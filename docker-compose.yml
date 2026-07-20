@@ -1,0 +1,46 @@
+services:
+  db:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_DB: driperska
+      POSTGRES_USER: driperska
+      POSTGRES_PASSWORD: ${DB_PASSWORD:-driperska}
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U driperska"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  backend:
+    build: ./backend
+    depends_on:
+      db:
+        condition: service_healthy
+    environment:
+      SPRING_PROFILES_ACTIVE: docker
+      SPRING_DATASOURCE_URL: jdbc:postgresql://db:5432/driperska
+      SPRING_DATASOURCE_USERNAME: driperska
+      SPRING_DATASOURCE_PASSWORD: ${DB_PASSWORD:-driperska}
+      JWT_SECRET: ${JWT_SECRET:-change-me-in-env-this-must-be-at-least-32-bytes!!}
+      MEDIA_DIR: /app/data/media
+      DDRAGON_SYNC_ON_STARTUP: "true"
+      APP_ADMIN_USERNAME: ${APP_ADMIN_USERNAME:-admin}
+      APP_ADMIN_EMAIL: ${APP_ADMIN_EMAIL:-admin@driperska.local}
+      APP_ADMIN_PASSWORD: ${APP_ADMIN_PASSWORD:-changeit123}
+    volumes:
+      - media:/app/data/media
+
+  web:
+    build: ./frontend
+    depends_on:
+      - backend
+    ports:
+      - "${WEB_PORT:-8080}:80"
+    volumes:
+      - media:/media:ro
+
+volumes:
+  pgdata:
+  media:

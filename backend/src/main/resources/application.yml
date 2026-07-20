@@ -1,0 +1,75 @@
+spring:
+  application:
+    name: driperska-liga
+  jpa:
+    open-in-view: false
+    hibernate:
+      ddl-auto: update
+    properties:
+      hibernate:
+        format_sql: true
+  flyway:
+    enabled: false
+  threads:
+    virtual:
+      enabled: true
+  servlet:
+    multipart:
+      max-file-size: 6MB
+      max-request-size: 6MB
+  # Default datasource is an in-memory H2 so `java -jar` / tests boot with zero setup.
+  datasource:
+    url: jdbc:h2:mem:driperska;DB_CLOSE_DELAY=-1;MODE=PostgreSQL
+    driver-class-name: org.h2.Driver
+    username: sa
+    password: ""
+
+server:
+  port: 8080
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info,metrics
+
+app:
+  jwt:
+    secret: ${JWT_SECRET:dev-secret-please-override-with-a-32plus-byte-value!!}
+    access-token-minutes: 15
+    refresh-token-days: 7
+  storage:
+    media-dir: ${MEDIA_DIR:./data/media}
+    public-base-url: /media
+  ddragon:
+    base-url: https://ddragon.leagueoflegends.com
+    locale: en_US
+    sync-on-startup: ${DDRAGON_SYNC_ON_STARTUP:false}
+  bootstrap:
+    admin-username: ${APP_ADMIN_USERNAME:admin}
+    admin-email: ${APP_ADMIN_EMAIL:admin@driperska.local}
+    admin-password: ${APP_ADMIN_PASSWORD:changeit123}
+
+---
+spring:
+  config:
+    activate:
+      on-profile: dev
+  h2:
+    console:
+      enabled: true
+  jpa:
+    show-sql: true
+
+---
+spring:
+  config:
+    activate:
+      on-profile: docker
+  datasource:
+    url: ${SPRING_DATASOURCE_URL:jdbc:postgresql://db:5432/driperska}
+    driver-class-name: org.postgresql.Driver
+    username: ${SPRING_DATASOURCE_USERNAME:driperska}
+    password: ${SPRING_DATASOURCE_PASSWORD:driperska}
+  jpa:
+    database-platform: org.hibernate.dialect.PostgreSQLDialect

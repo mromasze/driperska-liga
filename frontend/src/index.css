@@ -1,0 +1,118 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* ============================================================
+   Hextech Arena — motyw (tokeny z docs/06). Dark-first.
+   Komponenty czytają wyłącznie te zmienne CSS.
+   ============================================================ */
+:root {
+  /* Tła — od najgłębszego do wypukłego */
+  --bg-0: #0a0e1a; /* app background (midnight) */
+  --bg-1: #111827; /* powierzchnia karty */
+  --bg-2: #1a2333; /* karta wypukła / hover */
+  --border: #263248;
+
+  /* Tekst */
+  --text-hi: #f5f7fa; /* nagłówki, liczby */
+  --text: #c7d0de; /* body */
+  --text-lo: #7c8aa0; /* podpisy, meta */
+
+  /* Marka / prestiż */
+  --gold: #c8a24b; /* akcent ligi, MVP, 1. miejsce */
+  --gold-soft: #e7c67a;
+
+  /* Drużyny */
+  --blue: #3b82f6;
+  --blue-bg: rgba(59, 130, 246, 0.12);
+  --red: #ef4444;
+  --red-bg: rgba(239, 68, 68, 0.12);
+
+  /* Semantyka */
+  --win: #34d399;
+  --loss: #f87171;
+  --pending: #f59e0b;
+  --info: #38bdf8;
+
+  /* Skala PR (0–100) → kolor */
+  --pr-low: #6b7280;
+  --pr-mid: #38bdf8;
+  --pr-high: #a78bfa;
+  --pr-elite: #c8a24b;
+
+  /* Promienie / cienie / spacing (skala 4px) */
+  --r-sm: 8px;
+  --r-md: 14px;
+  --r-lg: 22px;
+  --shadow-card: 0 8px 30px rgba(0, 0, 0, 0.35);
+  --glow-gold: 0 0 20px rgba(200, 162, 75, 0.35);
+}
+
+/* Tryb jasny: opcjonalny, niski priorytet. Tożsamość jest ciemna.
+   Komponenty czytają tylko zmienne, więc wystarczy remap tokenów. */
+:root[data-theme='light'] {
+  --bg-0: #eef1f6;
+  --bg-1: #ffffff;
+  --bg-2: #f4f6fb;
+  --border: #d5dbe6;
+  --text-hi: #0a0e1a;
+  --text: #29323f;
+  --text-lo: #5c6779;
+  --shadow-card: 0 8px 24px rgba(15, 23, 42, 0.12);
+}
+
+@layer base {
+  * {
+    border-color: var(--border);
+  }
+
+  html {
+    color-scheme: dark;
+  }
+
+  body {
+    margin: 0;
+    min-height: 100vh;
+    background-color: var(--bg-0);
+    color: var(--text);
+    font-family: 'Inter', system-ui, sans-serif;
+    -webkit-font-smoothing: antialiased;
+    text-rendering: optimizeLegibility;
+  }
+
+  h1,
+  h2,
+  h3,
+  h4 {
+    font-family: 'Marcellus', Georgia, serif;
+    color: var(--text-hi);
+    letter-spacing: 0.01em;
+  }
+
+  /* Liczby / statystyki — techniczny font + równe kolumny */
+  .num {
+    font-family: 'Rajdhani', ui-monospace, monospace;
+    font-variant-numeric: tabular-nums;
+  }
+
+  :focus-visible {
+    outline: 2px solid var(--gold);
+    outline-offset: 2px;
+  }
+}
+
+@layer utilities {
+  .tabnum {
+    font-variant-numeric: tabular-nums;
+  }
+
+  /* Delikatny gradient przyciemniający pod champion splash-art */
+  .splash-scrim {
+    background-image: linear-gradient(
+      to top,
+      var(--bg-1) 6%,
+      rgba(17, 24, 39, 0.85) 40%,
+      rgba(17, 24, 39, 0.35) 100%
+    );
+  }
+}
