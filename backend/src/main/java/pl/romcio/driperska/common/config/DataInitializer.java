@@ -44,10 +44,18 @@ public class DataInitializer implements ApplicationRunner {
 
     @Override
     public void run(ApplicationArguments args) {
-        if (accountRepository.count() == 0) {
+        // Reconcile the bootstrap admin on every startup so the configured credentials always work,
+        // even when a pre-existing database already held an admin with a drifted/unknown password.
+        Account admin = accountRepository.findByUsername(adminUsername).orElse(null);
+        if (admin == null) {
             accountRepository.save(new Account(adminUsername, adminEmail,
                     passwordEncoder.encode(adminPassword), AccountRole.ADMIN));
-            log.info("Seeded first admin account '{}'. CHANGE THE PASSWORD after first login.", adminUsername);
+            log.info("Seeded bootstrap admin '{}'. Log in and change the password.", adminUsername);
+        } else if (!passwordEncoder.matches(adminPassword, admin.getPasswordHash())) {
+            admin.setPasswordHash(passwordEncoder.encode(adminPassword));
+            admin.setEnabled(true);
+            accountRepository.save(admin);
+            log.info("Reconciled bootstrap admin '{}' password to the configured value.", adminUsername);
         }
         if (seasonRepository.findFirstByStatus(SeasonStatus.ACTIVE).isEmpty() && seasonRepository.count() == 0) {
             Season season = new Season("Sezon 1", LocalDate.now(), null);
