@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useRef, useState } from 'react';
 import { Link, useParams } from 'react-router-dom';
 import {
   useMatch,
@@ -12,6 +12,9 @@ import {
   useRiotLobbyStatus,
   useImportRiotResults,
   useReplaceMatchPlayer,
+  useReopenMatch,
+  useUploadReplay,
+  useShareMatchToDiscord,
 } from '../../api/hooks/matches';
 import { DrawBoard } from '../../components/match/DrawBoard';
 import { usePlayers } from '../../api/hooks/players';
@@ -37,9 +40,15 @@ export function MatchControlPage() {
   const confirm = useConfirmDraw(id);
   const submit = useSubmitResults(id);
   const edit = useEditResults(id);
+  const reopen = useReopenMatch(id);
+  const uploadReplay = useUploadReplay(id);
+  const shareDiscord = useShareMatchToDiscord(id);
+  const replayInput = useRef<HTMLInputElement>(null);
   const [removedPlayerId, setRemovedPlayerId] = useState('');
   const [addedPlayerId, setAddedPlayerId] = useState('');
   const [drawResult, setDrawResult] = useState<DrawResult | null>(null);
+  const [editingResults, setEditingResults] = useState(false);
+  const [shareMsg, setShareMsg] = useState<string | null>(null);
 
   if (match.isLoading) return <LoadingState />;
   if (match.isError) return <ErrorState error={match.error} />;
@@ -50,6 +59,31 @@ export function MatchControlPage() {
   const currentPlayerIds = new Set(m.participants.map((participant) => participant.playerId));
   const availablePlayers = (players.data?.content ?? []).filter((player) =>
     !currentPlayerIds.has(player.id) && player.accountProvisioned && player.riotId);
+
+  const doShare = () => {
+    if (!window.confirm('Wygenerować obrazek wyników i wysłać go na kanał Discord?')) return;
+    setShareMsg(null);
+    shareDiscord.mutate(undefined, {
+      onSuccess: (r) => setShareMsg(r.sent ? '✓ Wysłano na Discord.' : '⚠ ' + r.message),
+      onError: (e) => setShareMsg('⚠ ' + (e as Error).message),
+    });
+  };
+
+  const matchTools = (
+    <section className="panel flex flex-wrap items-center gap-3 p-4">
+      <Button variant="gold" size="sm" disabled={shareDiscord.isPending} onClick={doShare}>
+        {shareDiscord.isPending ? 'Wysyłanie…' : '📤 Udostępnij wynik na Discord'}
+      </Button>
+      <input ref={replayInput} type="file" accept=".rofl" className="hidden"
+        onChange={(e) => { const f = e.target.files?.[0]; if (f) uploadReplay.mutate(f); e.currentTarget.value = ''; }} />
+      <Button variant="ghost" size="sm" disabled={uploadReplay.isPending} onClick={() => replayInput.current?.click()}>
+        {uploadReplay.isPending ? 'Wgrywanie…' : m.replayUrl ? 'Podmień powtórkę (.rofl)' : 'Wgraj powtórkę (.rofl)'}
+      </Button>
+      {m.replayUrl && <a className="text-sm text-gold hover:underline" href={m.replayUrl}>⬇ Pobierz powtórkę</a>}
+      {shareMsg && <span className="text-sm text-text-lo">{shareMsg}</span>}
+      {uploadReplay.isError && <span className="text-sm text-loss">{uploadReplay.error.message}</span>}
+    </section>
+  );
 
   return (
     <div className="space-y-6">
@@ -271,20 +305,45 @@ export function MatchControlPage() {
       {/* RESULTS_SUBMITTED → awaiting sign-off */}
       {m.status === 'RESULTS_SUBMITTED' && (
         <>
-          <div className="flex items-center justify-between rounded-lg border border-[color:var(--pending)]/40 bg-[color:var(--pending)]/10 p-4">
+          <div className="flex flex-wrap items-center justify-between gap-2 rounded-lg border border-[color:var(--pending)]/40 bg-[color:var(--pending)]/10 p-4">
             <span className="text-sm text-text-hi">Wyniki czekają na akceptację admina.</span>
-            <Link to="/admin/approvals">
-              <Button variant="gold" size="sm">
-                Przejdź do akceptacji
+            <div className="flex gap-2">
+              <Button variant="ghost" size="sm" onClick={() => setEditingResults((v) => !v)}>
+                {editingResults ? 'Zwiń edycję' : 'Edytuj wynik'}
               </Button>
-            </Link>
+              <Link to="/admin/approvals">
+                <Button variant="gold" size="sm">Przejdź do akceptacji</Button>
+              </Link>
+            </div>
           </div>
-          <Scoreboard match={m} />
+          {editingResults ? (
+            <ResultsForm
+              match={m}
+              submitting={edit.isPending}
+              onSubmit={(req) => edit.mutate(req, { onSuccess: () => setEditingResults(false) })}
+            />
+          ) : (
+            <Scoreboard match={m} />
+          )}
+          {matchTools}
         </>
       )}
 
       {/* APPROVED / CANCELLED */}
-      {(m.status === 'APPROVED' || m.status === 'CANCELLED') && <Scoreboard match={m} />}
+      {(m.status === 'APPROVED' || m.status === 'CANCELLED') && (
+        <>
+          {m.status === 'APPROVED' && (
+            <div className="flex flex-wrap items-center justify-between gap-2 rounded-lg border border-line p-4">
+              <span className="text-sm text-text-lo">Mecz zatwierdzony i policzony do rankingu.</span>
+              <Button variant="ghost" size="sm" disabled={reopen.isPending} onClick={() => reopen.mutate()}>
+                {reopen.isPending ? 'Otwieranie…' : 'Edytuj wynik (ponów akceptację)'}
+              </Button>
+            </div>
+          )}
+          <Scoreboard match={m} />
+          {m.status === 'APPROVED' && matchTools}
+        </>
+      )}
     </div>
   );
 }

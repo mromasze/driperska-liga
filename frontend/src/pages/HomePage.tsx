@@ -81,24 +81,25 @@ export function HomePage() {
       </section>
 
       <section id="changelog" className="scroll-mt-24">
-        <div className="mb-4">
-          <div className="kicker text-gold">Patch notes</div>
-          <h2 className="font-display text-2xl">Co nowego</h2>
+        <div className="mb-4 flex items-end justify-between">
+          <div>
+            <div className="kicker text-gold">Patch notes</div>
+            <h2 className="font-display text-2xl">Co nowego</h2>
+          </div>
+          <Link to="/patch-notes" className="text-sm text-gold hover:underline">Wszystkie zmiany →</Link>
         </div>
-        <div className="space-y-4">
-          {RELEASES.map((release) => (
-            <article key={release.version} className="glass p-5 sm:p-6">
-              <div className="flex flex-wrap items-baseline gap-3">
-                <span className="rounded-md bg-gold px-2.5 py-1 font-display text-sm font-bold text-[#1a1205]">{release.version}</span>
-                <h3 className="font-display text-xl">{release.title}</h3>
-                <time className="ml-auto text-xs text-text-lo">{release.date}</time>
-              </div>
-              <ul className="mt-4 grid gap-2 text-sm text-text sm:grid-cols-2">
-                {release.changes.map((change) => <li key={change} className="flex gap-2"><span className="text-gold">◆</span><span>{change}</span></li>)}
-              </ul>
-            </article>
-          ))}
-        </div>
+        {RELEASES.slice(0, 1).map((release) => (
+          <article key={release.version} className="glass p-5 sm:p-6">
+            <div className="flex flex-wrap items-baseline gap-3">
+              <span className="rounded-md bg-gold px-2.5 py-1 font-display text-sm font-bold text-[#1a1205]">{release.version}</span>
+              <h3 className="font-display text-xl">{release.title}</h3>
+              <time className="ml-auto text-xs text-text-lo">{release.date}</time>
+            </div>
+            <ul className="mt-4 grid gap-2 text-sm text-text sm:grid-cols-2">
+              {release.changes.map((change) => <li key={change} className="flex gap-2"><span className="text-gold">◆</span><span>{change}</span></li>)}
+            </ul>
+          </article>
+        ))}
       </section>
     </div>
   );

@@ -15,5 +15,7 @@ public enum MatchEventType {
     APPROVED,
     REJECTED,
     REOPENED,
+    REPLAY_UPLOADED,
+    DISCORD_SHARED,
     CANCELLED
 }

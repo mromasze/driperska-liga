@@ -11,6 +11,13 @@ public class RiotProperties {
     private String platform = "eun1";
     private String providerRegion = "EUNE";
     private String regionalRoute = "europe";
+    /** Tournament APIs are served from the regional cluster (americas), not the platform host. */
+    private String tournamentRoute = "americas";
+    /**
+     * When true, use tournament-STUB-v5 (available to development keys; codes are NOT playable
+     * in-client). Set false only with a production key that has the real tournament-v5 product.
+     */
+    private boolean useStub = true;
     private String callbackUrl;
     private String tournamentName = "Driperska Liga";
     private String mapType = "SUMMONERS_RIFT";
@@ -23,7 +30,15 @@ public class RiotProperties {
     public boolean configured() { return StringUtils.hasText(apiKey); }
     public boolean isMock() { return mock; }
     public void setMock(boolean mock) { this.mock = mock; }
-    public String tournamentBaseUrl() { return "https://" + platform + ".api.riotgames.com"; }
+    public boolean isUseStub() { return useStub; }
+    public void setUseStub(boolean useStub) { this.useStub = useStub; }
+    public String getTournamentRoute() { return tournamentRoute; }
+    public void setTournamentRoute(String tournamentRoute) { this.tournamentRoute = tournamentRoute; }
+    /** Base URL for tournament(-stub) endpoints, e.g. https://americas.api.riotgames.com/lol/tournament-stub/v5 */
+    public String tournamentApiBase() {
+        return "https://" + tournamentRoute + ".api.riotgames.com/lol/"
+                + (useStub ? "tournament-stub" : "tournament") + "/v5";
+    }
     public String regionalBaseUrl() { return "https://" + regionalRoute + ".api.riotgames.com"; }
     public String getApiKey() { return apiKey; }
     public void setApiKey(String apiKey) { this.apiKey = apiKey; }

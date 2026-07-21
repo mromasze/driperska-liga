@@ -98,6 +98,7 @@ export interface MatchDetail {
   id: string; seasonId: string; status: MatchStatus; drawMode: DrawMode; winningSide: Side | null;
   durationSeconds: number | null; patch: string | null; createdAt: string; startedAt: string | null;
   completedAt: string | null; participants: MatchParticipant[]; approval: Approval | null; riot: RiotMatchInfo;
+  replayUrl: string | null;
 }
 export interface MatchEvent { type: MatchEventType; actorAccountId: string | null; payloadJson: string | null; createdAt: string; }
 export interface MatchesQuery { status?: MatchStatus; seasonId?: string; page?: number; size?: number; }

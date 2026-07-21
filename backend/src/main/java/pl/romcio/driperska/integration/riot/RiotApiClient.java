@@ -33,7 +33,7 @@ public class RiotApiClient {
 
     public long createProvider(String callbackUrl) {
         Long id = execute("rejestracja providera", () -> client.post()
-                .uri(properties.tournamentBaseUrl() + "/lol/tournament/v5/providers")
+                .uri(properties.tournamentApiBase() + "/providers")
                 .header("X-Riot-Token", apiKey())
                 .body(new ProviderRequest(properties.getProviderRegion(), callbackUrl))
                 .retrieve().body(Long.class));
@@ -42,7 +42,7 @@ public class RiotApiClient {
 
     public long createTournament(long providerId) {
         Long id = execute("rejestracja turnieju", () -> client.post()
-                .uri(properties.tournamentBaseUrl() + "/lol/tournament/v5/tournaments")
+                .uri(properties.tournamentApiBase() + "/tournaments")
                 .header("X-Riot-Token", apiKey())
                 .body(new TournamentRequest(properties.getTournamentName(), providerId))
                 .retrieve().body(Long.class));
@@ -55,9 +55,7 @@ public class RiotApiClient {
                 allowedParticipants, metadata, properties.getTeamSize(), properties.getPickType(),
                 properties.getMapType(), properties.getSpectatorType());
         List<String> codes = execute("tworzenie kodu turniejowego", () -> client.post()
-                .uri(builder -> builder.scheme("https").host(properties.getPlatform() + ".api.riotgames.com")
-                        .path("/lol/tournament/v5/codes")
-                        .queryParam("tournamentId", tournamentId).queryParam("count", 1).build())
+                .uri(properties.tournamentApiBase() + "/codes?tournamentId=" + tournamentId + "&count=1")
                 .header("X-Riot-Token", apiKey()).body(body).retrieve()
                 .body(new ParameterizedTypeReference<List<String>>() {}));
         if (codes == null || codes.size() != 1) {
@@ -69,8 +67,7 @@ public class RiotApiClient {
 
     public List<TournamentGame> getGames(String tournamentCode) {
         List<TournamentGame> games = execute("pobieranie gier po kodzie", () -> client.get()
-                .uri(builder -> builder.scheme("https").host(properties.getPlatform() + ".api.riotgames.com")
-                        .path("/lol/tournament/v5/games/by-code/").pathSegment(tournamentCode).build())
+                .uri(properties.tournamentApiBase() + "/games/by-code/" + tournamentCode)
                 .header("X-Riot-Token", apiKey()).retrieve()
                 .body(new ParameterizedTypeReference<List<TournamentGame>>() {}));
         return games == null ? List.of() : games;
@@ -87,9 +84,7 @@ public class RiotApiClient {
 
     public LobbyEventList getLobbyEvents(String tournamentCode) {
         LobbyEventList events = execute("pobieranie zdarzeń lobby", () -> client.get()
-                .uri(builder -> builder.scheme("https").host(properties.getPlatform() + ".api.riotgames.com")
-                        .path("/lol/tournament/v5/lobby-events/by-code/")
-                        .pathSegment(tournamentCode).build())
+                .uri(properties.tournamentApiBase() + "/lobby-events/by-code/" + tournamentCode)
                 .header("X-Riot-Token", apiKey()).retrieve().body(LobbyEventList.class));
         return events == null ? new LobbyEventList(List.of()) : events;
     }

@@ -24,15 +24,18 @@ public class ResultService {
     private final MatchApprovalRepository approvalRepository;
     private final ChampionRepository championRepository;
     private final MatchEventRecorder eventRecorder;
+    private final org.springframework.context.ApplicationEventPublisher eventPublisher;
 
     public ResultService(MatchService matchService,
                          MatchApprovalRepository approvalRepository,
                          ChampionRepository championRepository,
-                         MatchEventRecorder eventRecorder) {
+                         MatchEventRecorder eventRecorder,
+                         org.springframework.context.ApplicationEventPublisher eventPublisher) {
         this.matchService = matchService;
         this.approvalRepository = approvalRepository;
         this.championRepository = championRepository;
         this.eventRecorder = eventRecorder;
+        this.eventPublisher = eventPublisher;
     }
 
     @Transactional
@@ -91,6 +94,8 @@ public class ResultService {
         eventRecorder.record(matchId,
                 firstSubmission ? MatchEventType.RESULTS_SUBMITTED : MatchEventType.RESULTS_EDITED,
                 actor, Map.of("winningSide", req.winningSide().name()));
+        // Compute display-only ratings so the summary shows PR/LP before approval.
+        eventPublisher.publishEvent(new MatchResultsSubmittedEvent(matchId));
         return match;
     }
 }

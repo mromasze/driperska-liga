@@ -15,8 +15,8 @@ spring:
       enabled: true
   servlet:
     multipart:
-      max-file-size: 6MB
-      max-request-size: 6MB
+      max-file-size: 64MB
+      max-request-size: 64MB
   datasource:
     url: jdbc:h2:mem:driperska;DB_CLOSE_DELAY=-1;MODE=PostgreSQL
     driver-class-name: org.h2.Driver
@@ -36,7 +36,7 @@ management:
 info:
   app:
     name: Driperska Liga
-    version: 0.2
+    version: 0.2.1
 
 app:
   public-url: ${APP_PUBLIC_URL:https://driperska.pl}
@@ -45,6 +45,10 @@ app:
     platform: ${RIOT_PLATFORM:eun1}
     provider-region: ${RIOT_PROVIDER_REGION:EUNE}
     regional-route: ${RIOT_REGIONAL_ROUTE:europe}
+    # Tournament APIs live on the regional cluster (americas), not the platform host.
+    tournament-route: ${RIOT_TOURNAMENT_ROUTE:americas}
+    # true = tournament-stub-v5 (dev keys; codes NOT playable in-client). false = real tournament-v5 (production key).
+    use-stub: ${RIOT_USE_STUB:true}
     callback-url: ${RIOT_CALLBACK_URL:}
     tournament-name: ${RIOT_TOURNAMENT_NAME:Driperska Liga}
     map-type: SUMMONERS_RIFT
@@ -56,6 +60,7 @@ app:
   discord:
     bot-token: ${DISCORD_BOT_TOKEN:}
     guild-id: ${DISCORD_GUILD_ID:}
+    results-channel-id: ${DISCORD_RESULTS_CHANNEL_ID:}
   jwt:
     secret: ${JWT_SECRET:dev-secret-please-override-with-a-32plus-byte-value!!}
     access-token-minutes: 15

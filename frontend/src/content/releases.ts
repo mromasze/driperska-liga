@@ -11,6 +11,23 @@ export interface ReleaseNote {
  */
 export const RELEASES: ReleaseNote[] = [
   {
+    version: 'v0.2.1',
+    date: '2026-07-21',
+    title: 'Poprawki: Riot, zdjęcia, podsumowanie',
+    changes: [
+      'Naprawiona integracja Riot — poprawny klaster (americas) i tournament-stub dla kluczy deweloperskich (koniec błędów 403).',
+      'Usunięte zbędne zapytanie summoner-v4 (błąd „zasób nie istnieje").',
+      'Region ustawiony na EUNE.',
+      'Naprawione wgrywanie zdjęć (uprawnienia woluminu w Dockerze).',
+      'Edycja danych gracza z panelu admina: Riot ID, Discord, role, imię.',
+      'Ręczne rozpoczęcie meczu bez Riot oraz edycja już rozegranych meczów.',
+      'Auto-akceptacja składu po 30 s i podgląd głosowania na żywo dla admina.',
+      'Oceny (PR/LP) widoczne na podsumowaniu zaraz po wpisaniu wyniku.',
+      'Udostępnianie obrazka z wynikiem na Discord i wgrywanie powtórki .rofl.',
+      'Podpowiedzi statystyk, wyjaśnienie punktacji i osobna zakładka Patch Notes.',
+    ],
+  },
+  {
     version: 'v0.2',
     date: '2026-07-21',
     title: 'Lobby turniejowe i automatyczne wyniki',

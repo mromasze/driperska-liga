@@ -28,11 +28,14 @@ public class MatchController {
     private final MatchAssembler assembler;
     private final TournamentMatchService tournamentMatchService;
     private final RiotResultImportService riotResultImportService;
+    private final MatchReplayService replayService;
+    private final MatchShareService shareService;
 
     public MatchController(MatchService matchService, DrawLobbyService drawLobbyService,
                            ResultService resultService, ApprovalService approvalService,
                            MatchAssembler assembler, TournamentMatchService tournamentMatchService,
-                           RiotResultImportService riotResultImportService) {
+                           RiotResultImportService riotResultImportService,
+                           MatchReplayService replayService, MatchShareService shareService) {
         this.matchService = matchService;
         this.drawLobbyService = drawLobbyService;
         this.resultService = resultService;
@@ -40,6 +43,8 @@ public class MatchController {
         this.assembler = assembler;
         this.tournamentMatchService = tournamentMatchService;
         this.riotResultImportService = riotResultImportService;
+        this.replayService = replayService;
+        this.shareService = shareService;
     }
 
     @GetMapping
@@ -176,6 +181,27 @@ public class MatchController {
     public MatchResponse reopen(@PathVariable UUID id) {
         return assembler.toResponse(approvalService.reopen(
                 id, CurrentAccount.require().accountId()));
+    }
+
+    @PostMapping(value = "/{id}/replay", consumes = "multipart/form-data")
+    @PreAuthorize("hasAnyRole('ADMIN','EDITOR')")
+    public MatchResponse uploadReplay(@PathVariable UUID id,
+                                      @org.springframework.web.bind.annotation.RequestParam("file")
+                                      org.springframework.web.multipart.MultipartFile file) {
+        return assembler.toResponse(replayService.store(id, file, CurrentAccount.require().accountId()));
+    }
+
+    /** Raw PNG preview of the result card (used by the share dialog). */
+    @GetMapping(value = "/{id}/share/image", produces = org.springframework.http.MediaType.IMAGE_PNG_VALUE)
+    @PreAuthorize("hasAnyRole('ADMIN','EDITOR')")
+    public byte[] shareImage(@PathVariable UUID id) {
+        return shareService.renderImage(id);
+    }
+
+    @PostMapping("/{id}/share/discord")
+    @PreAuthorize("hasAnyRole('ADMIN','EDITOR')")
+    public MatchShareService.ShareResult shareToDiscord(@PathVariable UUID id) {
+        return shareService.shareToDiscord(id, CurrentAccount.require().accountId());
     }
 
     private DrawResponse toDrawResponse(UUID matchId, DrawResult result) {

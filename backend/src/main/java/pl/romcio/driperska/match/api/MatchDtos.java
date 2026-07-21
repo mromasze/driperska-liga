@@ -132,7 +132,8 @@ public final class MatchDtos {
             Instant completedAt,
             List<ParticipantResponse> participants,
             ApprovalResponse approval,
-            RiotInfoResponse riot) {
+            RiotInfoResponse riot,
+            String replayUrl) {
     }
 
     public record MatchSummaryResponse(

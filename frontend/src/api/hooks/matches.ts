@@ -199,6 +199,35 @@ export function useRiotLobbyStatus(matchId: string, enabled: boolean) {
   });
 }
 
+export function useReopenMatch(matchId: string) {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: () => api.post<MatchDetail>(`/matches/${matchId}/reopen`),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: queryKeys.match(matchId) });
+      qc.invalidateQueries({ queryKey: ['matches'] });
+    },
+  });
+}
+
+export function useUploadReplay(matchId: string) {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (file: File) => {
+      const form = new FormData();
+      form.append('file', file);
+      return api.upload<MatchDetail>(`/matches/${matchId}/replay`, form);
+    },
+    onSuccess: () => qc.invalidateQueries({ queryKey: queryKeys.match(matchId) }),
+  });
+}
+
+export function useShareMatchToDiscord(matchId: string) {
+  return useMutation({
+    mutationFn: () => api.post<{ sent: boolean; message: string }>(`/matches/${matchId}/share/discord`),
+  });
+}
+
 export function useImportRiotResults(matchId: string) {
   const qc = useQueryClient();
   return useMutation({

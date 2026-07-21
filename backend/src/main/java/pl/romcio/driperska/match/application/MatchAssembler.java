@@ -62,7 +62,8 @@ public class MatchAssembler {
                 new RiotInfoResponse(match.getRiotTournamentCode(), match.getRiotGameId(),
                         match.getRiotMatchId(), match.getRiotLobbyCreatedAt(),
                         match.getRiotCallbackReceivedAt(), match.getRiotResultsImportedAt(),
-                        match.getRiotImportError()));
+                        match.getRiotImportError()),
+                match.getReplayUrl());
     }
 
     public MatchSummaryResponse toSummary(Match match) {

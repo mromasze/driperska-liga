@@ -3,6 +3,21 @@
 Wszystkie istotne zmiany Driperskiej Ligi są opisywane tutaj oraz w
 `frontend/src/content/releases.ts`, który zasila patch notes na stronie głównej.
 
+## v0.2.1 — 2026-07-21
+
+Poprawki błędów i uzupełnienia po v0.2:
+
+- Riot: użycie właściwego klastra `americas` i `tournament-stub-v5` dla kluczy deweloperskich (koniec błędów 403); usunięto zbędne `summoner-v4`.
+- Region docelowy ustawiony na EUNE.
+- Naprawione wgrywanie avatarów (uprawnienia woluminu media w Dockerze — entrypoint chown).
+- Panel admina: edycja danych gracza (Riot ID, Discord, role, imię).
+- Ręczne rozpoczęcie meczu bez Riot oraz edycja już rozegranych (zatwierdzonych) meczów.
+- Auto-akceptacja składu po 30 s (konfigurowalne) z limitem prób; podgląd głosowania na żywo dla admina.
+- Oceny PR/LP liczone i pokazywane na podsumowaniu zaraz po wpisaniu wyniku.
+- Udostępnianie obrazka wyniku na Discord i wgrywanie powtórki `.rofl` do meczu.
+- Podpowiedzi statystyk w formularzu wyniku, wyjaśnienie punktacji i osobna zakładka Patch Notes.
+- Tryb testowy `RIOT_MOCK` do pełnego przejścia flow bez realnego Riot.
+
 ## v0.2 — 2026-07-21
 
 - Integracja Tournament API v5: provider, turniej, jednorazowy kod lobby i lista PUUID.

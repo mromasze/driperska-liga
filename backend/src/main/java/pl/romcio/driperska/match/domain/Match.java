@@ -34,6 +34,7 @@ public class Match {
     @Column(name = "riot_callback_received_at") private Instant riotCallbackReceivedAt;
     @Column(name = "riot_results_imported_at") private Instant riotResultsImportedAt;
     @Column(name = "riot_import_error", columnDefinition = "text") private String riotImportError;
+    @Column(name = "replay_url", length = 500) private String replayUrl;
 
     @ElementCollection
     @CollectionTable(name = "match_pool", joinColumns = @JoinColumn(name = "match_id"))
@@ -113,6 +114,8 @@ public class Match {
     public void setNotes(String notes) { this.notes = notes; }
     public UUID getCreatedBy() { return createdBy; }
     public Instant getCreatedAt() { return createdAt; }
+    public String getReplayUrl() { return replayUrl; }
+    public void setReplayUrl(String replayUrl) { this.replayUrl = replayUrl; }
     public Instant getStartedAt() { return startedAt; }
     public void setStartedAt(Instant startedAt) { this.startedAt = startedAt; }
     public Instant getTeamsDrawnAt() { return teamsDrawnAt; }

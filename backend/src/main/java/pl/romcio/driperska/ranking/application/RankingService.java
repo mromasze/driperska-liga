@@ -69,6 +69,29 @@ public class RankingService {
         recalculateSeason(event.seasonId());
     }
 
+    /**
+     * Display-only preview: computes Performance Rating, LP and MVP for a just-submitted match and
+     * stores them on the participants so the summary screen shows ratings before approval. Does NOT
+     * touch season stats or MMR — those are applied only on approval.
+     */
+    @EventListener
+    @Transactional
+    public void onResultsSubmitted(pl.romcio.driperska.match.application.MatchResultsSubmittedEvent event) {
+        Match match = matchRepository.findById(event.matchId()).orElse(null);
+        if (match == null || match.getWinningSide() == null || match.getParticipants().isEmpty()) {
+            return;
+        }
+        ScoringConfig cfg = configProvider.forSeason(match.getSeasonId());
+        MatchStatsContext ctx = toContext(match);
+        Map<UUID, Double> pr = ratingCalculator.computePerformance(ctx, cfg);
+        Map<UUID, PointsBreakdown> points = pointsEngine.computeLeaguePoints(ctx, pr, cfg);
+        for (MatchParticipant p : match.getParticipants()) {
+            double rating = pr.getOrDefault(p.getId(), 0.0);
+            PointsBreakdown breakdown = points.getOrDefault(p.getId(), new PointsBreakdown(0, false));
+            p.applyComputed(rating, breakdown.lp(), 0.0, breakdown.mvp());
+        }
+    }
+
     /** Wipes and rebuilds a season's ranking from its approved matches, chronologically (Elo needs order). */
     @Transactional
     public void recalculateSeason(UUID seasonId) {

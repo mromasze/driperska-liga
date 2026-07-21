@@ -4,6 +4,9 @@ import com.fasterxml.jackson.annotation.JsonProperty;
 import java.util.List;
 import java.util.Locale;
 import org.springframework.core.ParameterizedTypeReference;
+import org.springframework.core.io.ByteArrayResource;
+import org.springframework.http.MediaType;
+import org.springframework.http.client.MultipartBodyBuilder;
 import org.springframework.http.client.SimpleClientHttpRequestFactory;
 import org.springframework.stereotype.Component;
 import org.springframework.web.client.RestClient;
@@ -25,6 +28,29 @@ public class DiscordClient {
         factory.setConnectTimeout(5_000);
         factory.setReadTimeout(10_000);
         return factory;
+    }
+
+    /** Posts a PNG image (with caption) to the configured results channel. */
+    public Delivery sendResultImage(String caption, byte[] png, String filename) {
+        if (!properties.resultsChannelConfigured()) {
+            return Delivery.failed("Kanał wyników Discord nie jest skonfigurowany (DISCORD_RESULTS_CHANNEL_ID)");
+        }
+        try {
+            MultipartBodyBuilder body = new MultipartBodyBuilder();
+            body.part("payload_json",
+                    new MessageRequest(caption, new AllowedMentions(List.of(), List.of())),
+                    MediaType.APPLICATION_JSON);
+            body.part("files[0]", new ByteArrayResource(png)).filename(filename)
+                    .contentType(MediaType.IMAGE_PNG);
+            client.post().uri(BASE + "/channels/" + properties.getResultsChannelId() + "/messages")
+                    .header("Authorization", "Bot " + properties.getBotToken())
+                    .contentType(MediaType.MULTIPART_FORM_DATA)
+                    .body(body.build())
+                    .retrieve().toBodilessEntity();
+            return Delivery.sent(properties.getResultsChannelId());
+        } catch (RestClientException ex) {
+            return Delivery.failed("Discord odrzucił wysyłkę obrazka; sprawdź token bota i uprawnienia na kanale wyników");
+        }
     }
 
     public Delivery sendLoginMessage(String discordName, String knownUserId, String message) {
