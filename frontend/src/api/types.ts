@@ -4,9 +4,9 @@ export type AccountRole = 'ADMIN' | 'EDITOR' | 'PLAYER';
 export type DrawMode = 'PURE_RANDOM' | 'BALANCED' | 'MANUAL';
 export type DrawVoteDecision = 'ACCEPT' | 'REJECT';
 export type SeasonStatus = 'UPCOMING' | 'ACTIVE' | 'ARCHIVED';
-export type MatchStatus = 'DRAFT' | 'TEAMS_DRAWN' | 'LIVE' | 'RESULTS_SUBMITTED' | 'APPROVED' | 'REJECTED' | 'CANCELLED';
+export type MatchStatus = 'DRAFT' | 'TEAMS_DRAWN' | 'LOBBY_READY' | 'LIVE' | 'RESULTS_SUBMITTED' | 'APPROVED' | 'REJECTED' | 'CANCELLED';
 export type ApprovalDecision = 'PENDING' | 'APPROVED' | 'REJECTED';
-export type MatchEventType = 'CREATED' | 'TEAMS_DRAWN' | 'DRAW_CONFIRMED' | 'RESULTS_SUBMITTED' | 'RESULTS_EDITED' | 'APPROVED' | 'REJECTED' | 'REOPENED' | 'CANCELLED';
+export type MatchEventType = 'CREATED' | 'TEAMS_DRAWN' | 'DRAW_CONFIRMED' | 'RIOT_LOBBY_CREATED' | 'PLAYER_REPLACED' | 'MATCH_STARTED' | 'RIOT_CALLBACK_RECEIVED' | 'RIOT_RESULTS_IMPORTED' | 'RIOT_IMPORT_FAILED' | 'RESULTS_SUBMITTED' | 'RESULTS_EDITED' | 'APPROVED' | 'REJECTED' | 'REOPENED' | 'CANCELLED';
 
 export interface PageResponse<T> { content: T[]; page: number; size: number; totalElements: number; totalPages: number; }
 export interface ProblemDetail { type: string; title: string; status: number; detail?: string; instance?: string; errors?: { field: string; message: string }[]; }
@@ -26,17 +26,18 @@ export interface Champion {
 
 export interface Player {
   id: string; nickname: string; realName: string | null; riotId: string | null;
+  discordName: string;
   mainRole: Role; secondaryRole: Role | null; avatarUrl: string | null; bio: string | null;
   opggLink: string | null; favoriteChampionIds: number[]; accountProvisioned: boolean; active: boolean; joinedAt: string;
 }
 export interface CreatePlayerRequest {
   nickname: string; mainRole: Role; secondaryRole?: Role | null; realName?: string | null;
-  riotId?: string | null; bio?: string | null;
+  riotId?: string | null; bio?: string | null; discordName: string;
 }
 export interface UpdatePlayerRequest {
   nickname?: string; mainRole?: Role; secondaryRole?: Role | null; realName?: string | null;
   riotId?: string | null; bio?: string | null; opggLink?: string | null;
-  favoriteChampionIds?: number[]; active?: boolean;
+  favoriteChampionIds?: number[]; discordName?: string | null; active?: boolean;
 }
 export interface SelfUpdatePlayerRequest {
   mainRole: Role; secondaryRole: Role | null; riotId: string | null; bio: string | null;
@@ -45,7 +46,8 @@ export interface SelfUpdatePlayerRequest {
 export interface LoginCredentials {
   login: string; temporaryPassword: string; loginUrl: string; messageTemplate: string;
 }
-export interface CreatedPlayerResponse { player: Player; credentials: LoginCredentials; }
+export interface DiscordDelivery { sent: boolean; message: string; }
+export interface CreatedPlayerResponse { player: Player; credentials: LoginCredentials; discordDelivery: DiscordDelivery; }
 export interface PlayersQuery { active?: boolean; role?: Role; search?: string; page?: number; size?: number; }
 
 export interface SeasonAggregate {
@@ -87,16 +89,22 @@ export interface MatchSummary {
   id: string; seasonId: string; status: MatchStatus; winningSide: Side | null;
   durationSeconds: number | null; createdAt: string; completedAt: string | null; participantCount: number;
 }
+export interface RiotMatchInfo {
+  tournamentCode: string | null; gameId: string | null; matchId: string | null;
+  lobbyCreatedAt: string | null; callbackReceivedAt: string | null;
+  resultsImportedAt: string | null; importError: string | null;
+}
 export interface MatchDetail {
   id: string; seasonId: string; status: MatchStatus; drawMode: DrawMode; winningSide: Side | null;
   durationSeconds: number | null; patch: string | null; createdAt: string; startedAt: string | null;
-  completedAt: string | null; participants: MatchParticipant[]; approval: Approval | null;
+  completedAt: string | null; participants: MatchParticipant[]; approval: Approval | null; riot: RiotMatchInfo;
 }
 export interface MatchEvent { type: MatchEventType; actorAccountId: string | null; payloadJson: string | null; createdAt: string; }
 export interface MatchesQuery { status?: MatchStatus; seasonId?: string; page?: number; size?: number; }
 
 export interface CreateMatchRequest { seasonId: string; drawMode: DrawMode; playerIds: string[]; }
 export interface DrawSlot { playerId: string; nickname: string; role: Role; mmr: number; }
+export interface ReplacePlayerRequest { removedPlayerId: string; addedPlayerId: string; }
 export interface DrawBalance { blueMmrAvg: number; redMmrAvg: number; predictedBlueWinPct: number; }
 export interface DrawResult { matchId: string; drawMode: DrawMode; blue: DrawSlot[]; red: DrawSlot[]; balance: DrawBalance; }
 export interface ResultParticipantInput {
@@ -114,4 +122,12 @@ export interface DrawLobby {
   matchId: string; status: MatchStatus; round: number; requiredAccepts: number;
   accepts: number; rejects: number; acceptedPlayerIds: string[]; rejectedPlayerIds: string[];
   blue: LobbyPlayer[]; red: LobbyPlayer[]; updatedAt: string;
+  tournamentCode: string | null; riotImportError: string | null;
+}
+export interface RiotLobbyMember {
+  playerId: string; nickname: string; puuid: string; joined: boolean;
+}
+export interface RiotLobbyStatus {
+  joinedCount: number; expectedCount: number; gameStarted: boolean; members: RiotLobbyMember[];
+  events: { timestamp: string; eventType: string; puuid?: string | null }[];
 }

@@ -41,6 +41,12 @@ export function useProvisionPlayerAccount() {
     onSuccess: () => qc.invalidateQueries({ queryKey: ['players'] }),
   });
 }
+export function useResendPlayerCredentials() {
+  return useMutation({
+    mutationFn: (id: string) =>
+      api.post<CreatedPlayerResponse>(`/players/${id}/credentials/resend`),
+  });
+}
 export function useUpdatePlayer() {
   const qc = useQueryClient();
   return useMutation({

@@ -165,19 +165,28 @@ function DrawVotingCard({ lobby, myPlayerId, myVote, pending, onVote }: {
     );
   }
 
-  const approved = lobby.status === 'LIVE';
+  const voting = lobby.status === 'TEAMS_DRAWN';
+  const mySlot = [...lobby.blue, ...lobby.red].find((player) => player.playerId === myPlayerId);
+  const sideLabel = mySlot?.side === 'BLUE' ? 'NIEBIESKĄ' : 'CZERWONĄ';
+  const title = voting ? 'Czy gramy tym składem?'
+    : lobby.status === 'LOBBY_READY' ? 'Lobby Riot jest gotowe'
+    : lobby.status === 'LIVE' ? 'Mecz trwa'
+    : lobby.status === 'RESULTS_SUBMITTED' ? 'Wynik czeka na admina'
+    : 'Wynik wymaga korekty';
   return (
     <section className="draw-stage glass grid-tex overflow-hidden p-5 sm:p-8">
       <div className="mb-6 flex flex-wrap items-end justify-between gap-3">
         <div>
           <div className="kicker text-gold">Losowanie na żywo · runda {lobby.round}</div>
-          <h2 className="mt-1 font-display text-3xl">{approved ? 'Składy zatwierdzone!' : 'Czy gramy tym składem?'}</h2>
+          <h2 className="mt-1 font-display text-3xl">{title}</h2>
         </div>
-        <div className="flex gap-2">
-          <Badge tone="win">{lobby.accepts} za</Badge>
-          <Badge tone="loss">{lobby.rejects} przeciw</Badge>
-          <Badge>{lobby.requiredAccepts} wymaganych</Badge>
-        </div>
+        {voting && (
+          <div className="flex gap-2">
+            <Badge tone="win">{lobby.accepts} za</Badge>
+            <Badge tone="loss">{lobby.rejects} przeciw</Badge>
+            <Badge>{lobby.requiredAccepts} wymaganych</Badge>
+          </div>
+        )}
       </div>
 
       <div key={lobby.round} className="grid gap-4 md:grid-cols-2">
@@ -185,7 +194,7 @@ function DrawVotingCard({ lobby, myPlayerId, myVote, pending, onVote }: {
         <LobbyTeam title="Czerwona strona" players={lobby.red} color="var(--red)" myPlayerId={myPlayerId} />
       </div>
 
-      {!approved && (
+      {voting && (
         <div className="mt-6 rounded-lg border border-line bg-[color:var(--bg)]/60 p-4">
           <div className="mb-3 h-2 overflow-hidden rounded-full bg-bg-2">
             <div className="h-full rounded-full bg-gradient-to-r from-cyan to-gold transition-all duration-500"
@@ -199,10 +208,39 @@ function DrawVotingCard({ lobby, myPlayerId, myVote, pending, onVote }: {
               <Button variant="danger" onClick={() => onVote('REJECT')} disabled={pending}>↻ Losuj ponownie</Button>
             </div>
           )}
-          <p className="mt-3 text-center text-xs text-text-lo">6 głosów „za” uruchamia grę. 5 głosów „przeciw” automatycznie losuje nowe drużyny i strony.</p>
+          <p className="mt-3 text-center text-xs text-text-lo">6 głosów „za” tworzy lobby Riot. 5 głosów „przeciw” losuje nowe drużyny i strony.</p>
         </div>
       )}
-      {approved && <div className="mt-6 rounded-lg border border-[color:var(--win)]/40 bg-[color:var(--win)]/10 p-4 text-center font-semibold text-win">Głosowanie zakończone — powodzenia na Rifcie!</div>}
+      {lobby.status === 'LOBBY_READY' && (
+        <div className="mt-6 rounded-lg border border-[color:var(--win)]/40 bg-[color:var(--win)]/10 p-5 text-center">
+          <p className="text-sm text-text">W grze wybierz stronę <strong className="text-win">{sideLabel}</strong>.</p>
+          <div className="my-3 select-all break-all font-mono text-xl font-bold text-text-hi">{lobby.tournamentCode}</div>
+          <Button variant="gold" onClick={() => navigator.clipboard.writeText(lobby.tournamentCode ?? '')}>
+            Kopiuj kod lobby
+          </Button>
+          <p className="mt-3 text-xs text-text-lo">Wejdź przez Graj → Turniej → wklej kod. Admin uruchomi mecz, gdy wszyscy dołączą.</p>
+        </div>
+      )}
+      {lobby.status === 'LIVE' && (
+        <div className="mt-6 rounded-lg border border-[color:var(--cyan)]/40 bg-[color:var(--cyan)]/10 p-4 text-center font-semibold text-cyan">
+          Mecz trwa — grasz stroną {sideLabel}. Powodzenia na Rifcie!
+        </div>
+      )}
+      {lobby.status === 'RESULTS_SUBMITTED' && (
+        <div className="mt-6 rounded-lg border border-[color:var(--pending)]/40 bg-[color:var(--pending)]/10 p-4 text-center text-text-hi">
+          Statystyki zostały pobrane. Oczekiwanie na dodanie meczu przez admina.
+        </div>
+      )}
+      {lobby.status === 'REJECTED' && (
+        <div className="mt-6 rounded-lg border border-[color:var(--loss)]/40 bg-[color:var(--loss)]/10 p-4 text-center text-loss">
+          Wynik został odesłany do korekty przez admina.
+        </div>
+      )}
+      {lobby.riotImportError && (
+        <div className="mt-3 rounded-lg border border-[color:var(--loss)]/30 p-3 text-center text-xs text-loss">
+          Automatyczny import nie powiódł się. Admin może pobrać dane ręcznie.
+        </div>
+      )}
     </section>
   );
 }

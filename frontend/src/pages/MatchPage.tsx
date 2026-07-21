@@ -10,6 +10,7 @@ const STATUS_LABEL: Record<MatchStatus, string> = {
   DRAFT: 'Szkic',
   TEAMS_DRAWN: 'Wylosowano drużyny',
   LIVE: 'W trakcie',
+  LOBBY_READY: 'Lobby Riot gotowe',
   RESULTS_SUBMITTED: 'Oczekuje na akceptację',
   APPROVED: 'Zatwierdzony',
   REJECTED: 'Odesłany do edycji',

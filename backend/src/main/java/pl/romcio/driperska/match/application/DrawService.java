@@ -6,6 +6,7 @@ import org.springframework.transaction.annotation.Transactional;
 import pl.romcio.driperska.common.domain.Role;
 import pl.romcio.driperska.common.domain.Side;
 import pl.romcio.driperska.common.error.InvalidTransitionException;
+import pl.romcio.driperska.integration.riot.TournamentMatchService;
 import pl.romcio.driperska.match.domain.*;
 import pl.romcio.driperska.player.domain.Player;
 import pl.romcio.driperska.player.infra.PlayerRepository;
@@ -17,14 +18,17 @@ public class DrawService {
     private final PlayerRepository playerRepository;
     private final PlayerMmrService mmrService;
     private final MatchEventRecorder eventRecorder;
+    private final TournamentMatchService tournamentMatchService;
     private final Random random = new Random();
 
     public DrawService(MatchService matchService, PlayerRepository playerRepository,
-                       PlayerMmrService mmrService, MatchEventRecorder eventRecorder) {
+                       PlayerMmrService mmrService, MatchEventRecorder eventRecorder,
+                       TournamentMatchService tournamentMatchService) {
         this.matchService = matchService;
         this.playerRepository = playerRepository;
         this.mmrService = mmrService;
         this.eventRecorder = eventRecorder;
+        this.tournamentMatchService = tournamentMatchService;
     }
 
     public record Slot(UUID playerId, String nickname, Role role, double mmr, Side side) {}
@@ -66,6 +70,7 @@ public class DrawService {
         match.replaceParticipants(participants);
         match.advanceDrawRound();
         match.transitionTo(MatchStatus.TEAMS_DRAWN);
+        match.setTeamsDrawnAt(java.time.Instant.now());
 
         double blueAvg = avg(slots, Side.BLUE);
         double redAvg = avg(slots, Side.RED);
@@ -82,11 +87,7 @@ public class DrawService {
         if (match.getStatus() != MatchStatus.TEAMS_DRAWN) {
             throw new InvalidTransitionException("Najpierw wylosuj drużyny");
         }
-        match.transitionTo(MatchStatus.LIVE);
-        match.setStartedAt(java.time.Instant.now());
-        eventRecorder.record(matchId, MatchEventType.DRAW_CONFIRMED, actor,
-                Map.of("round", match.getDrawRound()));
-        return match;
+        return tournamentMatchService.createLobby(matchId, actor);
     }
 
     private List<UUID> randomSplit(List<UUID> pool) {

@@ -56,6 +56,12 @@ public class PlayerController {
         return service.provisionExisting(id);
     }
 
+    @PostMapping("/{id}/credentials/resend")
+    @PreAuthorize("hasRole('ADMIN')")
+    public CreatedPlayerResponse resendCredentials(@PathVariable UUID id) {
+        return service.resendCredentials(id);
+    }
+
     @PatchMapping("/me")
     @PreAuthorize("hasRole('PLAYER')")
     public PlayerResponse updateMe(@Valid @RequestBody SelfUpdatePlayerRequest req) {

@@ -24,11 +24,27 @@ public interface MatchRepository extends JpaRepository<Match, UUID> {
     @Query("select m from Match m where m.id = :id")
     Optional<Match> findForUpdate(@Param("id") UUID id);
 
+    Optional<Match> findByRiotTournamentCode(String riotTournamentCode);
+
+    @EntityGraph(attributePaths = "participants")
+    Optional<Match> findDetailedById(UUID id);
+
     @EntityGraph(attributePaths = "participants")
     @Query("select distinct m from Match m join m.poolPlayerIds playerId "
             + "where playerId = :playerId and m.status = :status order by m.createdAt desc")
     List<Match> findForPlayerAndStatus(@Param("playerId") UUID playerId,
                                       @Param("status") MatchStatus status,
                                       Pageable pageable);
+    @EntityGraph(attributePaths = "participants")
+    @Query("select distinct m from Match m join m.poolPlayerIds playerId "
+            + "where playerId = :playerId and m.status in :statuses order by m.createdAt desc")
+    List<Match> findForPlayerAndStatuses(@Param("playerId") UUID playerId,
+                                        @Param("statuses") java.util.Collection<MatchStatus> statuses,
+                                        Pageable pageable);
     long countByStatus(MatchStatus status);
+
+    @Query("select m.id from Match m where m.status = :status and m.teamsDrawnAt is not null "
+            + "and m.teamsDrawnAt < :threshold")
+    List<UUID> findIdsForAutoConfirm(@Param("status") MatchStatus status,
+                                     @Param("threshold") java.time.Instant threshold);
 }

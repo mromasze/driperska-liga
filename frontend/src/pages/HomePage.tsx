@@ -8,6 +8,7 @@ import { RankingTable } from '../components/ranking/RankingTable';
 import { StatTile } from '../components/ui/StatTile';
 import { Button } from '../components/ui/Button';
 import { LoadingState, EmptyState } from '../components/ui/States';
+import { ScoringInfo } from '../components/ScoringInfo';
 import { RELEASES } from '../content/releases';
 import type { MatchDetail } from '../api/types';
 
@@ -29,7 +30,7 @@ export function HomePage() {
         <div className="relative z-10 max-w-2xl animate-rise">
           <div className="mb-3 flex items-center gap-3">
             <span className="kicker text-gold">{season.data?.name ?? 'Inhouse League of Legends'}</span>
-            <span className="chip border-[color:var(--gold)]/30 text-gold">v0.1</span>
+            <span className="chip border-[color:var(--gold)]/30 text-gold">v0.2</span>
           </div>
           <h1 className="font-display text-4xl font-bold leading-none sm:text-6xl">
             DRIPERSKA <span className="text-gradient-gold">LIGA</span>
@@ -69,6 +70,14 @@ export function HomePage() {
         {ranking.isLoading ? <LoadingState /> : (ranking.data?.length ?? 0) === 0
           ? <EmptyState title="Ranking jest pusty" />
           : <RankingTable rows={(ranking.data ?? []).slice(0, 5)} />}
+      </section>
+
+      <section id="punktacja" className="scroll-mt-24">
+        <div className="mb-4">
+          <div className="kicker text-gold">Zasady</div>
+          <h2 className="font-display text-2xl">Jak liczymy punkty</h2>
+        </div>
+        <ScoringInfo />
       </section>
 
       <section id="changelog" className="scroll-mt-24">

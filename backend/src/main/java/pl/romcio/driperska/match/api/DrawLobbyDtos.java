@@ -17,5 +17,6 @@ public final class DrawLobbyDtos {
     public record DrawLobbyResponse(
             UUID matchId, MatchStatus status, int round, int requiredAccepts, int accepts, int rejects,
             List<UUID> acceptedPlayerIds, List<UUID> rejectedPlayerIds,
-            List<LobbyPlayer> blue, List<LobbyPlayer> red, Instant updatedAt) {}
+            List<LobbyPlayer> blue, List<LobbyPlayer> red, Instant updatedAt,
+            String tournamentCode, String riotImportError) {}
 }

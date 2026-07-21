@@ -33,6 +33,18 @@ public class Player {
     @Column(name = "riot_id")
     private String riotId;
 
+    @Column(name = "riot_puuid", length = 128)
+    private String riotPuuid;
+
+    @Column(name = "riot_summoner_id", length = 128)
+    private String riotSummonerId;
+
+    @Column(name = "discord_name", nullable = false, length = 80)
+    private String discordName;
+
+    @Column(name = "discord_user_id", length = 32, unique = true)
+    private String discordUserId;
+
     @Enumerated(EnumType.STRING)
     @Column(name = "main_role")
     private Role mainRole;
@@ -67,9 +79,10 @@ public class Player {
     protected Player() {
     }
 
-    public Player(String nickname, Role mainRole) {
+    public Player(String nickname, Role mainRole, String discordName) {
         this.nickname = nickname;
         this.mainRole = mainRole;
+        this.discordName = discordName;
     }
 
     public UUID getId() { return id; }
@@ -78,7 +91,21 @@ public class Player {
     public String getRealName() { return realName; }
     public void setRealName(String realName) { this.realName = realName; }
     public String getRiotId() { return riotId; }
-    public void setRiotId(String riotId) { this.riotId = riotId; }
+    public void setRiotId(String riotId) {
+        if (!java.util.Objects.equals(this.riotId, riotId)) {
+            this.riotPuuid = null;
+            this.riotSummonerId = null;
+        }
+        this.riotId = riotId;
+    }
+    public String getRiotPuuid() { return riotPuuid; }
+    public void setRiotPuuid(String riotPuuid) { this.riotPuuid = riotPuuid; }
+    public String getRiotSummonerId() { return riotSummonerId; }
+    public void setRiotSummonerId(String riotSummonerId) { this.riotSummonerId = riotSummonerId; }
+    public String getDiscordName() { return discordName; }
+    public void setDiscordName(String discordName) { this.discordName = discordName; }
+    public String getDiscordUserId() { return discordUserId; }
+    public void setDiscordUserId(String discordUserId) { this.discordUserId = discordUserId; }
     public Role getMainRole() { return mainRole; }
     public void setMainRole(Role mainRole) { this.mainRole = mainRole; }
     public Role getSecondaryRole() { return secondaryRole; }

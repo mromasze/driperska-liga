@@ -61,6 +61,9 @@ public final class MatchDtos {
             @NotEmpty String reason) {
     }
 
+    public record ReplacePlayerRequest(@NotNull UUID removedPlayerId,
+                                       @NotNull UUID addedPlayerId) {}
+
     // ---- responses ----
 
     public record BalanceResponse(double blueMmrAvg, double redMmrAvg, double predictedBlueWinPct) {
@@ -111,6 +114,11 @@ public final class MatchDtos {
             String rejectionReason) {
     }
 
+    public record RiotInfoResponse(String tournamentCode, String gameId, String matchId,
+                                   Instant lobbyCreatedAt, Instant callbackReceivedAt,
+                                   Instant resultsImportedAt, String importError) {
+    }
+
     public record MatchResponse(
             UUID id,
             UUID seasonId,
@@ -123,7 +131,8 @@ public final class MatchDtos {
             Instant startedAt,
             Instant completedAt,
             List<ParticipantResponse> participants,
-            ApprovalResponse approval) {
+            ApprovalResponse approval,
+            RiotInfoResponse riot) {
     }
 
     public record MatchSummaryResponse(

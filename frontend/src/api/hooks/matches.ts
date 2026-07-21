@@ -11,6 +11,9 @@ import type {
   MatchesQuery,
   PageResponse,
   RejectRequest,
+  ReplacePlayerRequest,
+  RiotLobbyStatus,
+  DrawLobby,
   SubmitResultsRequest,
 } from '../types';
 
@@ -36,6 +39,8 @@ export function useMatch(id: string | undefined) {
     queryKey: queryKeys.match(id ?? ''),
     queryFn: () => api.get<MatchDetail>(`/matches/${id}`),
     enabled: Boolean(id),
+    refetchInterval: (query) =>
+      query.state.data?.status === 'LIVE' ? 10_000 : false,
   });
 }
 
@@ -130,6 +135,74 @@ export function useRejectMatch(matchId: string) {
   const qc = useQueryClient();
   return useMutation({
     mutationFn: (body: RejectRequest) => api.post<MatchDetail>(`/matches/${matchId}/reject`, body),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: queryKeys.match(matchId) });
+      qc.invalidateQueries({ queryKey: ['matches'] });
+    },
+  });
+}
+
+/** POST /matches/{id}/start ? admin starts the already-created Riot lobby. */
+export function useStartMatch(matchId: string) {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: () => api.post<MatchDetail>(`/matches/${matchId}/start`),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: queryKeys.match(matchId) });
+      qc.invalidateQueries({ queryKey: ['matches'] });
+    },
+  });
+}
+
+/** POST /matches/{id}/start/manual — start without a Riot lobby (manually recorded match). */
+export function useStartMatchManual(matchId: string) {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: () => api.post<MatchDetail>(`/matches/${matchId}/start/manual`),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: queryKeys.match(matchId) });
+      qc.invalidateQueries({ queryKey: ['matches'] });
+    },
+  });
+}
+
+/** GET /matches/{id}/draw-state — live vote tally + teams for the admin panel. */
+export function useMatchDrawState(matchId: string, enabled: boolean) {
+  return useQuery({
+    queryKey: ['matches', matchId, 'draw-state'],
+    queryFn: () => api.get<DrawLobby>(`/matches/${matchId}/draw-state`),
+    enabled,
+    refetchInterval: enabled ? 2_000 : false,
+    retry: false,
+  });
+}
+
+export function useReplaceMatchPlayer(matchId: string) {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (body: ReplacePlayerRequest) =>
+      api.post<MatchDetail>(`/matches/${matchId}/players/replace`, body),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: queryKeys.match(matchId) });
+      qc.invalidateQueries({ queryKey: ['matches'] });
+    },
+  });
+}
+
+export function useRiotLobbyStatus(matchId: string, enabled: boolean) {
+  return useQuery({
+    queryKey: ['matches', matchId, 'riot-lobby'],
+    queryFn: () => api.get<RiotLobbyStatus>(`/matches/${matchId}/riot/lobby`),
+    enabled,
+    refetchInterval: enabled ? 10_000 : false,
+    retry: false,
+  });
+}
+
+export function useImportRiotResults(matchId: string) {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: () => api.post<MatchDetail>(`/matches/${matchId}/riot/import`),
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: queryKeys.match(matchId) });
       qc.invalidateQueries({ queryKey: ['matches'] });

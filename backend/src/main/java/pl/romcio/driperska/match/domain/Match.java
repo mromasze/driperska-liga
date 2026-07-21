@@ -25,6 +25,15 @@ public class Match {
     @Column(name = "created_at", nullable = false) private Instant createdAt = Instant.now();
     @Column(name = "started_at") private Instant startedAt;
     @Column(name = "completed_at") private Instant completedAt;
+    @Column(name = "teams_drawn_at") private Instant teamsDrawnAt;
+    @Column(name = "riot_tournament_code", unique = true) private String riotTournamentCode;
+    @Column(name = "riot_game_id") private String riotGameId;
+    @Column(name = "riot_match_id") private String riotMatchId;
+    @Column(name = "riot_metadata_token", length = 64) private String riotMetadataToken;
+    @Column(name = "riot_lobby_created_at") private Instant riotLobbyCreatedAt;
+    @Column(name = "riot_callback_received_at") private Instant riotCallbackReceivedAt;
+    @Column(name = "riot_results_imported_at") private Instant riotResultsImportedAt;
+    @Column(name = "riot_import_error", columnDefinition = "text") private String riotImportError;
 
     @ElementCollection
     @CollectionTable(name = "match_pool", joinColumns = @JoinColumn(name = "match_id"))
@@ -58,6 +67,36 @@ public class Match {
     }
 
     public void advanceDrawRound() { drawRound++; }
+    public void markRiotLobby(String tournamentCode, String metadataToken) {
+        this.riotTournamentCode = tournamentCode;
+        this.riotMetadataToken = metadataToken;
+        this.riotLobbyCreatedAt = Instant.now();
+        this.riotImportError = null;
+    }
+    public void clearRiotLobby() {
+        this.riotTournamentCode = null;
+        this.riotGameId = null;
+        this.riotMatchId = null;
+        this.riotMetadataToken = null;
+        this.riotLobbyCreatedAt = null;
+        this.riotCallbackReceivedAt = null;
+        this.riotResultsImportedAt = null;
+        this.riotImportError = null;
+    }
+    public void markRiotCallback(String gameId, String matchId) {
+        this.riotGameId = gameId;
+        this.riotMatchId = matchId;
+        this.riotCallbackReceivedAt = Instant.now();
+    }
+    public void markRiotImportSuccess(String matchId) {
+        this.riotMatchId = matchId;
+        this.riotResultsImportedAt = Instant.now();
+        this.riotImportError = null;
+    }
+    public void markRiotImportFailure(String message) {
+        String detail = message == null ? "Nieznany błąd importu Riot" : message;
+        this.riotImportError = detail.substring(0, Math.min(detail.length(), 2000));
+    }
     public UUID getId() { return id; }
     public UUID getSeasonId() { return seasonId; }
     public MatchStatus getStatus() { return status; }
@@ -76,9 +115,19 @@ public class Match {
     public Instant getCreatedAt() { return createdAt; }
     public Instant getStartedAt() { return startedAt; }
     public void setStartedAt(Instant startedAt) { this.startedAt = startedAt; }
+    public Instant getTeamsDrawnAt() { return teamsDrawnAt; }
+    public void setTeamsDrawnAt(Instant teamsDrawnAt) { this.teamsDrawnAt = teamsDrawnAt; }
     public Instant getCompletedAt() { return completedAt; }
     public void setCompletedAt(Instant completedAt) { this.completedAt = completedAt; }
     public List<MatchParticipant> getParticipants() { return participants; }
     public List<UUID> getPoolPlayerIds() { return poolPlayerIds; }
     public void setPoolPlayerIds(List<UUID> poolPlayerIds) { this.poolPlayerIds = new ArrayList<>(poolPlayerIds); }
+    public String getRiotTournamentCode() { return riotTournamentCode; }
+    public String getRiotGameId() { return riotGameId; }
+    public String getRiotMatchId() { return riotMatchId; }
+    public String getRiotMetadataToken() { return riotMetadataToken; }
+    public Instant getRiotLobbyCreatedAt() { return riotLobbyCreatedAt; }
+    public Instant getRiotCallbackReceivedAt() { return riotCallbackReceivedAt; }
+    public Instant getRiotResultsImportedAt() { return riotResultsImportedAt; }
+    public String getRiotImportError() { return riotImportError; }
 }

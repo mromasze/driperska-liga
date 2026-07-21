@@ -20,7 +20,7 @@ services:
     build:
       context: ./backend
       labels:
-        pl.driperska.version: "${APP_VERSION:-0.1.0}"
+        pl.driperska.version: "${APP_VERSION:-0.2.0}"
     restart: unless-stopped
     depends_on:
       db:
@@ -33,6 +33,14 @@ services:
       JWT_SECRET: ${JWT_SECRET:?Set JWT_SECRET in .env}
       MEDIA_DIR: /app/data/media
       DDRAGON_SYNC_ON_STARTUP: "${DDRAGON_SYNC_ON_STARTUP:-true}"
+      RIOT_API_KEY: ${RIOT_API_KEY:-}
+      RIOT_PLATFORM: ${RIOT_PLATFORM:-eun1}
+      RIOT_PROVIDER_REGION: ${RIOT_PROVIDER_REGION:-EUNE}
+      RIOT_REGIONAL_ROUTE: ${RIOT_REGIONAL_ROUTE:-europe}
+      RIOT_CALLBACK_URL: ${RIOT_CALLBACK_URL:-https://driperska.pl/api/v1/riot/tournament/callback}
+      RIOT_MOCK: ${RIOT_MOCK:-false}
+      DISCORD_BOT_TOKEN: ${DISCORD_BOT_TOKEN:-}
+      DISCORD_GUILD_ID: ${DISCORD_GUILD_ID:-}
       APP_PUBLIC_URL: ${APP_PUBLIC_URL:-https://driperska.pl}
       APP_ADMIN_USERNAME: ${APP_ADMIN_USERNAME:-admin}
       APP_ADMIN_EMAIL: ${APP_ADMIN_EMAIL:-admin@driperska.local}
@@ -50,7 +58,7 @@ services:
     build:
       context: ./frontend
       labels:
-        pl.driperska.version: "${APP_VERSION:-0.1.0}"
+        pl.driperska.version: "${APP_VERSION:-0.2.0}"
     restart: unless-stopped
     depends_on:
       backend:

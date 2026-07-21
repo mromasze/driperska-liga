@@ -77,6 +77,15 @@ public class AccountService {
     }
 
     @Transactional
+    public ProvisionedAccount resetTemporaryPassword(UUID accountId) {
+        Account account = get(accountId);
+        String password = randomPassword();
+        account.setPasswordHash(passwordEncoder.encode(password));
+        account.setEnabled(true);
+        return new ProvisionedAccount(account, password);
+    }
+
+    @Transactional
     public Account update(UUID id, UpdateAccountRequest req) {
         Account account = get(id);
         if (req.role() != null) {

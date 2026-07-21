@@ -4,6 +4,7 @@ import { useChampions } from '../../api/hooks/champions';
 import { roleLabel } from '../../lib/format';
 import { cn } from '../../lib/cn';
 import { Button } from '../ui/Button';
+import { ScoringInfo } from '../ScoringInfo';
 
 interface Row {
   championId: number | '';
@@ -29,15 +30,15 @@ const EMPTY: Row = {
   largestMultiKill: 0,
 };
 
-const NUM_FIELDS: { key: keyof Row; label: string }[] = [
-  { key: 'kills', label: 'K' },
-  { key: 'deaths', label: 'D' },
-  { key: 'assists', label: 'A' },
-  { key: 'cs', label: 'CS' },
-  { key: 'gold', label: 'Gold' },
-  { key: 'damageToChampions', label: 'DMG' },
-  { key: 'visionScore', label: 'Vis' },
-  { key: 'largestMultiKill', label: 'Multi' },
+const NUM_FIELDS: { key: keyof Row; label: string; desc: string }[] = [
+  { key: 'kills', label: 'K', desc: 'Zabójstwa (kills)' },
+  { key: 'deaths', label: 'D', desc: 'Śmierci (deaths)' },
+  { key: 'assists', label: 'A', desc: 'Asysty (assists)' },
+  { key: 'cs', label: 'CS', desc: 'Creep Score — zabite stwory i potwory (minony + jungle)' },
+  { key: 'gold', label: 'Gold', desc: 'Złoto zdobyte w meczu' },
+  { key: 'damageToChampions', label: 'DMG', desc: 'Obrażenia zadane bohaterom przeciwnika' },
+  { key: 'visionScore', label: 'Vis', desc: 'Vision Score — wynik wizji (wardy, odsłona i odbieranie wizji)' },
+  { key: 'largestMultiKill', label: 'Multi', desc: 'Największy multi-kill (2=double … 5=pentakill) — bonusy LP za pentę/quadrę' },
 ];
 
 export function ResultsForm({
@@ -175,7 +176,9 @@ export function ResultsForm({
                 <th className="px-2 py-1">Champion</th>
                 {NUM_FIELDS.map((f) => (
                   <th key={f.key} className="px-1 py-1 text-center">
-                    {f.label}
+                    <abbr title={f.desc} className="cursor-help no-underline decoration-dotted underline-offset-2 hover:underline">
+                      {f.label}
+                    </abbr>
                   </th>
                 ))}
               </tr>
@@ -236,6 +239,11 @@ export function ResultsForm({
           </span>
         )}
       </div>
+
+      <p className="text-xs text-text-lo">
+        Najedź na nagłówki kolumn (K / D / A / CS / …), aby zobaczyć, co oznaczają. Poniżej wyjaśnienie punktacji.
+      </p>
+      <ScoringInfo />
     </div>
   );
 }

@@ -36,14 +36,33 @@ management:
 info:
   app:
     name: Driperska Liga
-    version: 0.1
+    version: 0.2
 
 app:
   public-url: ${APP_PUBLIC_URL:https://driperska.pl}
+  riot:
+    api-key: ${RIOT_API_KEY:}
+    platform: ${RIOT_PLATFORM:eun1}
+    provider-region: ${RIOT_PROVIDER_REGION:EUNE}
+    regional-route: ${RIOT_REGIONAL_ROUTE:europe}
+    callback-url: ${RIOT_CALLBACK_URL:}
+    tournament-name: ${RIOT_TOURNAMENT_NAME:Driperska Liga}
+    map-type: SUMMONERS_RIFT
+    pick-type: TOURNAMENT_DRAFT
+    spectator-type: LOBBYONLY
+    team-size: 5
+    # When true, all Riot calls are faked so the full flow can be tested without real accounts.
+    mock: ${RIOT_MOCK:false}
+  discord:
+    bot-token: ${DISCORD_BOT_TOKEN:}
+    guild-id: ${DISCORD_GUILD_ID:}
   jwt:
     secret: ${JWT_SECRET:dev-secret-please-override-with-a-32plus-byte-value!!}
     access-token-minutes: 15
     refresh-token-days: 7
+  draw:
+    # Auto-confirm a drawn squad this many seconds after the draw if voting hasn't resolved. 0 = off.
+    auto-confirm-seconds: ${DRAW_AUTO_CONFIRM_SECONDS:30}
   storage:
     media-dir: ${MEDIA_DIR:./data/media}
     public-base-url: /media

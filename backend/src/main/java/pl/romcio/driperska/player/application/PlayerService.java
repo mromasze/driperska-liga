@@ -14,6 +14,8 @@ import pl.romcio.driperska.account.application.AccountService.ProvisionedAccount
 import pl.romcio.driperska.common.domain.Role;
 import pl.romcio.driperska.common.error.BusinessRuleException;
 import pl.romcio.driperska.common.error.ResourceNotFoundException;
+import pl.romcio.driperska.integration.discord.DiscordClient;
+import pl.romcio.driperska.integration.discord.DiscordClient.Delivery;
 import pl.romcio.driperska.player.api.PlayerDtos.*;
 import pl.romcio.driperska.player.domain.Player;
 import pl.romcio.driperska.player.infra.PlayerRepository;
@@ -23,14 +25,16 @@ public class PlayerService {
     private final PlayerRepository repository;
     private final AvatarStorage avatarStorage;
     private final AccountService accountService;
+    private final DiscordClient discordClient;
     private final String publicUrl;
 
     public PlayerService(PlayerRepository repository, AvatarStorage avatarStorage,
-                         AccountService accountService,
+                         AccountService accountService, DiscordClient discordClient,
                          @Value("${app.public-url:https://driperska.pl}") String publicUrl) {
         this.repository = repository;
         this.avatarStorage = avatarStorage;
         this.accountService = accountService;
+        this.discordClient = discordClient;
         this.publicUrl = publicUrl.replaceAll("/$", "");
     }
 
@@ -61,7 +65,7 @@ public class PlayerService {
         if (repository.existsByNicknameIgnoreCase(req.nickname())) {
             throw new BusinessRuleException("Gracz o takim nicku już istnieje");
         }
-        Player player = new Player(req.nickname(), req.mainRole());
+        Player player = new Player(req.nickname(), req.mainRole(), req.discordName().trim());
         player.setSecondaryRole(req.secondaryRole());
         player.setRealName(req.realName());
         player.setRiotId(req.riotId());
@@ -86,6 +90,19 @@ public class PlayerService {
     private CreatedPlayerResponse provision(Player player) {
         ProvisionedAccount provisioned = accountService.provisionPlayer(player.getNickname());
         player.setAccountId(provisioned.account().getId());
+        return deliver(player, provisioned);
+    }
+
+    @Transactional
+    public CreatedPlayerResponse resendCredentials(UUID playerId) {
+        Player player = get(playerId);
+        if (player.getAccountId() == null) {
+            throw new BusinessRuleException("Ten gracz nie ma konta logowania");
+        }
+        return deliver(player, accountService.resetTemporaryPassword(player.getAccountId()));
+    }
+
+    private CreatedPlayerResponse deliver(Player player, ProvisionedAccount provisioned) {
         String loginUrl = publicUrl + "/login";
         String template = "Siema! Twoje konto Driperskiej Ligi jest gotowe 🎮\n\n"
                 + "Strona: " + loginUrl + "\n"
@@ -94,7 +111,13 @@ public class PlayerService {
                 + "Po zalogowaniu możesz uzupełnić profil i głosować podczas losowania drużyn.";
         LoginCredentials credentials = new LoginCredentials(
                 player.getNickname(), provisioned.temporaryPassword(), loginUrl, template);
-        return new CreatedPlayerResponse(PlayerResponse.from(player), credentials);
+        Delivery delivery = discordClient.sendLoginMessage(
+                player.getDiscordName(), player.getDiscordUserId(), template);
+        if (delivery.sent() && delivery.discordUserId() != null) {
+            player.setDiscordUserId(delivery.discordUserId());
+        }
+        return new CreatedPlayerResponse(PlayerResponse.from(player), credentials,
+                new DiscordDelivery(delivery.sent(), delivery.message()));
     }
 
     @Transactional
@@ -107,6 +130,11 @@ public class PlayerService {
         if (req.riotId() != null) player.setRiotId(req.riotId());
         if (req.bio() != null) player.setBio(req.bio());
         if (req.opggLink() != null) player.setOpggLink(req.opggLink());
+        if (StringUtils.hasText(req.discordName())
+                && !req.discordName().trim().equalsIgnoreCase(player.getDiscordName())) {
+            player.setDiscordName(req.discordName().trim());
+            player.setDiscordUserId(null);
+        }
         if (req.favoriteChampionIds() != null) player.setFavoriteChampionIds(req.favoriteChampionIds());
         if (req.active() != null) player.setActive(req.active());
         return player;

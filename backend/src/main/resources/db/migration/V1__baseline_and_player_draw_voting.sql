@@ -1,4 +1,4 @@
--- Driperska Liga v0.1
+-- Driperska Liga v0.2 (merged baseline; the database is intentionally empty pre-release)
 -- Idempotent baseline: safe both for a fresh database and for the existing
 -- Hibernate-managed schema. Flyway baselines an existing schema at version 0,
 -- then applies this migration without dropping or rewriting user data.
@@ -19,6 +19,10 @@ CREATE TABLE IF NOT EXISTS player (
     nickname varchar(255) NOT NULL,
     real_name varchar(255),
     riot_id varchar(255),
+    riot_puuid varchar(128),
+    riot_summoner_id varchar(128),
+    discord_name varchar(80) NOT NULL,
+    discord_user_id varchar(32),
     main_role varchar(32),
     secondary_role varchar(32),
     avatar_url varchar(255),
@@ -63,7 +67,26 @@ CREATE TABLE IF NOT EXISTS match_game (
     created_by uuid NOT NULL,
     created_at timestamptz NOT NULL,
     started_at timestamptz,
-    completed_at timestamptz
+    completed_at timestamptz,
+    teams_drawn_at timestamptz,
+    riot_tournament_code varchar(255),
+    riot_game_id varchar(128),
+    riot_match_id varchar(128),
+    riot_metadata_token varchar(64),
+    riot_lobby_created_at timestamptz,
+    riot_callback_received_at timestamptz,
+    riot_results_imported_at timestamptz,
+    riot_import_error text
+);
+
+CREATE TABLE IF NOT EXISTS riot_tournament_registration (
+    id uuid PRIMARY KEY,
+    key_fingerprint varchar(64) NOT NULL,
+    platform varchar(16) NOT NULL,
+    callback_url varchar(500) NOT NULL,
+    provider_id bigint NOT NULL,
+    tournament_id bigint NOT NULL,
+    created_at timestamptz NOT NULL
 );
 
 CREATE TABLE IF NOT EXISTS match_pool (
@@ -151,6 +174,10 @@ CREATE UNIQUE INDEX IF NOT EXISTS ux_account_username ON account (username);
 CREATE UNIQUE INDEX IF NOT EXISTS ux_account_email ON account (email);
 CREATE UNIQUE INDEX IF NOT EXISTS ux_player_nickname ON player (nickname);
 CREATE UNIQUE INDEX IF NOT EXISTS ux_player_account ON player (account_id) WHERE account_id IS NOT NULL;
+CREATE UNIQUE INDEX IF NOT EXISTS ux_player_discord_user ON player (discord_user_id) WHERE discord_user_id IS NOT NULL;
+CREATE UNIQUE INDEX IF NOT EXISTS ux_match_riot_code ON match_game (riot_tournament_code) WHERE riot_tournament_code IS NOT NULL;
+CREATE UNIQUE INDEX IF NOT EXISTS ux_riot_registration_key
+    ON riot_tournament_registration (key_fingerprint, platform, callback_url);
 CREATE UNIQUE INDEX IF NOT EXISTS ux_match_approval_match ON match_approval (match_id);
 CREATE UNIQUE INDEX IF NOT EXISTS ux_player_season ON player_season_stats (player_id, season_id);
 CREATE UNIQUE INDEX IF NOT EXISTS ux_draw_vote_round_player

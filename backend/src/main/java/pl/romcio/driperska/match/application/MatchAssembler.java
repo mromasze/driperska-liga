@@ -12,6 +12,7 @@ import pl.romcio.driperska.match.api.MatchDtos.ApprovalResponse;
 import pl.romcio.driperska.match.api.MatchDtos.MatchResponse;
 import pl.romcio.driperska.match.api.MatchDtos.MatchSummaryResponse;
 import pl.romcio.driperska.match.api.MatchDtos.ParticipantResponse;
+import pl.romcio.driperska.match.api.MatchDtos.RiotInfoResponse;
 import pl.romcio.driperska.match.domain.Match;
 import pl.romcio.driperska.match.domain.MatchApproval;
 import pl.romcio.driperska.match.domain.MatchParticipant;
@@ -57,7 +58,11 @@ public class MatchAssembler {
                 match.getId(), match.getSeasonId(), match.getStatus(), match.getDrawMode(),
                 match.getWinningSide(), match.getDurationSeconds(), match.getPatch(),
                 match.getCreatedAt(), match.getStartedAt(), match.getCompletedAt(),
-                participants, approval);
+                participants, approval,
+                new RiotInfoResponse(match.getRiotTournamentCode(), match.getRiotGameId(),
+                        match.getRiotMatchId(), match.getRiotLobbyCreatedAt(),
+                        match.getRiotCallbackReceivedAt(), match.getRiotResultsImportedAt(),
+                        match.getRiotImportError()));
     }
 
     public MatchSummaryResponse toSummary(Match match) {

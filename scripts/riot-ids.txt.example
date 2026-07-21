@@ -1,0 +1,9 @@
+# Optional: real, resolvable Riot IDs for the 9 bots, one per line, in order.
+# Copy to scripts/riot-ids.txt and fill in. Required only if you want the squad
+# confirmation (6th ACCEPT) to actually create the Riot tournament lobby —
+# the backend resolves every player's PUUID at that step.
+# Format: GameName#TAG
+#
+# Bot1Name#EUW
+# Bot2Name#EUW
+# ...

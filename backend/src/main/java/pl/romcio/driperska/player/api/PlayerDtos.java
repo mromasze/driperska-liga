@@ -14,12 +14,13 @@ public final class PlayerDtos {
 
     public record PlayerResponse(
             UUID id, String nickname, String realName, String riotId,
+            String discordName,
             Role mainRole, Role secondaryRole, String avatarUrl, String bio,
             String opggLink, List<Integer> favoriteChampionIds,
             boolean accountProvisioned, boolean active, Instant joinedAt) {
         public static PlayerResponse from(Player p) {
             return new PlayerResponse(p.getId(), p.getNickname(), p.getRealName(), p.getRiotId(),
-                    p.getMainRole(), p.getSecondaryRole(), p.getAvatarUrl(), p.getBio(),
+                    p.getDiscordName(), p.getMainRole(), p.getSecondaryRole(), p.getAvatarUrl(), p.getBio(),
                     p.getOpggLink(), List.copyOf(p.getFavoriteChampionIds()),
                     p.getAccountId() != null, p.isActive(), p.getJoinedAt());
         }
@@ -28,13 +29,15 @@ public final class PlayerDtos {
     public record CreatePlayerRequest(
             @NotBlank @Size(min = 2, max = 40) String nickname,
             @NotNull Role mainRole, Role secondaryRole,
-            String realName, String riotId, String bio) {}
+            String realName, String riotId, String bio,
+            @NotBlank @Size(max = 80) String discordName) {}
 
     public record UpdatePlayerRequest(
             @Size(min = 2, max = 40) String nickname,
             Role mainRole, Role secondaryRole, String realName, String riotId, String bio,
             @Size(max = 500) String opggLink,
             @Size(max = 5) List<Integer> favoriteChampionIds,
+            @Size(max = 80) String discordName,
             Boolean active) {}
 
     public record SelfUpdatePlayerRequest(
@@ -46,5 +49,7 @@ public final class PlayerDtos {
 
     public record LoginCredentials(
             String login, String temporaryPassword, String loginUrl, String messageTemplate) {}
-    public record CreatedPlayerResponse(PlayerResponse player, LoginCredentials credentials) {}
+    public record DiscordDelivery(boolean sent, String message) {}
+    public record CreatedPlayerResponse(PlayerResponse player, LoginCredentials credentials,
+                                        DiscordDelivery discordDelivery) {}
 }

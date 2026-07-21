@@ -51,13 +51,34 @@ public class DrawLobbyService {
         return match;
     }
 
+    /** Auto-confirms a draw that has been sitting unvoted past the timeout. No-op if it already moved on. */
+    @Transactional
+    public void autoConfirm(UUID matchId) {
+        Match current = matchRepository.findById(matchId).orElse(null);
+        if (current == null || current.getStatus() != MatchStatus.TEAMS_DRAWN) {
+            return;
+        }
+        Match match = drawService.confirm(matchId, current.getCreatedBy());
+        publish(match);
+    }
+
     @Transactional(readOnly = true)
     public DrawLobbyResponse active(UUID accountId) {
         Player player = playerRepository.findByAccountId(accountId)
                 .orElseThrow(() -> new BusinessRuleException("Konto nie jest połączone z graczem"));
-        return matchRepository.findForPlayerAndStatus(
-                        player.getId(), MatchStatus.TEAMS_DRAWN, PageRequest.of(0, 1))
+        return matchRepository.findForPlayerAndStatuses(player.getId(),
+                        EnumSet.of(MatchStatus.TEAMS_DRAWN, MatchStatus.LOBBY_READY,
+                                MatchStatus.LIVE, MatchStatus.RESULTS_SUBMITTED, MatchStatus.REJECTED),
+                        PageRequest.of(0, 1))
                 .stream().findFirst().map(this::toResponse).orElse(null);
+    }
+
+    /** Draw state (vote tally + teams) for a specific match — used by the admin control panel. */
+    @Transactional(readOnly = true)
+    public DrawLobbyResponse stateForMatch(UUID matchId) {
+        Match match = matchRepository.findById(matchId)
+                .orElseThrow(() -> ResourceNotFoundException.of("Match", matchId));
+        return toResponse(match);
     }
 
     @Transactional
@@ -111,10 +132,16 @@ public class DrawLobbyService {
         return new DrawLobbyResponse(match.getId(), match.getStatus(), match.getDrawRound(),
                 REQUIRED_ACCEPTS, accepted.size(), rejected.size(), accepted, rejected,
                 slots.stream().filter(p -> p.side() == Side.BLUE).toList(),
-                slots.stream().filter(p -> p.side() == Side.RED).toList(), Instant.now());
+                slots.stream().filter(p -> p.side() == Side.RED).toList(), Instant.now(),
+                match.getRiotTournamentCode(), match.getRiotImportError());
     }
 
     private void publish(Match match) { publish(match, toResponse(match)); }
+
+    /** Reloads the match inside a transaction so lazy collections resolve, then broadcasts over SSE. */
+    @Transactional
+    public void publishUpdate(UUID matchId) { publish(matchService.get(matchId)); }
+
     private void publish(Match match, DrawLobbyResponse response) {
         List<UUID> accountIds = playerRepository.findByIdIn(match.getPoolPlayerIds())
                 .stream().map(Player::getAccountId).filter(Objects::nonNull).toList();

@@ -9,6 +9,9 @@ import pl.romcio.driperska.common.domain.Side;
 import pl.romcio.driperska.common.error.ResourceNotFoundException;
 import pl.romcio.driperska.common.security.CurrentAccount;
 import pl.romcio.driperska.common.web.PageResponse;
+import pl.romcio.driperska.integration.riot.RiotLobbyDtos.LobbyStatusResponse;
+import pl.romcio.driperska.integration.riot.RiotResultImportService;
+import pl.romcio.driperska.integration.riot.TournamentMatchService;
 import pl.romcio.driperska.match.api.MatchDtos.*;
 import pl.romcio.driperska.match.application.*;
 import pl.romcio.driperska.match.application.DrawService.DrawResult;
@@ -23,15 +26,20 @@ public class MatchController {
     private final ResultService resultService;
     private final ApprovalService approvalService;
     private final MatchAssembler assembler;
+    private final TournamentMatchService tournamentMatchService;
+    private final RiotResultImportService riotResultImportService;
 
     public MatchController(MatchService matchService, DrawLobbyService drawLobbyService,
                            ResultService resultService, ApprovalService approvalService,
-                           MatchAssembler assembler) {
+                           MatchAssembler assembler, TournamentMatchService tournamentMatchService,
+                           RiotResultImportService riotResultImportService) {
         this.matchService = matchService;
         this.drawLobbyService = drawLobbyService;
         this.resultService = resultService;
         this.approvalService = approvalService;
         this.assembler = assembler;
+        this.tournamentMatchService = tournamentMatchService;
+        this.riotResultImportService = riotResultImportService;
     }
 
     @GetMapping
@@ -80,6 +88,53 @@ public class MatchController {
     public MatchResponse confirmDraw(@PathVariable UUID id) {
         return assembler.toResponse(drawLobbyService.adminConfirm(
                 id, CurrentAccount.require().accountId()));
+    }
+
+    @PostMapping("/{id}/start")
+    @PreAuthorize("hasRole('ADMIN')")
+    public MatchResponse start(@PathVariable UUID id) {
+        Match match = tournamentMatchService.start(id, CurrentAccount.require().accountId());
+        drawLobbyService.publishUpdate(id);
+        return assembler.toResponse(match);
+    }
+
+    @PostMapping("/{id}/start/manual")
+    @PreAuthorize("hasAnyRole('ADMIN','EDITOR')")
+    public MatchResponse startManual(@PathVariable UUID id) {
+        Match match = tournamentMatchService.startManual(id, CurrentAccount.require().accountId());
+        drawLobbyService.publishUpdate(id);
+        return assembler.toResponse(match);
+    }
+
+    /** Live draw/vote state for the admin panel (vote tally + teams). */
+    @GetMapping("/{id}/draw-state")
+    @PreAuthorize("hasAnyRole('ADMIN','EDITOR')")
+    public pl.romcio.driperska.match.api.DrawLobbyDtos.DrawLobbyResponse drawState(@PathVariable UUID id) {
+        return drawLobbyService.stateForMatch(id);
+    }
+
+    @PostMapping("/{id}/players/replace")
+    @PreAuthorize("hasRole('ADMIN')")
+    public MatchResponse replacePlayer(@PathVariable UUID id,
+                                       @Valid @RequestBody ReplacePlayerRequest req) {
+        Match match = tournamentMatchService.replacePlayer(id, req.removedPlayerId(),
+                req.addedPlayerId(), CurrentAccount.require().accountId());
+        drawLobbyService.publishUpdate(id);
+        return assembler.toResponse(match);
+    }
+
+    @GetMapping("/{id}/riot/lobby")
+    @PreAuthorize("hasAnyRole('ADMIN','EDITOR')")
+    public LobbyStatusResponse riotLobby(@PathVariable UUID id) {
+        return tournamentMatchService.lobbyStatus(id);
+    }
+
+    @PostMapping("/{id}/riot/import")
+    @PreAuthorize("hasRole('ADMIN')")
+    public MatchResponse importRiotResults(@PathVariable UUID id) {
+        Match match = riotResultImportService.importNow(id);
+        drawLobbyService.publishUpdate(id);
+        return assembler.toResponse(match);
     }
 
     @PostMapping("/{id}/results")
