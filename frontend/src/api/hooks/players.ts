@@ -3,23 +3,26 @@ import { api } from '../client';
 import { queryKeys } from '../queryKeys';
 import type {
   CreatePlayerRequest,
-  MatchSummary,
   PageResponse,
   Player,
+  PlayerMatchEntry,
   PlayersQuery,
   PlayerStats,
+  UpdatePlayerRequest,
 } from '../types';
 
-/** GET /players */
+/** GET /players (paginated). */
 export function usePlayers(query?: PlayersQuery) {
   return useQuery({
     queryKey: queryKeys.players(query),
     queryFn: () =>
-      api.get<Player[]>('/players', {
+      api.get<PageResponse<Player>>('/players', {
         query: {
           active: query?.active,
           role: query?.role,
           search: query?.search,
+          page: query?.page,
+          size: query?.size ?? 100,
         },
       }),
   });
@@ -43,12 +46,11 @@ export function usePlayerStats(id: string | undefined, season?: string) {
   });
 }
 
-/** GET /players/{id}/matches (paginated) */
-export function usePlayerMatches(id: string | undefined, page = 0, size = 10) {
+/** GET /players/{id}/matches — approved match history (flat list). */
+export function usePlayerMatches(id: string | undefined) {
   return useQuery({
-    queryKey: queryKeys.playerMatches(id ?? '', page),
-    queryFn: () =>
-      api.get<PageResponse<MatchSummary>>(`/players/${id}/matches`, { query: { page, size } }),
+    queryKey: queryKeys.playerMatches(id ?? ''),
+    queryFn: () => api.get<PlayerMatchEntry[]>(`/players/${id}/matches`),
     enabled: Boolean(id),
   });
 }
@@ -59,6 +61,19 @@ export function useCreatePlayer() {
   return useMutation({
     mutationFn: (body: CreatePlayerRequest) => api.post<Player>('/players', body),
     onSuccess: () => qc.invalidateQueries({ queryKey: ['players'] }),
+  });
+}
+
+/** PATCH /players/{id} (ADMIN/EDITOR) */
+export function useUpdatePlayer() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: ({ id, body }: { id: string; body: UpdatePlayerRequest }) =>
+      api.patch<Player>(`/players/${id}`, body),
+    onSuccess: (_data, variables) => {
+      qc.invalidateQueries({ queryKey: ['players'] });
+      qc.invalidateQueries({ queryKey: queryKeys.player(variables.id) });
+    },
   });
 }
 

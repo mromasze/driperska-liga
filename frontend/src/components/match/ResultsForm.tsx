@@ -1,242 +1,241 @@
-import { useForm, useFieldArray } from 'react-hook-form';
-import { zodResolver } from '@hookform/resolvers/zod';
-import { z } from 'zod';
-import type { Champion, MatchParticipant, SubmitResultsRequest } from '../../api/types';
-import { Card, CardBody, CardHeader, CardTitle } from '../ui/Card';
-import { Button } from '../ui/Button';
+import { useMemo, useState } from 'react';
+import type { MatchDetail, Side, SubmitResultsRequest } from '../../api/types';
+import { useChampions } from '../../api/hooks/champions';
 import { roleLabel } from '../../lib/format';
 import { cn } from '../../lib/cn';
+import { Button } from '../ui/Button';
 
-/**
- * Results-entry form skeleton (docs/06 §6.7): React Hook Form + Zod with the
- * same client-side rules as the backend — 10 participants (5 BLUE + 5 RED) and
- * non-negative stats — validated before submit.
- */
-const participantSchema = z.object({
-  playerId: z.string(),
-  nickname: z.string(),
-  side: z.enum(['BLUE', 'RED']),
-  role: z.enum(['TOP', 'JUNGLE', 'MID', 'ADC', 'SUPPORT']),
-  championId: z.number({ invalid_type_error: 'Wybierz' }).int().positive('Wybierz championa'),
-  kills: z.number({ invalid_type_error: 'liczba' }).int().min(0),
-  deaths: z.number({ invalid_type_error: 'liczba' }).int().min(0),
-  assists: z.number({ invalid_type_error: 'liczba' }).int().min(0),
-  cs: z.number({ invalid_type_error: 'liczba' }).int().min(0),
-  gold: z.number({ invalid_type_error: 'liczba' }).int().min(0),
-  damageToChampions: z.number({ invalid_type_error: 'liczba' }).int().min(0),
-  visionScore: z.number({ invalid_type_error: 'liczba' }).int().min(0),
-  largestMultiKill: z.number({ invalid_type_error: 'liczba' }).int().min(0).max(5),
-});
-
-const resultsSchema = z
-  .object({
-    winningSide: z.enum(['BLUE', 'RED']),
-    durationSeconds: z.number({ invalid_type_error: 'liczba' }).int().positive('Podaj czas gry'),
-    patch: z.string().min(1, 'Podaj patch'),
-    participants: z.array(participantSchema).length(10, 'Wymaganych jest 10 uczestników'),
-  })
-  .refine(
-    (data) =>
-      data.participants.filter((p) => p.side === 'BLUE').length === 5 &&
-      data.participants.filter((p) => p.side === 'RED').length === 5,
-    { message: 'Wymagane 5 BLUE + 5 RED', path: ['participants'] },
-  );
-
-export type ResultsFormValues = z.infer<typeof resultsSchema>;
-
-export interface ResultsFormProps {
-  participants: MatchParticipant[];
-  champions: Champion[];
-  onSubmit: (payload: SubmitResultsRequest) => void;
-  isSubmitting?: boolean;
+interface Row {
+  championId: number | '';
+  kills: number;
+  deaths: number;
+  assists: number;
+  cs: number;
+  gold: number;
+  damageToChampions: number;
+  visionScore: number;
+  largestMultiKill: number;
 }
 
-function toDefaults(participants: MatchParticipant[]): ResultsFormValues {
-  return {
-    winningSide: 'BLUE',
-    durationSeconds: 1800,
-    patch: '',
-    participants: participants.map((p) => ({
-      playerId: p.playerId,
-      nickname: p.nickname,
-      side: p.side,
-      role: p.role,
-      championId: p.championId || 0,
-      kills: p.kills || 0,
-      deaths: p.deaths || 0,
-      assists: p.assists || 0,
-      cs: p.cs || 0,
-      gold: p.gold || 0,
-      damageToChampions: p.damageToChampions || 0,
-      visionScore: p.visionScore || 0,
-      largestMultiKill: p.largestMultiKill || 0,
-    })),
-  };
-}
+const EMPTY: Row = {
+  championId: '',
+  kills: 0,
+  deaths: 0,
+  assists: 0,
+  cs: 0,
+  gold: 0,
+  damageToChampions: 0,
+  visionScore: 0,
+  largestMultiKill: 0,
+};
 
-const STAT_FIELDS = [
+const NUM_FIELDS: { key: keyof Row; label: string }[] = [
   { key: 'kills', label: 'K' },
   { key: 'deaths', label: 'D' },
   { key: 'assists', label: 'A' },
   { key: 'cs', label: 'CS' },
   { key: 'gold', label: 'Gold' },
-  { key: 'damageToChampions', label: 'Dmg' },
+  { key: 'damageToChampions', label: 'DMG' },
   { key: 'visionScore', label: 'Vis' },
-  { key: 'largestMultiKill', label: 'MK' },
-] as const;
+  { key: 'largestMultiKill', label: 'Multi' },
+];
 
-export function ResultsForm({ participants, champions, onSubmit, isSubmitting }: ResultsFormProps) {
-  const {
-    control,
-    register,
-    handleSubmit,
-    watch,
-    formState: { errors },
-  } = useForm<ResultsFormValues>({
-    resolver: zodResolver(resultsSchema),
-    defaultValues: toDefaults(participants),
-  });
+export function ResultsForm({
+  match,
+  submitting,
+  onSubmit,
+}: {
+  match: MatchDetail;
+  submitting?: boolean;
+  onSubmit: (req: SubmitResultsRequest) => void;
+}) {
+  const champions = useChampions();
+  const [winningSide, setWinningSide] = useState<Side | ''>(match.winningSide ?? '');
+  const [duration, setDuration] = useState<number>(match.durationSeconds ?? 1800);
+  const [patch, setPatch] = useState<string>(match.patch ?? '');
+  const [rows, setRows] = useState<Record<string, Row>>(() =>
+    Object.fromEntries(
+      match.participants.map((p) => [
+        p.playerId,
+        {
+          ...EMPTY,
+          championId: p.championId ?? '',
+          kills: p.kills,
+          deaths: p.deaths,
+          assists: p.assists,
+          cs: p.cs,
+          gold: p.gold,
+          damageToChampions: p.damageToChampions,
+          visionScore: p.visionScore,
+          largestMultiKill: p.largestMultiKill,
+        },
+      ]),
+    ),
+  );
 
-  const { fields } = useFieldArray({ control, name: 'participants' });
+  const championOptions = useMemo(
+    () => (champions.data ?? []).slice().sort((a, b) => a.name.localeCompare(b.name)),
+    [champions.data],
+  );
 
-  const submit = handleSubmit((values) => {
-    const payload: SubmitResultsRequest = {
-      winningSide: values.winningSide,
-      durationSeconds: values.durationSeconds,
-      patch: values.patch,
-      participants: values.participants.map((p) => ({
-        playerId: p.playerId,
-        side: p.side,
-        role: p.role,
-        championId: p.championId,
-        kills: p.kills,
-        deaths: p.deaths,
-        assists: p.assists,
-        cs: p.cs,
-        gold: p.gold,
-        damageToChampions: p.damageToChampions,
-        visionScore: p.visionScore,
-        largestMultiKill: p.largestMultiKill,
-      })),
-    };
-    onSubmit(payload);
-  });
+  const setField = (playerId: string, key: keyof Row, value: number | '') => {
+    setRows((prev) => ({ ...prev, [playerId]: { ...prev[playerId], [key]: value } }));
+  };
 
-  const watched = watch('participants');
+  const allChampionsPicked = match.participants.every((p) => rows[p.playerId]?.championId !== '');
+  const canSubmit = winningSide !== '' && duration > 0 && allChampionsPicked;
+
+  const submit = () => {
+    if (!canSubmit) return;
+    onSubmit({
+      winningSide: winningSide as Side,
+      durationSeconds: duration,
+      patch,
+      participants: match.participants.map((p) => {
+        const r = rows[p.playerId];
+        return {
+          playerId: p.playerId,
+          role: p.role,
+          championId: r.championId as number,
+          kills: r.kills,
+          deaths: r.deaths,
+          assists: r.assists,
+          cs: r.cs,
+          gold: r.gold,
+          damageToChampions: r.damageToChampions,
+          visionScore: r.visionScore,
+          largestMultiKill: r.largestMultiKill,
+        };
+      }),
+    });
+  };
 
   return (
-    <Card>
-      <CardHeader>
-        <CardTitle>Wpisz wyniki</CardTitle>
-      </CardHeader>
-      <CardBody>
-        <form onSubmit={submit} className="space-y-4" noValidate>
-          <div className="flex flex-wrap items-end gap-4">
-            <label className="text-sm">
-              <span className="mb-1 block text-xs uppercase tracking-wide text-text-lo">
-                Zwycięska strona
-              </span>
-              <select {...register('winningSide')} className={inputClass}>
-                <option value="BLUE">Niebiescy</option>
-                <option value="RED">Czerwoni</option>
-              </select>
-            </label>
-            <label className="text-sm">
-              <span className="mb-1 block text-xs uppercase tracking-wide text-text-lo">
-                Czas gry (s)
-              </span>
-              <input
-                type="number"
-                {...register('durationSeconds', { valueAsNumber: true })}
-                className={cn(inputClass, 'w-28')}
-              />
-            </label>
-            <label className="text-sm">
-              <span className="mb-1 block text-xs uppercase tracking-wide text-text-lo">Patch</span>
-              <input {...register('patch')} placeholder="14.13" className={cn(inputClass, 'w-28')} />
-            </label>
+    <div className="space-y-5">
+      <div className="panel flex flex-wrap items-end gap-4 p-4">
+        <div>
+          <span className="kicker">Zwycięska strona</span>
+          <div className="mt-1 flex gap-2">
+            {(['BLUE', 'RED'] as Side[]).map((s) => (
+              <button
+                key={s}
+                onClick={() => setWinningSide(s)}
+                className={cn(
+                  'h-10 rounded-md border px-4 text-sm font-semibold',
+                  winningSide === s
+                    ? 'text-text-hi'
+                    : 'border-line text-text-lo hover:text-text',
+                )}
+                style={
+                  winningSide === s
+                    ? {
+                        borderColor: s === 'BLUE' ? 'var(--blue)' : 'var(--red)',
+                        background: s === 'BLUE' ? 'var(--blue-bg)' : 'var(--red-bg)',
+                      }
+                    : undefined
+                }
+              >
+                {s === 'BLUE' ? 'Niebiescy' : 'Czerwoni'}
+              </button>
+            ))}
           </div>
+        </div>
+        <label>
+          <span className="kicker">Czas gry (s)</span>
+          <input
+            type="number"
+            value={duration}
+            onChange={(e) => setDuration(Number(e.target.value))}
+            className="mt-1 h-10 w-28 rounded-md border border-line bg-bg-1 px-3 text-text-hi"
+          />
+        </label>
+        <label>
+          <span className="kicker">Patch</span>
+          <input
+            value={patch}
+            onChange={(e) => setPatch(e.target.value)}
+            placeholder="14.13"
+            className="mt-1 h-10 w-24 rounded-md border border-line bg-bg-1 px-3 text-text-hi placeholder:text-text-lo"
+          />
+        </label>
+      </div>
 
-          {errors.participants?.message && (
-            <p className="text-sm text-loss">{errors.participants.message}</p>
-          )}
-          {(errors.durationSeconds || errors.patch) && (
-            <p className="text-sm text-loss">
-              {errors.durationSeconds?.message ?? errors.patch?.message}
-            </p>
-          )}
-
-          <div className="overflow-x-auto">
-            <table className="w-full min-w-[720px] text-sm">
-              <thead>
-                <tr className="border-b border-line text-xs uppercase text-text-lo">
-                  <th className="px-2 py-1 text-left">Gracz</th>
-                  <th className="px-2 py-1 text-left">Champion</th>
-                  {STAT_FIELDS.map((f) => (
-                    <th key={f.key} className="px-1 py-1 text-right">
-                      {f.label}
-                    </th>
-                  ))}
-                </tr>
-              </thead>
-              <tbody>
-                {fields.map((field, index) => {
-                  const side = watched?.[index]?.side ?? 'BLUE';
+      {(['BLUE', 'RED'] as Side[]).map((side) => (
+        <div key={side} className="glass overflow-x-auto p-3">
+          <div
+            className="mb-2 font-display font-semibold"
+            style={{ color: side === 'BLUE' ? 'var(--blue)' : 'var(--red)' }}
+          >
+            {side === 'BLUE' ? 'Niebiescy' : 'Czerwoni'}
+          </div>
+          <table className="w-full min-w-[720px] text-sm">
+            <thead>
+              <tr className="kicker text-left">
+                <th className="px-2 py-1">Gracz</th>
+                <th className="px-2 py-1">Champion</th>
+                {NUM_FIELDS.map((f) => (
+                  <th key={f.key} className="px-1 py-1 text-center">
+                    {f.label}
+                  </th>
+                ))}
+              </tr>
+            </thead>
+            <tbody>
+              {match.participants
+                .filter((p) => p.side === side)
+                .map((p) => {
+                  const r = rows[p.playerId];
                   return (
-                    <tr
-                      key={field.id}
-                      className="border-b border-line/50"
-                      style={{
-                        backgroundColor: side === 'BLUE' ? 'var(--blue-bg)' : 'var(--red-bg)',
-                      }}
-                    >
-                      <td className="px-2 py-1">
-                        <span className="block text-text-hi">
-                          {watched?.[index]?.nickname ?? `#${index + 1}`}
-                        </span>
-                        <span className="text-xs text-text-lo">
-                          {roleLabel(watched?.[index]?.role ?? 'MID')}
-                        </span>
+                    <tr key={p.playerId} className="border-t border-line">
+                      <td className="px-2 py-1.5">
+                        <div className="font-medium text-text-hi">{p.nickname}</div>
+                        <div className="kicker">{roleLabel(p.role)}</div>
                       </td>
-                      <td className="px-2 py-1">
+                      <td className="px-2 py-1.5">
                         <select
-                          {...register(`participants.${index}.championId`, { valueAsNumber: true })}
-                          className={cn(inputClass, 'w-36')}
+                          value={r.championId}
+                          onChange={(e) =>
+                            setField(p.playerId, 'championId', e.target.value ? Number(e.target.value) : '')
+                          }
+                          className="h-8 w-36 rounded border border-line bg-bg-1 px-2 text-text-hi"
                         >
-                          <option value={0}>—</option>
-                          {champions.map((c) => (
+                          <option value="">—</option>
+                          {championOptions.map((c) => (
                             <option key={c.id} value={c.id}>
                               {c.name}
                             </option>
                           ))}
                         </select>
                       </td>
-                      {STAT_FIELDS.map((f) => (
-                        <td key={f.key} className="px-1 py-1 text-right">
+                      {NUM_FIELDS.map((f) => (
+                        <td key={f.key} className="px-1 py-1.5">
                           <input
                             type="number"
-                            {...register(`participants.${index}.${f.key}`, {
-                              valueAsNumber: true,
-                            })}
-                            className={cn(inputClass, 'w-16 text-right')}
+                            min={0}
+                            value={r[f.key] as number}
+                            onChange={(e) => setField(p.playerId, f.key, Math.max(0, Number(e.target.value)))}
+                            className="num h-8 w-16 rounded border border-line bg-bg-1 px-2 text-center text-text-hi"
                           />
                         </td>
                       ))}
                     </tr>
                   );
                 })}
-              </tbody>
-            </table>
-          </div>
+            </tbody>
+          </table>
+        </div>
+      ))}
 
-          <Button type="submit" variant="gold" disabled={isSubmitting}>
-            {isSubmitting ? 'Zapisywanie…' : 'Zapisz wyniki'}
-          </Button>
-        </form>
-      </CardBody>
-    </Card>
+      <div className="flex items-center gap-3">
+        <Button variant="gold" disabled={!canSubmit || submitting} onClick={submit}>
+          {submitting ? 'Wysyłanie…' : 'Wyślij do akceptacji'}
+        </Button>
+        {!canSubmit && (
+          <span className="text-xs text-text-lo">
+            Uzupełnij zwycięską stronę i wszystkich championów.
+          </span>
+        )}
+      </div>
+    </div>
   );
 }
-
-const inputClass =
-  'rounded-sm border border-line bg-bg-0 px-2 py-1 text-sm text-text-hi outline-none focus:border-[var(--gold)]';

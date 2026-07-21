@@ -1,7 +1,7 @@
 import { useQuery } from '@tanstack/react-query';
 import { api } from '../client';
 import { queryKeys } from '../queryKeys';
-import type { RankingRow, Season } from '../types';
+import type { Season } from '../types';
 
 /** GET /seasons */
 export function useSeasons() {
@@ -16,14 +16,5 @@ export function useCurrentSeason() {
   return useQuery({
     queryKey: queryKeys.currentSeason,
     queryFn: () => api.get<Season>('/seasons/current'),
-  });
-}
-
-/** GET /seasons/{id}/ranking */
-export function useSeasonRanking(id: string | undefined) {
-  return useQuery({
-    queryKey: queryKeys.seasonRanking(id ?? ''),
-    queryFn: () => api.get<RankingRow[]>(`/seasons/${id}/ranking`),
-    enabled: Boolean(id),
   });
 }

@@ -1,54 +1,48 @@
 import { useState } from 'react';
+import { useSeasons, useCurrentSeason } from '../api/hooks/seasons';
 import { useRanking } from '../api/hooks/ranking';
-import { useSeasons } from '../api/hooks/seasons';
 import { RankingTable } from '../components/ranking/RankingTable';
-import { Card, CardBody } from '../components/ui/Card';
-import { LoadingState, ErrorState } from '../components/ui/States';
+import { LoadingState, EmptyState, ErrorState } from '../components/ui/States';
 
 export function RankingPage() {
-  const [season, setSeason] = useState<string | undefined>(undefined);
   const seasons = useSeasons();
-  const ranking = useRanking(season);
+  const current = useCurrentSeason();
+  const [selected, setSelected] = useState<string | undefined>(undefined);
+  const seasonId = selected ?? current.data?.id;
+  const ranking = useRanking(seasonId);
 
   return (
     <div className="space-y-6">
-      <div className="flex flex-wrap items-center justify-between gap-3">
+      <div className="flex flex-wrap items-end justify-between gap-4">
         <div>
-          <h1 className="text-2xl">Ranking ligi</h1>
-          <p className="text-sm text-text-lo">
-            Sortowanie domyślnie wg LP. Kliknij nagłówek kolumny, aby zmienić.
-          </p>
+          <div className="kicker mb-1 text-gold">Sezon</div>
+          <h1 className="font-display text-3xl">Ranking graczy</h1>
         </div>
-        <label className="flex items-center gap-2 text-sm">
-          <span className="text-text-lo">Sezon</span>
-          <select
-            value={season ?? ''}
-            onChange={(e) => setSeason(e.target.value || undefined)}
-            className="rounded-sm border border-line bg-bg-1 px-3 py-1.5 text-sm text-text-hi outline-none focus:border-[var(--gold)]"
-          >
-            <option value="">Aktywny</option>
-            {(seasons.data ?? []).map((s) => (
-              <option key={s.id} value={s.id}>
-                {s.name}
-              </option>
-            ))}
-          </select>
-        </label>
+        <select
+          className="h-10 rounded-md border border-line bg-bg-1 px-3 text-sm text-text-hi focus:border-line-strong"
+          value={seasonId ?? ''}
+          onChange={(e) => setSelected(e.target.value || undefined)}
+        >
+          {(seasons.data ?? []).map((s) => (
+            <option key={s.id} value={s.id}>
+              {s.name}
+            </option>
+          ))}
+        </select>
       </div>
 
-      <Card>
-        <CardBody className="p-0 md:p-2">
-          {ranking.isLoading ? (
-            <LoadingState />
-          ) : ranking.isError ? (
-            <div className="p-4">
-              <ErrorState error={ranking.error} />
-            </div>
-          ) : (
-            <RankingTable rows={ranking.data ?? []} />
-          )}
-        </CardBody>
-      </Card>
+      {ranking.isLoading ? (
+        <LoadingState />
+      ) : ranking.isError ? (
+        <ErrorState error={ranking.error} />
+      ) : (ranking.data?.length ?? 0) === 0 ? (
+        <EmptyState
+          title="Ranking jest jeszcze pusty"
+          description="Punkty pojawią się po zatwierdzeniu pierwszych meczów."
+        />
+      ) : (
+        <RankingTable rows={ranking.data ?? []} />
+      )}
     </div>
   );
 }

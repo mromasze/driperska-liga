@@ -73,8 +73,10 @@ public class SecurityConfig {
     @Bean
     public CorsConfigurationSource corsConfigurationSource() {
         CorsConfiguration config = new CorsConfiguration();
-        // In production a single origin is served via nginx; dev uses the Vite dev server.
-        config.setAllowedOrigins(List.of("http://localhost:5173", "http://localhost", "http://localhost:80"));
+        // Auth uses stateless Bearer tokens (not cookies), and in production the API is same-origin
+        // behind nginx. Reflect the request origin so it works regardless of host/port (browsers
+        // send an Origin header even on same-origin POSTs, so a fixed list would reject :8080).
+        config.setAllowedOriginPatterns(List.of("*"));
         config.setAllowedMethods(List.of("GET", "POST", "PATCH", "PUT", "DELETE", "OPTIONS"));
         config.setAllowedHeaders(List.of("*"));
         config.setAllowCredentials(true);

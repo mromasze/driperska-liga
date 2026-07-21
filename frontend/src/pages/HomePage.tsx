@@ -1,144 +1,107 @@
 import { Link } from 'react-router-dom';
-import { useMatches } from '../api/hooks/matches';
-import { useRanking } from '../api/hooks/ranking';
 import { useCurrentSeason } from '../api/hooks/seasons';
+import { usePlayers } from '../api/hooks/players';
+import { useMatches, useMatchDetails } from '../api/hooks/matches';
+import { useRanking } from '../api/hooks/ranking';
 import { MatchCard } from '../components/match/MatchCard';
-import { Card, CardBody, CardHeader, CardTitle } from '../components/ui/Card';
-import { Avatar } from '../components/ui/Avatar';
-import { RankMedal } from '../components/ui/RankMedal';
-import { Badge } from '../components/ui/Badge';
-import { PrBadge } from '../components/ui/PrBadge';
+import { RankingTable } from '../components/ranking/RankingTable';
+import { StatTile } from '../components/ui/StatTile';
 import { Button } from '../components/ui/Button';
-import { LoadingState, ErrorState, EmptyState } from '../components/ui/States';
-import { championSplashUrl } from '../lib/ddragon';
-import { formatDate } from '../lib/format';
+import { LoadingState, EmptyState } from '../components/ui/States';
+import type { MatchDetail } from '../api/types';
 
 export function HomePage() {
-  const matches = useMatches({ status: 'APPROVED', size: 6 });
-  const ranking = useRanking();
   const season = useCurrentSeason();
+  const players = usePlayers({ active: true });
+  const matches = useMatches({ status: 'APPROVED', size: 12 });
+  const ranking = useRanking(season.data?.id);
 
-  const recent = matches.data?.content ?? [];
-  const hero = recent[0];
-  const top5 = (ranking.data ?? []).slice(0, 5);
+  const recentIds = (matches.data?.content ?? [])
+    .slice()
+    .sort((a, b) => (b.completedAt ?? '').localeCompare(a.completedAt ?? ''))
+    .slice(0, 6)
+    .map((m) => m.id);
+  const details = useMatchDetails(recentIds);
+  const recent = details.map((d) => d.data).filter((d): d is MatchDetail => Boolean(d));
+
+  const leader = ranking.data?.[0];
+  const playerCount = players.data?.totalElements ?? 0;
+  const matchCount = matches.data?.totalElements ?? 0;
 
   return (
-    <div className="space-y-10">
+    <div className="space-y-12">
       {/* Hero */}
-      <section
-        className="relative overflow-hidden rounded-lg border border-line bg-bg-1"
-        style={{ minHeight: 260 }}
-      >
-        {hero?.mvp && (
-          <img
-            src={championSplashUrl(hero.mvp.championSlug) ?? undefined}
-            alt=""
-            aria-hidden="true"
-            loading="lazy"
-            className="absolute inset-0 h-full w-full object-cover object-top opacity-40"
-          />
-        )}
-        <div className="splash-scrim absolute inset-0" />
-        <div className="relative flex h-full flex-col justify-end gap-3 p-6 md:p-10">
-          <Badge tone="gold" className="w-fit">
-            {season.data ? season.data.name : 'Driperska Liga'}
-          </Badge>
-          <h1 className="max-w-xl text-3xl md:text-5xl">Inhouse League of Legends</h1>
-          <p className="max-w-lg text-sm text-text">
-            Losowane składy, uczciwy system punktów (PR / LP / MMR) i pełne statystyki każdego meczu.
+      <section className="glass grid-tex relative overflow-hidden px-6 py-12 sm:px-12 sm:py-16">
+        <div className="relative z-10 max-w-2xl animate-rise">
+          <div className="kicker mb-3 text-gold">
+            {season.data ? season.data.name : 'Inhouse League of Legends'}
+          </div>
+          <h1 className="font-display text-4xl font-bold leading-none sm:text-6xl">
+            DRIPERSKA <span className="text-gradient-gold">LIGA</span>
+          </h1>
+          <p className="mt-4 max-w-lg text-text-lo">
+            Wyniki naszych meczów, ranking graczy i pełne statystyki z Summoner's Rift. Drużyny
+            losujemy co mecz — liczy się każda gra.
           </p>
-          <div className="flex gap-2">
+          <div className="mt-6 flex gap-3">
             <Link to="/ranking">
               <Button variant="gold">Zobacz ranking</Button>
             </Link>
             <Link to="/players">
-              <Button variant="secondary">Gracze</Button>
+              <Button variant="ghost">Gracze</Button>
             </Link>
           </div>
         </div>
       </section>
 
-      <div className="grid gap-8 lg:grid-cols-3">
-        {/* Recent matches */}
-        <section className="lg:col-span-2">
-          <div className="mb-3 flex items-center justify-between">
-            <h2 className="text-xl">Ostatnie mecze</h2>
+      {/* Headline stats */}
+      <section className="grid grid-cols-2 gap-4 sm:grid-cols-3">
+        <StatTile label="Aktywni gracze" value={playerCount} accent="cyan" />
+        <StatTile label="Rozegrane mecze" value={matchCount} accent="violet" />
+        <StatTile
+          label="Lider sezonu"
+          value={leader ? leader.nickname : '—'}
+          sub={leader ? `${leader.totalLp} LP` : undefined}
+          accent="gold"
+          className="col-span-2 sm:col-span-1"
+        />
+      </section>
+
+      {/* Recent results */}
+      <section>
+        <div className="mb-4 flex items-end justify-between">
+          <h2 className="font-display text-2xl">Ostatnie wyniki</h2>
+          <div className="kicker">Świeżo z Riftu</div>
+        </div>
+        {matches.isLoading ? (
+          <LoadingState />
+        ) : recent.length === 0 ? (
+          <EmptyState title="Brak rozegranych meczów" description="Gdy pierwszy mecz zostanie zatwierdzony, pojawi się tutaj." />
+        ) : (
+          <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+            {recent.map((m) => (
+              <MatchCard key={m.id} match={m} />
+            ))}
           </div>
-          {matches.isLoading ? (
-            <LoadingState />
-          ) : matches.isError ? (
-            <ErrorState error={matches.error} />
-          ) : recent.length === 0 ? (
-            <EmptyState
-              title="Brak rozegranych meczów"
-              description="Zaakceptowane mecze pojawią się tutaj."
-            />
-          ) : (
-            <div className="grid gap-4 sm:grid-cols-2">
-              {recent.map((match) => (
-                <MatchCard key={match.id} match={match} />
-              ))}
-            </div>
-          )}
-        </section>
+        )}
+      </section>
 
-        {/* Top 5 ranking teaser */}
-        <section>
-          <Card>
-            <CardHeader className="flex items-center justify-between">
-              <CardTitle>Top 5</CardTitle>
-              <Link to="/ranking" className="text-xs text-gold hover:underline">
-                pełna tabela →
-              </Link>
-            </CardHeader>
-            <CardBody className="p-0">
-              {ranking.isLoading ? (
-                <LoadingState />
-              ) : ranking.isError ? (
-                <div className="p-4">
-                  <ErrorState error={ranking.error} />
-                </div>
-              ) : top5.length === 0 ? (
-                <div className="p-4">
-                  <EmptyState title="Brak rankingu" />
-                </div>
-              ) : (
-                <ul className="divide-y divide-line">
-                  {top5.map((row) => (
-                    <li key={row.player.id}>
-                      <Link
-                        to={`/players/${row.player.id}`}
-                        className="flex items-center gap-3 px-4 py-2.5 transition hover:bg-bg-2"
-                      >
-                        <RankMedal rank={row.rank} />
-                        <Avatar src={row.player.avatarUrl} name={row.player.nickname} size={28} />
-                        <span className="flex-1 truncate text-sm text-text-hi">
-                          {row.player.nickname}
-                        </span>
-                        <PrBadge value={row.avgPerformanceRating} size="sm" />
-                        <span className="num w-14 text-right text-sm text-gold">
-                          {row.totalLp} LP
-                        </span>
-                      </Link>
-                    </li>
-                  ))}
-                </ul>
-              )}
-            </CardBody>
-          </Card>
-
-          {season.data && (
-            <Card className="mt-4">
-              <CardBody className="text-sm text-text-lo">
-                <div className="text-text-hi">{season.data.name}</div>
-                <div className="mt-1">
-                  {formatDate(season.data.startDate)} — {formatDate(season.data.endDate)}
-                </div>
-              </CardBody>
-            </Card>
-          )}
-        </section>
-      </div>
+      {/* Top ranking */}
+      <section>
+        <div className="mb-4 flex items-end justify-between">
+          <h2 className="font-display text-2xl">Czołówka</h2>
+          <Link to="/ranking" className="text-sm text-gold hover:underline">
+            Pełny ranking →
+          </Link>
+        </div>
+        {ranking.isLoading ? (
+          <LoadingState />
+        ) : (ranking.data?.length ?? 0) === 0 ? (
+          <EmptyState title="Ranking jest pusty" />
+        ) : (
+          <RankingTable rows={(ranking.data ?? []).slice(0, 5)} />
+        )}
+      </section>
     </div>
   );
 }

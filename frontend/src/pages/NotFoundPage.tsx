@@ -3,12 +3,13 @@ import { Button } from '../components/ui/Button';
 
 export function NotFoundPage() {
   return (
-    <div className="flex flex-col items-center justify-center gap-4 py-24 text-center">
-      <div className="num text-6xl font-bold text-gold">404</div>
-      <h1 className="text-2xl">Nie znaleziono strony</h1>
-      <p className="text-sm text-text-lo">Ta ścieżka nie istnieje w Driperskiej Lidze.</p>
+    <div className="flex min-h-[60vh] flex-col items-center justify-center gap-4 text-center">
+      <div className="font-display text-7xl font-bold text-gradient-gold">404</div>
+      <p className="max-w-sm text-text-lo">
+        Ta strona zniknęła w mgłach Riftu. Wróć na stronę główną.
+      </p>
       <Link to="/">
-        <Button variant="gold">Wróć na stronę główną</Button>
+        <Button variant="gold">Strona główna</Button>
       </Link>
     </div>
   );

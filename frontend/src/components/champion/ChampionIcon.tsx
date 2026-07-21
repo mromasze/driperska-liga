@@ -1,39 +1,35 @@
 import { cn } from '../../lib/cn';
 
-export interface ChampionIconProps {
-  src?: string | null;
-  name: string;
-  size?: number; // px
+interface ChampionIconProps {
+  iconUrl?: string | null;
+  name?: string | null;
+  size?: number;
   className?: string;
 }
 
-/** Square champion icon (docs/07 §7.3) — lazy-loaded, no layout shift. */
-export function ChampionIcon({ src, name, size = 32, className }: ChampionIconProps) {
+/** Square champion portrait with a subtle frame. */
+export function ChampionIcon({ iconUrl, name, size = 36, className }: ChampionIconProps) {
   return (
     <span
       className={cn(
-        'inline-flex shrink-0 overflow-hidden rounded-sm border border-line bg-bg-2',
+        'relative inline-block shrink-0 overflow-hidden rounded-md bg-bg-2 ring-1 ring-line',
         className,
       )}
       style={{ width: size, height: size }}
+      title={name ?? undefined}
     >
-      {src ? (
+      {iconUrl ? (
         <img
-          src={src}
-          alt={name}
-          title={name}
-          loading="lazy"
+          src={iconUrl}
+          alt={name ?? 'champion'}
           width={size}
           height={size}
+          loading="lazy"
           className="h-full w-full object-cover"
         />
       ) : (
-        <span
-          aria-hidden="true"
-          className="num flex h-full w-full items-center justify-center text-text-lo"
-          style={{ fontSize: size * 0.4 }}
-        >
-          {name.slice(0, 2)}
+        <span className="flex h-full w-full items-center justify-center text-[10px] text-text-lo">
+          ?
         </span>
       )}
     </span>

@@ -1,145 +1,140 @@
-import { useParams } from 'react-router-dom';
-import { usePlayer, usePlayerMatches, usePlayerStats } from '../api/hooks/players';
+import { Link, useParams } from 'react-router-dom';
+import { usePlayer, usePlayerStats, usePlayerMatches } from '../api/hooks/players';
+import { useChampions } from '../api/hooks/champions';
+import { useCurrentSeason } from '../api/hooks/seasons';
 import { Avatar } from '../components/ui/Avatar';
 import { Badge } from '../components/ui/Badge';
 import { StatTile } from '../components/ui/StatTile';
-import { Card, CardBody, CardHeader, CardTitle } from '../components/ui/Card';
-import { ChampionIcon } from '../components/champion/ChampionIcon';
 import { PrBadge } from '../components/ui/PrBadge';
-import { Sparkline } from '../components/ui/Sparkline';
-import { MatchCard } from '../components/match/MatchCard';
+import { ChampionIcon } from '../components/champion/ChampionIcon';
 import { LoadingState, ErrorState, EmptyState } from '../components/ui/States';
 import { championSplashUrl } from '../lib/ddragon';
-import { fixed, roleLabel } from '../lib/format';
+import { formatDate, roleLabel } from '../lib/format';
 
 export function PlayerProfilePage() {
   const { id } = useParams<{ id: string }>();
   const player = usePlayer(id);
-  const stats = usePlayerStats(id);
+  const season = useCurrentSeason();
+  const stats = usePlayerStats(id, season.data?.id);
   const matches = usePlayerMatches(id);
+  const champions = useChampions();
 
   if (player.isLoading) return <LoadingState />;
   if (player.isError) return <ErrorState error={player.error} />;
   if (!player.data) return <EmptyState title="Nie znaleziono gracza" />;
 
   const p = player.data;
-  const s = stats.data;
-  const mainChampion = s?.championPool?.[0];
+  const agg = stats.data?.season;
+  const pool = stats.data?.championPool ?? [];
+  const topChampId = pool[0]?.championId;
+  const topSlug = champions.data?.find((c) => c.id === topChampId)?.slug;
+  const splash = championSplashUrl(topSlug);
 
   return (
     <div className="space-y-8">
-      {/* Header */}
-      <section className="relative overflow-hidden rounded-lg border border-line bg-bg-1">
-        {mainChampion && (
-          <img
-            src={championSplashUrl(mainChampion.championSlug) ?? undefined}
-            alt=""
-            aria-hidden="true"
-            loading="lazy"
-            className="absolute inset-0 h-full w-full object-cover object-top opacity-30"
-          />
+      {/* Header with optional splash backdrop */}
+      <section className="glass relative overflow-hidden">
+        {splash && (
+          <>
+            <img src={splash} alt="" className="absolute inset-0 h-full w-full object-cover object-top opacity-40" />
+            <div className="absolute inset-0 scrim-side" />
+          </>
         )}
-        <div className="splash-scrim absolute inset-0" />
-        <div className="relative flex flex-wrap items-center gap-5 p-6">
+        <div className="relative z-10 flex flex-col gap-5 p-6 sm:flex-row sm:items-center sm:p-8">
           <Avatar src={p.avatarUrl} name={p.nickname} size={96} ring />
-          <div className="min-w-0">
-            <h1 className="text-3xl">{p.nickname}</h1>
-            <div className="mt-1 flex flex-wrap items-center gap-2 text-sm text-text-lo">
+          <div className="flex-1">
+            <h1 className="font-display text-4xl">{p.nickname}</h1>
+            <div className="mt-2 flex flex-wrap items-center gap-2 text-sm text-text-lo">
+              <Badge tone="gold">{roleLabel(p.mainRole)}</Badge>
+              {p.secondaryRole && <Badge>{roleLabel(p.secondaryRole)}</Badge>}
               {p.riotId && <span className="num">{p.riotId}</span>}
-              <Badge tone="info">{roleLabel(p.mainRole)}</Badge>
-              {p.secondaryRole && <Badge tone="neutral">2nd: {roleLabel(p.secondaryRole)}</Badge>}
-              {s && <span className="num">MMR {Math.round(s.mmr)}</span>}
+              {p.realName && <span>· {p.realName}</span>}
             </div>
-            {p.bio && <p className="mt-2 max-w-lg text-sm text-text">{p.bio}</p>}
+            {p.bio && <p className="mt-3 max-w-xl text-sm text-text">{p.bio}</p>}
           </div>
         </div>
       </section>
 
-      {/* Stat tiles */}
-      {stats.isLoading ? (
-        <LoadingState />
-      ) : stats.isError ? (
-        <ErrorState error={stats.error} />
-      ) : s ? (
-        <section className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-6">
-          <StatTile label="LP" value={s.totalLp} accent="var(--gold)" />
-          <StatTile label="Gry" value={s.games} />
-          <StatTile label="Win %" value={`${fixed(s.winRate, 0)}%`} />
-          <StatTile label="Bilans" value={`${s.wins}-${s.losses}`} />
-          <StatTile label="Avg PR" value={fixed(s.avgPerformanceRating, 1)} />
-          <StatTile label="MVP" value={s.mvpCount} accent="var(--gold)" />
-        </section>
-      ) : null}
-
-      <div className="grid gap-6 lg:grid-cols-2">
-        {/* PR chart */}
-        <Card>
-          <CardHeader>
-            <CardTitle>Forma PR w czasie</CardTitle>
-          </CardHeader>
-          <CardBody>
-            {s && s.prHistory.length > 1 ? (
-              <div className="flex items-center gap-4">
-                <Sparkline
-                  data={s.prHistory.map((h) => h.performanceRating)}
-                  width={260}
-                  height={72}
-                  color="var(--pr-high)"
-                  className="w-full"
-                />
-              </div>
-            ) : (
-              <p className="text-sm text-text-lo">Za mało danych do wykresu.</p>
-            )}
-          </CardBody>
-        </Card>
-
-        {/* Champion pool */}
-        <Card>
-          <CardHeader>
-            <CardTitle>Champion pool</CardTitle>
-          </CardHeader>
-          <CardBody className="p-0">
-            {s && s.championPool.length > 0 ? (
-              <ul className="divide-y divide-line">
-                {s.championPool.slice(0, 6).map((c) => (
-                  <li key={c.championId} className="flex items-center gap-3 px-4 py-2.5">
-                    <ChampionIcon src={c.iconUrl} name={c.championName} size={32} />
-                    <span className="flex-1 truncate text-sm text-text-hi">{c.championName}</span>
-                    <span className="num text-xs text-text-lo">{c.games} gier</span>
-                    <span className="num w-12 text-right text-xs text-text">
-                      {fixed(c.winRate, 0)}%
-                    </span>
-                    <PrBadge value={c.avgPerformanceRating} size="sm" />
-                  </li>
-                ))}
-              </ul>
-            ) : (
-              <p className="px-4 py-6 text-sm text-text-lo">
-                Brak danych o championach (placeholder — pojawią się po rozegranych meczach).
-              </p>
-            )}
-          </CardBody>
-        </Card>
-      </div>
-
-      {/* Match history */}
-      <section>
-        <h2 className="mb-3 text-xl">Historia meczów</h2>
-        {matches.isLoading ? (
-          <LoadingState />
-        ) : matches.isError ? (
-          <ErrorState error={matches.error} />
-        ) : (matches.data?.content ?? []).length === 0 ? (
-          <EmptyState title="Brak meczów" />
-        ) : (
-          <div className="grid gap-4 sm:grid-cols-2">
-            {(matches.data?.content ?? []).map((m) => (
-              <MatchCard key={m.id} match={m} />
-            ))}
-          </div>
-        )}
+      {/* Season stat tiles */}
+      <section className="grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-6">
+        <StatTile label="Punkty (LP)" value={agg?.totalLp ?? 0} accent="gold" />
+        <StatTile label="Mecze" value={agg?.games ?? 0} />
+        <StatTile
+          label="Winrate"
+          value={`${Math.round((agg?.winRate ?? 0) * 100)}%`}
+          sub={agg ? `${agg.wins}W ${agg.losses}L` : undefined}
+          accent="win"
+        />
+        <StatTile label="Śr. PR" value={Math.round(agg?.avgPerformanceRating ?? 0)} accent="cyan" />
+        <StatTile label="MVP" value={agg?.mvpCount ?? 0} accent="violet" />
+        <StatTile label="MMR" value={Math.round(agg?.mmr ?? 1000)} />
       </section>
+
+      <div className="grid gap-8 lg:grid-cols-[1fr_1.4fr]">
+        {/* Champion pool */}
+        <section>
+          <h2 className="mb-4 font-display text-2xl">Pula bohaterów</h2>
+          {pool.length === 0 ? (
+            <EmptyState title="Brak danych" description="Statystyki pojawią się po pierwszych meczach." />
+          ) : (
+            <div className="glass divide-y divide-line">
+              {pool.map((c) => (
+                <div key={c.championId} className="flex items-center gap-3 p-3">
+                  <ChampionIcon iconUrl={c.iconUrl} name={c.championName} size={40} />
+                  <div className="min-w-0 flex-1">
+                    <div className="truncate font-medium text-text-hi">{c.championName ?? '—'}</div>
+                    <div className="num text-xs text-text-lo">
+                      {c.games} gier · {Math.round(c.winRate * 100)}% WR
+                    </div>
+                  </div>
+                  <PrBadge value={c.avgPerformanceRating} size="sm" />
+                </div>
+              ))}
+            </div>
+          )}
+        </section>
+
+        {/* Match history */}
+        <section>
+          <h2 className="mb-4 font-display text-2xl">Historia meczów</h2>
+          {matches.isLoading ? (
+            <LoadingState />
+          ) : (matches.data?.length ?? 0) === 0 ? (
+            <EmptyState title="Brak rozegranych meczów" />
+          ) : (
+            <div className="space-y-2">
+              {(matches.data ?? []).map((m) => (
+                <Link
+                  key={m.matchId}
+                  to={`/matches/${m.matchId}`}
+                  className="glass lift flex items-center gap-3 p-3"
+                  style={{
+                    borderLeft: `3px solid ${m.won ? 'var(--win)' : 'var(--loss)'}`,
+                  }}
+                >
+                  <ChampionIcon iconUrl={m.championIconUrl} name={m.championName} size={40} />
+                  <div className="min-w-0 flex-1">
+                    <div className="flex items-center gap-2">
+                      <span className={m.won ? 'font-semibold text-win' : 'font-semibold text-loss'}>
+                        {m.won ? 'Wygrana' : 'Przegrana'}
+                      </span>
+                      {m.mvp && <span title="MVP">👑</span>}
+                      <span className="kicker">{roleLabel(m.role)}</span>
+                    </div>
+                    <div className="num text-xs text-text-lo">
+                      {m.kills}/{m.deaths}/{m.assists} · KDA {m.kda.toFixed(2)} · {formatDate(m.completedAt)}
+                    </div>
+                  </div>
+                  {m.lpAwarded != null && (
+                    <span className="num text-sm font-semibold text-gold">+{m.lpAwarded}</span>
+                  )}
+                  <PrBadge value={m.performanceRating} size="sm" />
+                </Link>
+              ))}
+            </div>
+          )}
+        </section>
+      </div>
     </div>
   );
 }

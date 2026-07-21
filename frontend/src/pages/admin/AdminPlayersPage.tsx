@@ -1,199 +1,124 @@
 import { useRef, useState } from 'react';
-import { useForm } from 'react-hook-form';
-import { zodResolver } from '@hookform/resolvers/zod';
-import { z } from 'zod';
-import { useCreatePlayer, usePlayers, useUploadAvatar } from '../../api/hooks/players';
-import type { Role } from '../../api/types';
-import { Card, CardBody, CardHeader, CardTitle } from '../../components/ui/Card';
-import { Button } from '../../components/ui/Button';
+import { usePlayers, useCreatePlayer, useUpdatePlayer, useUploadAvatar } from '../../api/hooks/players';
 import { Avatar } from '../../components/ui/Avatar';
 import { Badge } from '../../components/ui/Badge';
-import { LoadingState, ErrorState, EmptyState } from '../../components/ui/States';
+import { Button } from '../../components/ui/Button';
+import { LoadingState, EmptyState } from '../../components/ui/States';
 import { roleLabel } from '../../lib/format';
+import type { Player, Role } from '../../api/types';
 
 const ROLES: Role[] = ['TOP', 'JUNGLE', 'MID', 'ADC', 'SUPPORT'];
 
-const schema = z.object({
-  nickname: z.string().min(2, 'Min. 2 znaki'),
-  realName: z.string().optional(),
-  riotId: z.string().optional(),
-  mainRole: z.enum(['TOP', 'JUNGLE', 'MID', 'ADC', 'SUPPORT']),
-  secondaryRole: z.enum(['TOP', 'JUNGLE', 'MID', 'ADC', 'SUPPORT']).optional(),
-});
-
-type PlayerForm = z.infer<typeof schema>;
-
 export function AdminPlayersPage() {
   const players = usePlayers();
-  const createPlayer = useCreatePlayer();
-  const uploadAvatar = useUploadAvatar();
-  const [uploadingFor, setUploadingFor] = useState<string | null>(null);
-  const fileInputRef = useRef<HTMLInputElement>(null);
+  const create = useCreatePlayer();
+  const update = useUpdatePlayer();
+  const upload = useUploadAvatar();
 
-  const {
-    register,
-    handleSubmit,
-    reset,
-    formState: { errors },
-  } = useForm<PlayerForm>({
-    resolver: zodResolver(schema),
-    defaultValues: { mainRole: 'MID' },
-  });
+  const [nickname, setNickname] = useState('');
+  const [mainRole, setMainRole] = useState<Role>('MID');
+  const [riotId, setRiotId] = useState('');
+  const fileInputs = useRef<Record<string, HTMLInputElement | null>>({});
 
-  const onSubmit = handleSubmit((values) => {
-    createPlayer.mutate(
+  const submit = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!nickname.trim()) return;
+    create.mutate(
+      { nickname: nickname.trim(), mainRole, riotId: riotId.trim() || null },
       {
-        nickname: values.nickname,
-        realName: values.realName || null,
-        riotId: values.riotId || null,
-        mainRole: values.mainRole,
-        secondaryRole: values.secondaryRole ?? null,
+        onSuccess: () => {
+          setNickname('');
+          setRiotId('');
+        },
       },
-      { onSuccess: () => reset({ mainRole: 'MID' }) },
     );
-  });
+  };
 
-  function triggerUpload(playerId: string) {
-    setUploadingFor(playerId);
-    fileInputRef.current?.click();
-  }
-
-  function onFileSelected(e: React.ChangeEvent<HTMLInputElement>) {
-    const file = e.target.files?.[0];
-    if (file && uploadingFor) {
-      uploadAvatar.mutate({ id: uploadingFor, file });
-    }
-    e.target.value = '';
-    setUploadingFor(null);
-  }
+  const list = players.data?.content ?? [];
 
   return (
-    <div className="space-y-6">
-      <h1 className="text-2xl">Gracze</h1>
+    <div className="space-y-8">
+      <h1 className="font-display text-3xl">Gracze</h1>
 
-      <input
-        ref={fileInputRef}
-        type="file"
-        accept="image/png,image/jpeg,image/webp"
-        className="hidden"
-        onChange={onFileSelected}
-      />
+      <form onSubmit={submit} className="panel flex flex-wrap items-end gap-3 p-4">
+        <label className="flex-1">
+          <span className="kicker">Nick</span>
+          <input
+            value={nickname}
+            onChange={(e) => setNickname(e.target.value)}
+            className="mt-1 h-10 w-full rounded-md border border-line bg-bg-1 px-3 text-text-hi"
+          />
+        </label>
+        <label>
+          <span className="kicker">Rola</span>
+          <select
+            value={mainRole}
+            onChange={(e) => setMainRole(e.target.value as Role)}
+            className="mt-1 h-10 rounded-md border border-line bg-bg-1 px-3 text-text-hi"
+          >
+            {ROLES.map((r) => (
+              <option key={r} value={r}>
+                {roleLabel(r)}
+              </option>
+            ))}
+          </select>
+        </label>
+        <label className="flex-1">
+          <span className="kicker">Riot ID (opc.)</span>
+          <input
+            value={riotId}
+            onChange={(e) => setRiotId(e.target.value)}
+            placeholder="Nick#EUW"
+            className="mt-1 h-10 w-full rounded-md border border-line bg-bg-1 px-3 text-text-hi placeholder:text-text-lo"
+          />
+        </label>
+        <Button type="submit" variant="gold" disabled={create.isPending}>
+          Dodaj gracza
+        </Button>
+      </form>
 
-      <div className="grid gap-6 lg:grid-cols-3">
-        {/* Add player */}
-        <Card className="lg:col-span-1">
-          <CardHeader>
-            <CardTitle>Dodaj gracza</CardTitle>
-          </CardHeader>
-          <CardBody>
-            <form onSubmit={onSubmit} className="space-y-3" noValidate>
-              <Field label="Nick" error={errors.nickname?.message}>
-                <input {...register('nickname')} className={inputClass} />
-              </Field>
-              <Field label="Imię (opcjonalnie)">
-                <input {...register('realName')} className={inputClass} />
-              </Field>
-              <Field label="Riot ID (opcjonalnie)" hint="gameName#TAG">
-                <input {...register('riotId')} className={inputClass} placeholder="Faker#KR1" />
-              </Field>
-              <Field label="Główna rola">
-                <select {...register('mainRole')} className={inputClass}>
-                  {ROLES.map((r) => (
-                    <option key={r} value={r}>
-                      {roleLabel(r)}
-                    </option>
-                  ))}
-                </select>
-              </Field>
-              <Field label="Rola poboczna (opcjonalnie)">
-                <select {...register('secondaryRole')} className={inputClass}>
-                  <option value="">—</option>
-                  {ROLES.map((r) => (
-                    <option key={r} value={r}>
-                      {roleLabel(r)}
-                    </option>
-                  ))}
-                </select>
-              </Field>
-
-              {createPlayer.isError && <ErrorState error={createPlayer.error} title="Nie dodano" />}
-
-              <Button type="submit" variant="gold" className="w-full" disabled={createPlayer.isPending}>
-                {createPlayer.isPending ? 'Dodawanie…' : 'Dodaj gracza'}
+      {players.isLoading ? (
+        <LoadingState />
+      ) : list.length === 0 ? (
+        <EmptyState title="Brak graczy" />
+      ) : (
+        <div className="space-y-2">
+          {list.map((p: Player) => (
+            <div key={p.id} className="glass flex items-center gap-3 p-3">
+              <Avatar src={p.avatarUrl} name={p.nickname} size={44} />
+              <div className="min-w-0 flex-1">
+                <div className="font-medium text-text-hi">{p.nickname}</div>
+                <div className="flex items-center gap-2 text-xs text-text-lo">
+                  <Badge tone="gold">{roleLabel(p.mainRole)}</Badge>
+                  {p.riotId && <span className="num">{p.riotId}</span>}
+                </div>
+              </div>
+              <input
+                ref={(el) => {
+                  fileInputs.current[p.id] = el;
+                }}
+                type="file"
+                accept="image/png,image/jpeg,image/webp"
+                className="hidden"
+                onChange={(e) => {
+                  const file = e.target.files?.[0];
+                  if (file) upload.mutate({ id: p.id, file });
+                }}
+              />
+              <Button size="sm" variant="ghost" onClick={() => fileInputs.current[p.id]?.click()}>
+                Zdjęcie
               </Button>
-            </form>
-          </CardBody>
-        </Card>
-
-        {/* List */}
-        <Card className="lg:col-span-2">
-          <CardHeader>
-            <CardTitle>Lista graczy</CardTitle>
-          </CardHeader>
-          <CardBody className="p-0">
-            {players.isLoading ? (
-              <LoadingState />
-            ) : players.isError ? (
-              <div className="p-4">
-                <ErrorState error={players.error} />
-              </div>
-            ) : (players.data ?? []).length === 0 ? (
-              <div className="p-4">
-                <EmptyState title="Brak graczy" />
-              </div>
-            ) : (
-              <ul className="divide-y divide-line">
-                {(players.data ?? []).map((p) => (
-                  <li key={p.id} className="flex items-center gap-3 px-5 py-3">
-                    <Avatar src={p.avatarUrl} name={p.nickname} size={40} />
-                    <div className="min-w-0 flex-1">
-                      <div className="truncate text-sm font-medium text-text-hi">{p.nickname}</div>
-                      <div className="flex items-center gap-2 text-xs text-text-lo">
-                        <Badge tone="info">{roleLabel(p.mainRole)}</Badge>
-                        {!p.active && <Badge tone="neutral">nieaktywny</Badge>}
-                      </div>
-                    </div>
-                    <Button
-                      variant="secondary"
-                      size="sm"
-                      onClick={() => triggerUpload(p.id)}
-                      disabled={uploadAvatar.isPending}
-                    >
-                      Avatar
-                    </Button>
-                  </li>
-                ))}
-              </ul>
-            )}
-          </CardBody>
-        </Card>
-      </div>
-    </div>
-  );
-}
-
-const inputClass =
-  'w-full rounded-sm border border-line bg-bg-0 px-3 py-2 text-sm text-text-hi outline-none focus:border-[var(--gold)]';
-
-function Field({
-  label,
-  hint,
-  error,
-  children,
-}: {
-  label: string;
-  hint?: string;
-  error?: string;
-  children: React.ReactNode;
-}) {
-  return (
-    <div>
-      <label className="mb-1 block text-xs uppercase tracking-wide text-text-lo">
-        {label}
-        {hint && <span className="ml-1 normal-case text-text-lo/70">· {hint}</span>}
-      </label>
-      {children}
-      {error && <p className="mt-1 text-xs text-loss">{error}</p>}
+              <Button
+                size="sm"
+                variant="ghost"
+                onClick={() => update.mutate({ id: p.id, body: { active: !p.active } })}
+              >
+                {p.active ? 'Dezaktywuj' : 'Aktywuj'}
+              </Button>
+            </div>
+          ))}
+        </div>
+      )}
     </div>
   );
 }

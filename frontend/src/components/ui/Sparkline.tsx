@@ -1,7 +1,6 @@
 import { cn } from '../../lib/cn';
 
-export interface SparklineProps {
-  /** Series of values, oldest → newest. */
+interface SparklineProps {
   data: number[];
   width?: number;
   height?: number;
@@ -9,46 +8,29 @@ export interface SparklineProps {
   className?: string;
 }
 
-/** Tiny inline form/trend sparkline (docs/06 ranking form column). */
-export function Sparkline({
-  data,
-  width = 72,
-  height = 24,
-  color = 'var(--info)',
-  className,
-}: SparklineProps) {
-  if (data.length < 2) {
+/** Minimal inline sparkline for recent-form (PR over time). */
+export function Sparkline({ data, width = 96, height = 28, color = 'var(--cyan)', className }: SparklineProps) {
+  if (!data || data.length < 2) {
     return <span className={cn('text-xs text-text-lo', className)}>—</span>;
   }
-
   const min = Math.min(...data);
   const max = Math.max(...data);
-  const range = max - min || 1;
-  const stepX = width / (data.length - 1);
-
-  const points = data
-    .map((value, i) => {
-      const x = i * stepX;
-      const y = height - ((value - min) / range) * height;
-      return `${x.toFixed(1)},${y.toFixed(1)}`;
-    })
-    .join(' ');
-
+  const span = max - min || 1;
+  const step = width / (data.length - 1);
+  const points = data.map((v, i) => {
+    const x = i * step;
+    const y = height - ((v - min) / span) * (height - 4) - 2;
+    return `${x.toFixed(1)},${y.toFixed(1)}`;
+  });
+  const area = `0,${height} ${points.join(' ')} ${width},${height}`;
   return (
-    <svg
-      width={width}
-      height={height}
-      viewBox={`0 0 ${width} ${height}`}
-      className={className}
-      role="img"
-      aria-label="Forma z ostatnich meczów"
-      preserveAspectRatio="none"
-    >
+    <svg width={width} height={height} className={className} aria-hidden>
+      <polygon points={area} fill={color} opacity={0.12} />
       <polyline
-        points={points}
+        points={points.join(' ')}
         fill="none"
         stroke={color}
-        strokeWidth={1.5}
+        strokeWidth={1.75}
         strokeLinecap="round"
         strokeLinejoin="round"
       />

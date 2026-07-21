@@ -1,40 +1,28 @@
 import type { ReactNode } from 'react';
 import { cn } from '../../lib/cn';
 
-export interface StatTileProps {
+interface StatTileProps {
   label: string;
   value: ReactNode;
-  /** Optional trend/delta line under the value. */
-  delta?: string;
-  deltaTone?: 'up' | 'down' | 'neutral';
-  accent?: string; // CSS colour for the value (e.g. gold for a headline stat)
+  sub?: ReactNode;
+  accent?: 'default' | 'gold' | 'cyan' | 'violet' | 'win';
   className?: string;
 }
 
-const DELTA_TONE: Record<NonNullable<StatTileProps['deltaTone']>, string> = {
-  up: 'text-win',
-  down: 'text-loss',
-  neutral: 'text-text-lo',
+const ACCENT: Record<NonNullable<StatTileProps['accent']>, string> = {
+  default: 'text-text-hi',
+  gold: 'text-gradient-gold',
+  cyan: 'text-cyan',
+  violet: 'text-violet',
+  win: 'text-win',
 };
 
-export function StatTile({
-  label,
-  value,
-  delta,
-  deltaTone = 'neutral',
-  accent,
-  className,
-}: StatTileProps) {
+export function StatTile({ label, value, sub, accent = 'default', className }: StatTileProps) {
   return (
-    <div className={cn('rounded-md border border-line bg-bg-1 px-4 py-3', className)}>
-      <div className="text-xs uppercase tracking-wide text-text-lo">{label}</div>
-      <div
-        className="num mt-1 text-2xl font-bold leading-none text-text-hi"
-        style={accent ? { color: accent } : undefined}
-      >
-        {value}
-      </div>
-      {delta && <div className={cn('num mt-1 text-xs', DELTA_TONE[deltaTone])}>{delta}</div>}
+    <div className={cn('glass p-4 sm:p-5', className)}>
+      <div className="kicker">{label}</div>
+      <div className={cn('num mt-1.5 text-2xl font-bold sm:text-3xl', ACCENT[accent])}>{value}</div>
+      {sub && <div className="mt-1 text-xs text-text-lo">{sub}</div>}
     </div>
   );
 }

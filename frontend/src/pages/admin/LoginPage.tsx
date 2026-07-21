@@ -1,108 +1,59 @@
-import { useForm } from 'react-hook-form';
-import { zodResolver } from '@hookform/resolvers/zod';
-import { z } from 'zod';
-import { useLocation, useNavigate, Link } from 'react-router-dom';
+import { useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { useLogin } from '../../api/hooks/auth';
 import { Button } from '../../components/ui/Button';
-import { Card, CardBody, CardHeader, CardTitle } from '../../components/ui/Card';
 import { ApiError } from '../../api/client';
 
-const schema = z.object({
-  username: z.string().min(1, 'Podaj login'),
-  password: z.string().min(1, 'Podaj hasło'),
-});
-
-type LoginForm = z.infer<typeof schema>;
-
-interface LocationState {
-  from?: string;
-}
-
 export function LoginPage() {
-  const navigate = useNavigate();
-  const location = useLocation();
   const login = useLogin();
+  const navigate = useNavigate();
+  const [username, setUsername] = useState('');
+  const [password, setPassword] = useState('');
 
-  const {
-    register,
-    handleSubmit,
-    formState: { errors, isSubmitting },
-  } = useForm<LoginForm>({ resolver: zodResolver(schema) });
+  const onSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    login.mutate({ username, password }, { onSuccess: () => navigate('/admin') });
+  };
 
-  const onSubmit = handleSubmit((values) => {
-    login.mutate(values, {
-      onSuccess: () => {
-        const state = location.state as LocationState | null;
-        navigate(state?.from ?? '/admin', { replace: true });
-      },
-    });
-  });
-
-  const errorMessage =
-    login.error instanceof ApiError
-      ? login.error.status === 401
-        ? 'Błędny login lub hasło.'
-        : (login.error.problem?.detail ?? login.error.message)
-      : login.error
-        ? 'Logowanie nie powiodło się. Spróbuj ponownie.'
-        : null;
+  const errorMsg =
+    login.error instanceof ApiError ? login.error.message : login.isError ? 'Logowanie nie powiodło się' : null;
 
   return (
-    <div className="flex min-h-screen items-center justify-center bg-bg-0 px-4">
-      <Card className="w-full max-w-sm">
-        <CardHeader>
-          <CardTitle>Panel — logowanie</CardTitle>
-        </CardHeader>
-        <CardBody>
-          <form onSubmit={onSubmit} className="space-y-4" noValidate>
-            <div>
-              <label htmlFor="username" className="mb-1 block text-xs uppercase tracking-wide text-text-lo">
-                Login
-              </label>
-              <input
-                id="username"
-                autoComplete="username"
-                {...register('username')}
-                className="w-full rounded-sm border border-line bg-bg-0 px-3 py-2 text-sm text-text-hi outline-none focus:border-[var(--gold)]"
-              />
-              {errors.username && (
-                <p className="mt-1 text-xs text-loss">{errors.username.message}</p>
-              )}
-            </div>
+    <div className="grid min-h-screen place-items-center p-4">
+      <div className="glass grid-tex w-full max-w-sm p-8">
+        <div className="mb-6 text-center">
+          <div className="mx-auto mb-3 grid h-12 w-12 place-items-center rounded-lg bg-gradient-to-b from-gold-soft to-gold text-[#1a1205] shadow-glow-gold">
+            <span className="font-display text-2xl font-bold">D</span>
+          </div>
+          <h1 className="font-display text-2xl">Panel administracyjny</h1>
+          <p className="mt-1 text-sm text-text-lo">Driperska Liga</p>
+        </div>
 
-            <div>
-              <label htmlFor="password" className="mb-1 block text-xs uppercase tracking-wide text-text-lo">
-                Hasło
-              </label>
-              <input
-                id="password"
-                type="password"
-                autoComplete="current-password"
-                {...register('password')}
-                className="w-full rounded-sm border border-line bg-bg-0 px-3 py-2 text-sm text-text-hi outline-none focus:border-[var(--gold)]"
-              />
-              {errors.password && (
-                <p className="mt-1 text-xs text-loss">{errors.password.message}</p>
-              )}
-            </div>
-
-            {errorMessage && <p className="text-sm text-loss">{errorMessage}</p>}
-
-            <Button
-              type="submit"
-              variant="gold"
-              className="w-full"
-              disabled={isSubmitting || login.isPending}
-            >
-              {login.isPending ? 'Logowanie…' : 'Zaloguj'}
-            </Button>
-          </form>
-
-          <Link to="/" className="mt-4 block text-center text-xs text-text-lo hover:text-text-hi">
-            ← Powrót do strony publicznej
-          </Link>
-        </CardBody>
-      </Card>
+        <form onSubmit={onSubmit} className="space-y-4">
+          <label className="block">
+            <span className="kicker">Login</span>
+            <input
+              value={username}
+              onChange={(e) => setUsername(e.target.value)}
+              autoFocus
+              className="mt-1 h-10 w-full rounded-md border border-line bg-bg-1 px-3 text-text-hi focus:border-line-strong"
+            />
+          </label>
+          <label className="block">
+            <span className="kicker">Hasło</span>
+            <input
+              type="password"
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
+              className="mt-1 h-10 w-full rounded-md border border-line bg-bg-1 px-3 text-text-hi focus:border-line-strong"
+            />
+          </label>
+          {errorMsg && <p className="text-sm text-loss">{errorMsg}</p>}
+          <Button type="submit" variant="gold" className="w-full" disabled={login.isPending}>
+            {login.isPending ? 'Logowanie…' : 'Zaloguj się'}
+          </Button>
+        </form>
+      </div>
     </div>
   );
 }

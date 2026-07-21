@@ -1,147 +1,69 @@
-import { useEffect, useMemo, useState } from 'react';
-import { useApproveMatch, useMatch, useMatches, useRejectMatch } from '../../api/hooks/matches';
-import { useMe } from '../../api/hooks/auth';
+import { useMatches, useMatch, useApproveMatch, useRejectMatch } from '../../api/hooks/matches';
 import { useAuthStore } from '../../store/auth';
 import { Scoreboard } from '../../components/match/Scoreboard';
 import { SignOffPanel } from '../../components/admin/SignOffPanel';
-import { Card, CardBody, CardHeader, CardTitle } from '../../components/ui/Card';
+import { LoadingState, EmptyState } from '../../components/ui/States';
 import { Badge } from '../../components/ui/Badge';
-import { LoadingState, ErrorState, EmptyState } from '../../components/ui/States';
-import { cn } from '../../lib/cn';
 import { formatDateTime } from '../../lib/format';
 
 export function ApprovalsPage() {
-  const me = useMe();
-  const account = useAuthStore((s) => s.account);
-  const isAdmin = (account ?? me.data)?.role === 'ADMIN';
-
-  const queue = useMatches({ status: 'RESULTS_SUBMITTED', size: 50 });
-  const items = useMemo(() => queue.data?.content ?? [], [queue.data]);
-
-  const [selectedId, setSelectedId] = useState<string | null>(null);
-  useEffect(() => {
-    if (!selectedId && items.length > 0) setSelectedId(items[0].id);
-  }, [items, selectedId]);
+  const pending = useMatches({ status: 'RESULTS_SUBMITTED', size: 50 });
+  const list = pending.data?.content ?? [];
 
   return (
     <div className="space-y-6">
       <div>
-        <h1 className="text-2xl">Kolejka akceptacji</h1>
-        <p className="text-sm text-text-lo">
-          Mecze w stanie RESULTS_SUBMITTED czekają na decyzję administratora.
+        <div className="kicker text-gold">Dwie pary oczu</div>
+        <h1 className="font-display text-3xl">Kolejka akceptacji</h1>
+        <p className="mt-1 text-sm text-text-lo">
+          Zatwierdź wyniki podpisanym potwierdzeniem albo odeślij do edycji.
         </p>
       </div>
 
-      {queue.isLoading ? (
+      {pending.isLoading ? (
         <LoadingState />
-      ) : queue.isError ? (
-        <ErrorState error={queue.error} />
-      ) : items.length === 0 ? (
-        <EmptyState title="Pusto" description="Brak meczów oczekujących na akceptację." />
+      ) : list.length === 0 ? (
+        <EmptyState title="Brak wyników do akceptacji" description="Wszystko zatwierdzone. 🎉" />
       ) : (
-        <div className="grid gap-6 lg:grid-cols-[280px_1fr]">
-          <Card className="h-fit">
-            <CardHeader>
-              <CardTitle>Do akceptacji ({items.length})</CardTitle>
-            </CardHeader>
-            <CardBody className="p-0">
-              <ul className="divide-y divide-line">
-                {items.map((m) => (
-                  <li key={m.id}>
-                    <button
-                      type="button"
-                      onClick={() => setSelectedId(m.id)}
-                      className={cn(
-                        'flex w-full items-center justify-between px-4 py-3 text-left text-sm transition hover:bg-bg-2',
-                        selectedId === m.id && 'bg-bg-2',
-                      )}
-                    >
-                      <span>
-                        <span className="block text-text-hi">Mecz {m.id.slice(0, 8)}</span>
-                        <span className="block text-xs text-text-lo">
-                          {formatDateTime(m.createdAt)}
-                        </span>
-                      </span>
-                      <Badge tone="pending">
-                        {m.blueScore}:{m.redScore}
-                      </Badge>
-                    </button>
-                  </li>
-                ))}
-              </ul>
-            </CardBody>
-          </Card>
-
-          <div>
-            {selectedId ? (
-              <ApprovalDetail
-                matchId={selectedId}
-                isAdmin={isAdmin}
-                signatureName={(account ?? me.data)?.username ?? ''}
-                onResolved={() => setSelectedId(null)}
-              />
-            ) : (
-              <EmptyState title="Wybierz mecz z listy" />
-            )}
-          </div>
+        <div className="space-y-8">
+          {list.map((m) => (
+            <ApprovalItem key={m.id} matchId={m.id} />
+          ))}
         </div>
       )}
     </div>
   );
 }
 
-function ApprovalDetail({
-  matchId,
-  isAdmin,
-  signatureName,
-  onResolved,
-}: {
-  matchId: string;
-  isAdmin: boolean;
-  signatureName: string;
-  onResolved: () => void;
-}) {
+function ApprovalItem({ matchId }: { matchId: string }) {
   const match = useMatch(matchId);
   const approve = useApproveMatch(matchId);
   const reject = useRejectMatch(matchId);
+  const account = useAuthStore((s) => s.account);
 
-  if (match.isLoading) return <LoadingState />;
-  if (match.isError) return <ErrorState error={match.error} />;
-  if (!match.data) return <EmptyState title="Nie znaleziono meczu" />;
+  if (match.isLoading || !match.data) return <LoadingState />;
+
+  const m = match.data;
+  const submittedAt = m.approval?.submittedAt;
 
   return (
-    <div className="space-y-4">
-      <Card>
-        <CardBody>
-          <Scoreboard match={match.data} />
-        </CardBody>
-      </Card>
+    <div className="space-y-4 rounded-lg border border-line p-4 sm:p-6">
+      <div className="flex flex-wrap items-center justify-between gap-2">
+        <Badge tone="pending">Oczekuje na akceptację</Badge>
+        {submittedAt && <span className="num text-xs text-text-lo">wpisano: {formatDateTime(submittedAt)}</span>}
+      </div>
 
-      {(approve.isError || reject.isError) && (
-        <ErrorState error={approve.error ?? reject.error} title="Operacja nie powiodła się" />
-      )}
+      <Scoreboard match={m} />
 
-      {isAdmin ? (
-        <SignOffPanel
-          defaultSignatureName={signatureName}
-          isApproving={approve.isPending}
-          isRejecting={reject.isPending}
-          onApprove={(name) =>
-            approve.mutate(
-              { signatureConfirmed: true, signatureName: name },
-              { onSuccess: onResolved },
-            )
-          }
-          onReject={(reason) => reject.mutate({ reason }, { onSuccess: onResolved })}
-        />
-      ) : (
-        <Card>
-          <CardBody className="text-sm text-text-lo">
-            Tylko konto z rolą ADMIN może zatwierdzać wyniki. Twoja rola (EDITOR) pozwala wpisywać i
-            edytować statystyki.
-          </CardBody>
-        </Card>
-      )}
+      <SignOffPanel
+        defaultSignature={account?.username ?? ''}
+        approving={approve.isPending}
+        rejecting={reject.isPending}
+        onApprove={(signatureName) =>
+          approve.mutate({ signatureConfirmed: true, signatureName })
+        }
+        onReject={(reason) => reject.mutate({ reason })}
+      />
     </div>
   );
 }

@@ -1,45 +1,57 @@
 import { useState } from 'react';
 import { usePlayers } from '../api/hooks/players';
 import { PlayerCard } from '../components/player/PlayerCard';
-import { LoadingState, ErrorState, EmptyState } from '../components/ui/States';
-import type { Role } from '../api/types';
-import { roleLabel } from '../lib/format';
+import { LoadingState, EmptyState, ErrorState } from '../components/ui/States';
 import { cn } from '../lib/cn';
+import type { Role } from '../api/types';
 
-const ROLES: Role[] = ['TOP', 'JUNGLE', 'MID', 'ADC', 'SUPPORT'];
+const ROLES: { value: Role | 'ALL'; label: string }[] = [
+  { value: 'ALL', label: 'Wszyscy' },
+  { value: 'TOP', label: 'Top' },
+  { value: 'JUNGLE', label: 'Jungle' },
+  { value: 'MID', label: 'Mid' },
+  { value: 'ADC', label: 'ADC' },
+  { value: 'SUPPORT', label: 'Support' },
+];
 
 export function PlayersPage() {
+  const [role, setRole] = useState<Role | 'ALL'>('ALL');
   const [search, setSearch] = useState('');
-  const [role, setRole] = useState<Role | undefined>(undefined);
   const players = usePlayers({
+    role: role === 'ALL' ? undefined : role,
     search: search.trim() || undefined,
-    role,
-    active: true,
   });
+
+  const list = players.data?.content ?? [];
 
   return (
     <div className="space-y-6">
       <div>
-        <h1 className="text-2xl">Gracze</h1>
-        <p className="text-sm text-text-lo">Zawodnicy Driperskiej Ligi.</p>
+        <div className="kicker mb-1 text-gold">Skład ligi</div>
+        <h1 className="font-display text-3xl">Gracze</h1>
       </div>
 
-      <div className="flex flex-wrap items-center gap-2">
+      <div className="flex flex-wrap items-center gap-3">
         <input
-          type="search"
           value={search}
           onChange={(e) => setSearch(e.target.value)}
           placeholder="Szukaj po nicku…"
-          className="min-w-[12rem] flex-1 rounded-sm border border-line bg-bg-1 px-3 py-2 text-sm text-text-hi outline-none focus:border-[var(--gold)]"
+          className="h-10 flex-1 rounded-md border border-line bg-bg-1 px-3 text-sm text-text-hi placeholder:text-text-lo focus:border-line-strong"
         />
         <div className="flex flex-wrap gap-1">
-          <RoleChip active={role === undefined} onClick={() => setRole(undefined)}>
-            Wszystkie
-          </RoleChip>
           {ROLES.map((r) => (
-            <RoleChip key={r} active={role === r} onClick={() => setRole(r)}>
-              {roleLabel(r)}
-            </RoleChip>
+            <button
+              key={r.value}
+              onClick={() => setRole(r.value)}
+              className={cn(
+                'rounded-md px-3 py-2 text-sm font-medium transition-colors',
+                role === r.value
+                  ? 'bg-[var(--glass-strong)] text-text-hi'
+                  : 'text-text-lo hover:text-text',
+              )}
+            >
+              {r.label}
+            </button>
           ))}
         </div>
       </div>
@@ -48,40 +60,15 @@ export function PlayersPage() {
         <LoadingState />
       ) : players.isError ? (
         <ErrorState error={players.error} />
-      ) : (players.data ?? []).length === 0 ? (
-        <EmptyState title="Brak graczy" description="Nie znaleziono graczy dla tych filtrów." />
+      ) : list.length === 0 ? (
+        <EmptyState title="Brak graczy" description="Dodaj graczy w panelu administracyjnym." />
       ) : (
         <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-          {(players.data ?? []).map((player) => (
-            <PlayerCard key={player.id} player={player} />
+          {list.map((p) => (
+            <PlayerCard key={p.id} player={p} />
           ))}
         </div>
       )}
     </div>
-  );
-}
-
-function RoleChip({
-  active,
-  onClick,
-  children,
-}: {
-  active: boolean;
-  onClick: () => void;
-  children: React.ReactNode;
-}) {
-  return (
-    <button
-      type="button"
-      onClick={onClick}
-      className={cn(
-        'rounded-sm border px-3 py-1.5 text-xs font-medium transition',
-        active
-          ? 'border-[var(--gold)]/50 bg-bg-2 text-gold'
-          : 'border-line text-text hover:text-text-hi',
-      )}
-    >
-      {children}
-    </button>
   );
 }

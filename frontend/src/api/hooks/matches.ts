@@ -1,4 +1,4 @@
-import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import { useMutation, useQueries, useQuery, useQueryClient } from '@tanstack/react-query';
 import { api } from '../client';
 import { queryKeys } from '../queryKeys';
 import type {
@@ -22,7 +22,7 @@ export function useMatches(query?: MatchesQuery) {
       api.get<PageResponse<MatchSummary>>('/matches', {
         query: {
           status: query?.status,
-          season: query?.season,
+          seasonId: query?.seasonId,
           page: query?.page,
           size: query?.size,
         },
@@ -36,6 +36,17 @@ export function useMatch(id: string | undefined) {
     queryKey: queryKeys.match(id ?? ''),
     queryFn: () => api.get<MatchDetail>(`/matches/${id}`),
     enabled: Boolean(id),
+  });
+}
+
+/** Fetch several match details at once (e.g. recent-results cards on the home page). */
+export function useMatchDetails(ids: string[]) {
+  return useQueries({
+    queries: ids.map((id) => ({
+      queryKey: queryKeys.match(id),
+      queryFn: () => api.get<MatchDetail>(`/matches/${id}`),
+      staleTime: 30_000,
+    })),
   });
 }
 

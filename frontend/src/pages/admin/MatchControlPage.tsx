@@ -1,29 +1,28 @@
 import { useState } from 'react';
-import { useParams, Link } from 'react-router-dom';
+import { Link, useParams } from 'react-router-dom';
 import {
-  useConfirmDraw,
-  useDrawTeams,
   useMatch,
+  useDrawTeams,
+  useConfirmDraw,
   useSubmitResults,
+  useEditResults,
 } from '../../api/hooks/matches';
-import { useChampions } from '../../api/hooks/champions';
-import type { DrawResult } from '../../api/types';
 import { DrawBoard } from '../../components/match/DrawBoard';
 import { ResultsForm } from '../../components/match/ResultsForm';
+import { Scoreboard } from '../../components/match/Scoreboard';
+import { Button } from '../../components/ui/Button';
 import { Badge } from '../../components/ui/Badge';
-import { Card, CardBody } from '../../components/ui/Card';
 import { LoadingState, ErrorState, EmptyState } from '../../components/ui/States';
+import { roleLabel } from '../../lib/format';
+import type { DrawResult } from '../../api/types';
 
 export function MatchControlPage() {
-  const { id } = useParams<{ id: string }>();
-  const matchId = id ?? '';
-
+  const { id = '' } = useParams<{ id: string }>();
   const match = useMatch(id);
-  const champions = useChampions();
-  const draw = useDrawTeams(matchId);
-  const confirmDraw = useConfirmDraw(matchId);
-  const submitResults = useSubmitResults(matchId);
-
+  const draw = useDrawTeams(id);
+  const confirm = useConfirmDraw(id);
+  const submit = useSubmitResults(id);
+  const edit = useEditResults(id);
   const [drawResult, setDrawResult] = useState<DrawResult | null>(null);
 
   if (match.isLoading) return <LoadingState />;
@@ -31,59 +30,107 @@ export function MatchControlPage() {
   if (!match.data) return <EmptyState title="Nie znaleziono meczu" />;
 
   const m = match.data;
-  const inDrawPhase = m.status === 'DRAFT' || m.status === 'TEAMS_DRAWN';
-  const inResultsPhase =
-    m.status === 'LIVE' || m.status === 'RESULTS_SUBMITTED' || m.status === 'REJECTED';
+  const runDraw = () => draw.mutate(undefined, { onSuccess: (d) => setDrawResult(d) });
 
   return (
     <div className="space-y-6">
-      <div className="flex items-center justify-between">
-        <div>
-          <Link to="/admin" className="text-xs text-text-lo hover:text-text-hi">
-            ← Panel
-          </Link>
-          <h1 className="text-2xl">Kontrola meczu</h1>
-          <p className="num text-sm text-text-lo">{matchId.slice(0, 8)}</p>
+      <div>
+        <Link to="/admin" className="text-sm text-text-lo hover:text-text">
+          ← Pulpit
+        </Link>
+        <div className="mt-1 flex items-center gap-3">
+          <h1 className="font-display text-3xl">Kontrola meczu</h1>
+          <Badge tone="info">{m.status}</Badge>
         </div>
-        <Badge tone="info">{m.status}</Badge>
       </div>
 
-      {inDrawPhase && (
-        <DrawBoard
-          draw={drawResult}
-          isDrawing={draw.isPending}
-          isConfirming={confirmDraw.isPending}
-          onReroll={() => draw.mutate(undefined, { onSuccess: (data) => setDrawResult(data) })}
-          onConfirm={() => confirmDraw.mutate()}
-        />
+      {/* DRAFT / TEAMS_DRAWN → drawing */}
+      {(m.status === 'DRAFT' || m.status === 'TEAMS_DRAWN') && (
+        <>
+          {drawResult ? (
+            <DrawBoard
+              draw={drawResult}
+              drawing={draw.isPending}
+              confirming={confirm.isPending}
+              onReroll={runDraw}
+              onConfirm={() => confirm.mutate()}
+            />
+          ) : m.status === 'TEAMS_DRAWN' ? (
+            <div className="space-y-4">
+              <div className="grid gap-4 sm:grid-cols-2">
+                {(['BLUE', 'RED'] as const).map((side) => (
+                  <div key={side} className="glass p-4">
+                    <div
+                      className="mb-2 font-display font-semibold"
+                      style={{ color: side === 'BLUE' ? 'var(--blue)' : 'var(--red)' }}
+                    >
+                      {side === 'BLUE' ? 'Niebiescy' : 'Czerwoni'}
+                    </div>
+                    {m.participants
+                      .filter((p) => p.side === side)
+                      .map((p) => (
+                        <div key={p.playerId} className="flex justify-between py-1 text-sm">
+                          <span className="text-text-hi">{p.nickname}</span>
+                          <span className="kicker">{roleLabel(p.role)}</span>
+                        </div>
+                      ))}
+                  </div>
+                ))}
+              </div>
+              <div className="flex gap-3">
+                <Button variant="ghost" onClick={runDraw} disabled={draw.isPending}>
+                  🎲 Losuj ponownie
+                </Button>
+                <Button variant="gold" onClick={() => confirm.mutate()} disabled={confirm.isPending}>
+                  Zatwierdź składy — gra rusza
+                </Button>
+              </div>
+            </div>
+          ) : (
+            <div className="glass p-8 text-center">
+              <p className="mb-4 text-text-lo">Pula gotowa. Wylosuj drużyny, aby rozpocząć.</p>
+              <Button variant="gold" onClick={runDraw} disabled={draw.isPending}>
+                {draw.isPending ? 'Losowanie…' : '🎲 Losuj drużyny'}
+              </Button>
+            </div>
+          )}
+        </>
       )}
 
-      {inResultsPhase &&
-        (champions.isLoading ? (
-          <LoadingState label="Ładowanie championów…" />
-        ) : (
+      {/* LIVE / REJECTED → enter (or fix) results */}
+      {(m.status === 'LIVE' || m.status === 'REJECTED') && (
+        <>
+          {m.status === 'REJECTED' && m.approval?.rejectionReason && (
+            <div className="rounded-lg border border-[color:var(--loss)]/40 bg-[color:var(--loss)]/10 p-4 text-sm">
+              <span className="font-semibold text-loss">Odesłano do edycji:</span>{' '}
+              {m.approval.rejectionReason}
+            </div>
+          )}
           <ResultsForm
-            participants={m.participants}
-            champions={champions.data ?? []}
-            isSubmitting={submitResults.isPending}
-            onSubmit={(payload) => submitResults.mutate(payload)}
+            match={m}
+            submitting={submit.isPending || edit.isPending}
+            onSubmit={(req) => (m.status === 'REJECTED' ? edit.mutate(req) : submit.mutate(req))}
           />
-        ))}
-
-      {m.status === 'APPROVED' && (
-        <Card>
-          <CardBody className="text-sm text-text-lo">
-            Mecz został zaakceptowany — punkty naliczone. Korekta wymaga operacji „reopen" (ADMIN).
-          </CardBody>
-        </Card>
+        </>
       )}
 
-      {(draw.isError || confirmDraw.isError || submitResults.isError) && (
-        <ErrorState
-          error={draw.error ?? confirmDraw.error ?? submitResults.error}
-          title="Operacja nie powiodła się"
-        />
+      {/* RESULTS_SUBMITTED → awaiting sign-off */}
+      {m.status === 'RESULTS_SUBMITTED' && (
+        <>
+          <div className="flex items-center justify-between rounded-lg border border-[color:var(--pending)]/40 bg-[color:var(--pending)]/10 p-4">
+            <span className="text-sm text-text-hi">Wyniki czekają na akceptację admina.</span>
+            <Link to="/admin/approvals">
+              <Button variant="gold" size="sm">
+                Przejdź do akceptacji
+              </Button>
+            </Link>
+          </div>
+          <Scoreboard match={m} />
+        </>
       )}
+
+      {/* APPROVED / CANCELLED */}
+      {(m.status === 'APPROVED' || m.status === 'CANCELLED') && <Scoreboard match={m} />}
     </div>
   );
 }

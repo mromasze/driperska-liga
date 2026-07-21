@@ -1,19 +1,24 @@
 import type { Config } from 'tailwindcss';
 
-// Tailwind consumes the Hextech Arena theme tokens defined in src/index.css.
-// Components only ever reference these semantic names, never raw hex values,
-// so a future light theme can remap the CSS variables without touching markup.
+// Tailwind consumes the "Rift Nights" theme tokens defined in src/index.css.
+// Components reference these semantic names, never raw hex, so the light theme
+// (and any future retheme) works by remapping CSS variables alone.
 const config: Config = {
   content: ['./index.html', './src/**/*.{ts,tsx}'],
   theme: {
     extend: {
       colors: {
         bg: {
-          0: 'var(--bg-0)',
+          DEFAULT: 'var(--bg)',
+          0: 'var(--bg)',
           1: 'var(--bg-1)',
           2: 'var(--bg-2)',
+          3: 'var(--bg-3)',
         },
-        line: 'var(--border)',
+        line: {
+          DEFAULT: 'var(--line)',
+          strong: 'var(--line-strong)',
+        },
         text: {
           hi: 'var(--text-hi)',
           DEFAULT: 'var(--text)',
@@ -23,6 +28,8 @@ const config: Config = {
           DEFAULT: 'var(--gold)',
           soft: 'var(--gold-soft)',
         },
+        cyan: 'var(--cyan)',
+        violet: 'var(--violet)',
         blue: 'var(--blue)',
         'blue-bg': 'var(--blue-bg)',
         red: 'var(--red)',
@@ -39,18 +46,24 @@ const config: Config = {
         },
       },
       fontFamily: {
-        display: ['Marcellus', 'Georgia', 'serif'],
+        display: ['Chakra Petch', 'Inter', 'sans-serif'],
         sans: ['Inter', 'system-ui', 'sans-serif'],
-        numbers: ['Rajdhani', 'ui-monospace', 'monospace'],
+        numbers: ['Chakra Petch', 'ui-monospace', 'monospace'],
       },
       borderRadius: {
         sm: 'var(--r-sm)',
         md: 'var(--r-md)',
         lg: 'var(--r-lg)',
+        xl: 'var(--r-xl)',
       },
       boxShadow: {
         card: 'var(--shadow-card)',
+        pop: 'var(--shadow-pop)',
         'glow-gold': 'var(--glow-gold)',
+        'glow-cyan': 'var(--glow-cyan)',
+      },
+      maxWidth: {
+        content: '1200px',
       },
     },
   },
