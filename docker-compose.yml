@@ -1,20 +1,27 @@
+name: driperska
+
 services:
   db:
     image: postgres:16-alpine
+    restart: unless-stopped
     environment:
       POSTGRES_DB: driperska
       POSTGRES_USER: driperska
-      POSTGRES_PASSWORD: ${DB_PASSWORD:-driperska}
+      POSTGRES_PASSWORD: ${DB_PASSWORD:?Set DB_PASSWORD in .env}
     volumes:
       - pgdata:/var/lib/postgresql/data
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U driperska"]
+      test: ["CMD-SHELL", "pg_isready -U driperska -d driperska"]
       interval: 10s
       timeout: 5s
-      retries: 5
+      retries: 10
 
   backend:
-    build: ./backend
+    build:
+      context: ./backend
+      labels:
+        pl.driperska.version: "${APP_VERSION:-0.1.0}"
+    restart: unless-stopped
     depends_on:
       db:
         condition: service_healthy
@@ -22,24 +29,41 @@ services:
       SPRING_PROFILES_ACTIVE: docker
       SPRING_DATASOURCE_URL: jdbc:postgresql://db:5432/driperska
       SPRING_DATASOURCE_USERNAME: driperska
-      SPRING_DATASOURCE_PASSWORD: ${DB_PASSWORD:-driperska}
-      JWT_SECRET: ${JWT_SECRET:-change-me-in-env-this-must-be-at-least-32-bytes!!}
+      SPRING_DATASOURCE_PASSWORD: ${DB_PASSWORD}
+      JWT_SECRET: ${JWT_SECRET:?Set JWT_SECRET in .env}
       MEDIA_DIR: /app/data/media
-      DDRAGON_SYNC_ON_STARTUP: "true"
+      DDRAGON_SYNC_ON_STARTUP: "${DDRAGON_SYNC_ON_STARTUP:-true}"
+      APP_PUBLIC_URL: ${APP_PUBLIC_URL:-https://driperska.pl}
       APP_ADMIN_USERNAME: ${APP_ADMIN_USERNAME:-admin}
       APP_ADMIN_EMAIL: ${APP_ADMIN_EMAIL:-admin@driperska.local}
-      APP_ADMIN_PASSWORD: ${APP_ADMIN_PASSWORD:-changeit123}
+      APP_ADMIN_PASSWORD: ${APP_ADMIN_PASSWORD:?Set APP_ADMIN_PASSWORD in .env}
     volumes:
       - media:/app/data/media
+    healthcheck:
+      test: ["CMD-SHELL", "wget -qO- http://localhost:8080/actuator/health | grep -q UP"]
+      interval: 15s
+      timeout: 5s
+      retries: 10
+      start_period: 30s
 
   web:
-    build: ./frontend
+    build:
+      context: ./frontend
+      labels:
+        pl.driperska.version: "${APP_VERSION:-0.1.0}"
+    restart: unless-stopped
     depends_on:
-      - backend
+      backend:
+        condition: service_healthy
     ports:
-      - "${WEB_PORT:-8080}:80"
+      - "127.0.0.1:${WEB_PORT:-18080}:80"
     volumes:
       - media:/media:ro
+    healthcheck:
+      test: ["CMD-SHELL", "wget -qO- http://localhost/ >/dev/null"]
+      interval: 15s
+      timeout: 5s
+      retries: 5
 
 volumes:
   pgdata:

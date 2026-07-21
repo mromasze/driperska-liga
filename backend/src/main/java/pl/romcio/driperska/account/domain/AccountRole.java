@@ -12,7 +12,8 @@ package pl.romcio.driperska.account.domain;
  */
 public enum AccountRole {
     ADMIN,
-    EDITOR;
+    EDITOR,
+    PLAYER;
 
     /** Spring Security authority name (e.g. {@code ROLE_ADMIN}). */
     public String authority() {

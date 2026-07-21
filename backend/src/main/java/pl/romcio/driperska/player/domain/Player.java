@@ -1,12 +1,17 @@
 package pl.romcio.driperska.player.domain;
 
+import jakarta.persistence.CollectionTable;
 import jakarta.persistence.Column;
+import jakarta.persistence.ElementCollection;
 import jakarta.persistence.Entity;
 import jakarta.persistence.EnumType;
 import jakarta.persistence.Enumerated;
 import jakarta.persistence.Id;
+import jakarta.persistence.JoinColumn;
 import jakarta.persistence.Table;
 import java.time.Instant;
+import java.util.ArrayList;
+import java.util.List;
 import java.util.UUID;
 import org.hibernate.annotations.UuidGenerator;
 import pl.romcio.driperska.common.domain.Role;
@@ -42,7 +47,15 @@ public class Player {
     @Column(columnDefinition = "text")
     private String bio;
 
-    @Column(name = "account_id")
+    @Column(name = "opgg_link", length = 500)
+    private String opggLink;
+
+    @ElementCollection(fetch = jakarta.persistence.FetchType.EAGER)
+    @CollectionTable(name = "player_favorite_champion", joinColumns = @JoinColumn(name = "player_id"))
+    @Column(name = "champion_id", nullable = false)
+    private List<Integer> favoriteChampionIds = new ArrayList<>();
+
+    @Column(name = "account_id", unique = true)
     private UUID accountId;
 
     @Column(nullable = false)
@@ -59,83 +72,32 @@ public class Player {
         this.mainRole = mainRole;
     }
 
-    public UUID getId() {
-        return id;
+    public UUID getId() { return id; }
+    public String getNickname() { return nickname; }
+    public void setNickname(String nickname) { this.nickname = nickname; }
+    public String getRealName() { return realName; }
+    public void setRealName(String realName) { this.realName = realName; }
+    public String getRiotId() { return riotId; }
+    public void setRiotId(String riotId) { this.riotId = riotId; }
+    public Role getMainRole() { return mainRole; }
+    public void setMainRole(Role mainRole) { this.mainRole = mainRole; }
+    public Role getSecondaryRole() { return secondaryRole; }
+    public void setSecondaryRole(Role secondaryRole) { this.secondaryRole = secondaryRole; }
+    public String getAvatarUrl() { return avatarUrl; }
+    public void setAvatarUrl(String avatarUrl) { this.avatarUrl = avatarUrl; }
+    public String getBio() { return bio; }
+    public void setBio(String bio) { this.bio = bio; }
+    public String getOpggLink() { return opggLink; }
+    public void setOpggLink(String opggLink) { this.opggLink = opggLink; }
+    public List<Integer> getFavoriteChampionIds() { return favoriteChampionIds; }
+    public void setFavoriteChampionIds(List<Integer> favoriteChampionIds) {
+        this.favoriteChampionIds = favoriteChampionIds == null
+                ? new ArrayList<>()
+                : new ArrayList<>(favoriteChampionIds);
     }
-
-    public String getNickname() {
-        return nickname;
-    }
-
-    public void setNickname(String nickname) {
-        this.nickname = nickname;
-    }
-
-    public String getRealName() {
-        return realName;
-    }
-
-    public void setRealName(String realName) {
-        this.realName = realName;
-    }
-
-    public String getRiotId() {
-        return riotId;
-    }
-
-    public void setRiotId(String riotId) {
-        this.riotId = riotId;
-    }
-
-    public Role getMainRole() {
-        return mainRole;
-    }
-
-    public void setMainRole(Role mainRole) {
-        this.mainRole = mainRole;
-    }
-
-    public Role getSecondaryRole() {
-        return secondaryRole;
-    }
-
-    public void setSecondaryRole(Role secondaryRole) {
-        this.secondaryRole = secondaryRole;
-    }
-
-    public String getAvatarUrl() {
-        return avatarUrl;
-    }
-
-    public void setAvatarUrl(String avatarUrl) {
-        this.avatarUrl = avatarUrl;
-    }
-
-    public String getBio() {
-        return bio;
-    }
-
-    public void setBio(String bio) {
-        this.bio = bio;
-    }
-
-    public UUID getAccountId() {
-        return accountId;
-    }
-
-    public void setAccountId(UUID accountId) {
-        this.accountId = accountId;
-    }
-
-    public boolean isActive() {
-        return active;
-    }
-
-    public void setActive(boolean active) {
-        this.active = active;
-    }
-
-    public Instant getJoinedAt() {
-        return joinedAt;
-    }
+    public UUID getAccountId() { return accountId; }
+    public void setAccountId(UUID accountId) { this.accountId = accountId; }
+    public boolean isActive() { return active; }
+    public void setActive(boolean active) { this.active = active; }
+    public Instant getJoinedAt() { return joinedAt; }
 }

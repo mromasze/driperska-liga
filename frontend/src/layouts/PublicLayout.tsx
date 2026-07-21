@@ -9,7 +9,8 @@ const NAV = [
 ];
 
 export function PublicLayout() {
-  const authed = useAuthStore((s) => Boolean(s.accessToken));
+  const account = useAuthStore((s) => s.account);
+  const panelUrl = account ? (account.role === 'PLAYER' ? '/panel' : '/admin') : '/login';
 
   return (
     <div className="flex min-h-screen flex-col">
@@ -23,48 +24,25 @@ export function PublicLayout() {
               DRIPERSKA <span className="text-gradient-gold">LIGA</span>
             </span>
           </Link>
-
           <nav className="flex items-center gap-1">
             {NAV.map((item) => (
-              <NavLink
-                key={item.to}
-                to={item.to}
-                end={item.end}
-                className={({ isActive }) =>
-                  cn(
-                    'rounded-md px-3 py-2 text-sm font-medium transition-colors',
-                    isActive ? 'text-text-hi' : 'text-text-lo hover:text-text',
-                  )
-                }
-              >
-                {({ isActive }) => (
-                  <span className="relative">
-                    {item.label}
-                    {isActive && (
-                      <span className="absolute -bottom-2 left-0 h-0.5 w-full rounded-full bg-gold" />
-                    )}
-                  </span>
-                )}
+              <NavLink key={item.to} to={item.to} end={item.end}
+                className={({ isActive }) => cn('rounded-md px-3 py-2 text-sm font-medium transition-colors',
+                  isActive ? 'text-text-hi' : 'text-text-lo hover:text-text')}>
+                {({ isActive }) => <span className="relative">{item.label}
+                  {isActive && <span className="absolute -bottom-2 left-0 h-0.5 w-full rounded-full bg-gold" />}
+                </span>}
               </NavLink>
             ))}
-            <Link
-              to={authed ? '/admin' : '/admin/login'}
-              className="ml-2 rounded-md border border-line bg-[var(--glass)] px-3 py-2 text-sm font-medium text-text hover:text-text-hi"
-            >
-              Panel
+            <Link to={panelUrl} className="ml-2 rounded-md border border-line bg-[var(--glass)] px-3 py-2 text-sm font-medium text-text hover:text-text-hi">
+              {account?.role === 'PLAYER' ? 'Strefa gracza' : 'Panel'}
             </Link>
           </nav>
         </div>
       </header>
-
-      <main className="mx-auto w-full max-w-content flex-1 px-4 py-8 sm:px-6 sm:py-10">
-        <Outlet />
-      </main>
-
+      <main className="mx-auto w-full max-w-content flex-1 px-4 py-8 sm:px-6 sm:py-10"><Outlet /></main>
       <footer className="border-t border-line py-8 text-center text-xs text-text-lo">
-        <div className="mx-auto max-w-content px-4">
-          Driperska Liga · inhouse League of Legends · zbudowane dla społeczności
-        </div>
+        <div className="mx-auto max-w-content px-4">Driperska Liga v0.1 · inhouse League of Legends</div>
       </footer>
     </div>
   );

@@ -5,47 +5,36 @@ import java.util.UUID;
 import org.springframework.data.domain.Pageable;
 import org.springframework.http.HttpStatus;
 import org.springframework.security.access.prepost.PreAuthorize;
-import org.springframework.web.bind.annotation.DeleteMapping;
-import org.springframework.web.bind.annotation.GetMapping;
-import org.springframework.web.bind.annotation.PatchMapping;
-import org.springframework.web.bind.annotation.PathVariable;
-import org.springframework.web.bind.annotation.PostMapping;
-import org.springframework.web.bind.annotation.RequestBody;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RequestParam;
-import org.springframework.web.bind.annotation.ResponseStatus;
-import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
 import pl.romcio.driperska.common.domain.Role;
+import pl.romcio.driperska.common.security.CurrentAccount;
 import pl.romcio.driperska.common.web.PageResponse;
-import pl.romcio.driperska.player.api.PlayerDtos.CreatePlayerRequest;
-import pl.romcio.driperska.player.api.PlayerDtos.PlayerResponse;
-import pl.romcio.driperska.player.api.PlayerDtos.UpdatePlayerRequest;
+import pl.romcio.driperska.player.api.PlayerDtos.*;
 import pl.romcio.driperska.player.application.PlayerService;
 
 @RestController
 @RequestMapping("/api/v1/players")
 public class PlayerController {
-
     private final PlayerService service;
-
-    public PlayerController(PlayerService service) {
-        this.service = service;
-    }
+    public PlayerController(PlayerService service) { this.service = service; }
 
     @GetMapping
     public PageResponse<PlayerResponse> list(
             @RequestParam(required = false) Boolean active,
             @RequestParam(required = false) Role role,
-            @RequestParam(required = false) String search,
-            Pageable pageable) {
+            @RequestParam(required = false) String search, Pageable pageable) {
         return PageResponse.of(service.list(active, role, search, pageable).map(PlayerResponse::from));
     }
 
-    @GetMapping("/{id}")
-    public PlayerResponse get(@PathVariable UUID id) {
-        return PlayerResponse.from(service.get(id));
+    @GetMapping("/me")
+    @PreAuthorize("hasRole('PLAYER')")
+    public PlayerResponse me() {
+        return PlayerResponse.from(service.getByAccountId(CurrentAccount.require().accountId()));
     }
+
+    @GetMapping("/{id}")
+    public PlayerResponse get(@PathVariable UUID id) { return PlayerResponse.from(service.get(id)); }
 
     @PostMapping
     @ResponseStatus(HttpStatus.CREATED)
@@ -54,10 +43,35 @@ public class PlayerController {
         return PlayerResponse.from(service.create(req));
     }
 
+    @PostMapping("/with-account")
+    @ResponseStatus(HttpStatus.CREATED)
+    @PreAuthorize("hasRole('ADMIN')")
+    public CreatedPlayerResponse createWithAccount(@Valid @RequestBody CreatePlayerRequest req) {
+        return service.createWithAccount(req);
+    }
+
+    @PostMapping("/{id}/account")
+    @PreAuthorize("hasRole('ADMIN')")
+    public CreatedPlayerResponse provisionAccount(@PathVariable UUID id) {
+        return service.provisionExisting(id);
+    }
+
+    @PatchMapping("/me")
+    @PreAuthorize("hasRole('PLAYER')")
+    public PlayerResponse updateMe(@Valid @RequestBody SelfUpdatePlayerRequest req) {
+        return PlayerResponse.from(service.updateSelf(CurrentAccount.require().accountId(), req));
+    }
+
     @PatchMapping("/{id}")
     @PreAuthorize("hasAnyRole('ADMIN','EDITOR')")
     public PlayerResponse update(@PathVariable UUID id, @Valid @RequestBody UpdatePlayerRequest req) {
         return PlayerResponse.from(service.update(id, req));
+    }
+
+    @PostMapping(value = "/me/avatar", consumes = "multipart/form-data")
+    @PreAuthorize("hasRole('PLAYER')")
+    public PlayerResponse uploadMyAvatar(@RequestParam("file") MultipartFile file) {
+        return PlayerResponse.from(service.updateSelfAvatar(CurrentAccount.require().accountId(), file));
     }
 
     @PostMapping(value = "/{id}/avatar", consumes = "multipart/form-data")
@@ -69,7 +83,5 @@ public class PlayerController {
     @DeleteMapping("/{id}")
     @ResponseStatus(HttpStatus.NO_CONTENT)
     @PreAuthorize("hasRole('ADMIN')")
-    public void delete(@PathVariable UUID id) {
-        service.softDelete(id);
-    }
+    public void delete(@PathVariable UUID id) { service.softDelete(id); }
 }

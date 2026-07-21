@@ -1,69 +1,57 @@
-# Driperska Liga
+# Driperska Liga v0.1
 
-Aplikacja do prowadzenia amatorskiej ligi League of Legends: publiczna strona z wynikami i
-rankingiem, profile graczy z pełnymi statystykami, panel administracyjny z losowaniem drużyn oraz
-dwustopniową akceptacją wyników.
+Aplikacja do prowadzenia amatorskiej ligi League of Legends: ranking i wyniki,
+profile graczy, panel administracyjny oraz głosowane losowanie drużyn w czasie rzeczywistym.
 
-- **Backend:** Java 21, Spring Boot 3.4, REST API (JWT), JPA, PostgreSQL. Katalog [`backend/`](backend/).
-- **Frontend:** React 18 + TypeScript + Vite, TanStack Query, Tailwind. Katalog [`frontend/`](frontend/).
-- **Plan i architektura:** [`docs/`](docs/README.md) — obszerny plan implementacji, model domenowy,
-  system punktów, REST API, design wizualny, integracja z championami, Docker, roadmapa.
+- **Backend:** Java 21, Spring Boot, JWT, JPA, Flyway i PostgreSQL.
+- **Frontend:** React + TypeScript + Vite, TanStack Query i Tailwind.
+- **Uruchomienie:** Docker Compose; publiczny ruch przechodzi przez nginx.
+- **Changelog:** [CHANGELOG.md](CHANGELOG.md).
+- **Pełne wdrożenie driperska.pl:** [docs/10-production-deployment.md](docs/10-production-deployment.md).
 
-Pracujemy na branchu `driperska-next`.
-
-## Szybki start (Docker)
+## Szybki start
 
 ```bash
-cp .env.example .env          # ustaw JWT_SECRET i hasła
+cp .env.example .env
+# ustaw silne DB_PASSWORD, JWT_SECRET i APP_ADMIN_PASSWORD
 docker compose up --build
 ```
 
-Strona publiczna: `http://localhost:8080` (port zmienisz przez `WEB_PORT`).
-Backend jest dostępny tylko przez nginx pod `/api`. Domyślny admin: `admin` / `changeit123`
-(zmień hasło po pierwszym logowaniu).
-
-### Tryb developerski
+Domyślny port z przykładowego pliku to `127.0.0.1:18080`. Tryb developerski:
 
 ```bash
-# baza + backend + frontend, z odsłoniętymi portami do debugowania
 docker compose -f docker-compose.yml -f docker-compose.dev.yml up --build
 ```
 
-lub lokalnie:
+Lokalnie bez Postgresa:
 
 ```bash
-# backend (profil dev = baza H2 w pamięci, zero konfiguracji)
-cd backend && JWT_SECRET=dev-secret-32-bytes-minimum-please-1234 ./mvnw spring-boot:run -Dspring-boot.run.profiles=dev
+cd backend
+JWT_SECRET=dev-secret-32-bytes-minimum-please-1234 ./mvnw spring-boot:run -Dspring-boot.run.profiles=dev
 
-# frontend (Vite dev server na :5173, proxy do backendu)
-cd frontend && npm install && npm run dev
+cd ../frontend
+npm install
+npm run dev
 ```
 
-- Swagger UI: `http://localhost:8080/swagger-ui.html` (przez backend na porcie 8080/8081 zależnie od trybu).
-- Health: `/actuator/health`.
+## Najważniejsze funkcje v0.1
 
-## Funkcje
+- Admin tworzy gracza razem z kontem. Login jest równy nickowi, hasło jest losowe,
+  a UI generuje gotową wiadomość do wysłania na DM.
+- Utworzenie meczu od razu rozpoczyna rundę losowania dla dokładnie 10 graczy.
+- Składy i strony są transmitowane przez SSE. 6 głosów „za” uruchamia grę;
+  5 „przeciw” automatycznie losuje kolejną rundę.
+- Gracz edytuje role, ulubionych championów, Riot ID, bio, zdjęcie i OP.GG.
+- Schemat produkcyjny zmienia wyłącznie Flyway. Deploy robi backup i nie usuwa
+  wolumenów PostgreSQL ani mediów.
+- Strona główna pokazuje patch notes z `frontend/src/content/releases.ts`.
 
-- Logowanie (JWT), role **ADMIN** i **EDITOR**.
-- Zarządzanie graczami + zdjęcia profilowe (skalowane serwerowo).
-- Synchronizacja championów z Riot **Data Dragon** (bez klucza API).
-- Cykl życia meczu: utworzenie → **losowanie zbalansowanych drużyn** (balans MMR) → potwierdzenie →
-  wpisanie wyników → **akceptacja z podpisem** (nawet gdy wpisał admin, wymagane osobne
-  zatwierdzenie checkboxem) albo odesłanie do edycji. Pełny audyt zdarzeń.
-- **System punktów:** Performance Rating (0–100) per mecz, Punkty Ligowe (ranking sezonu) oraz
-  ukryte MMR (Elo) do balansowania losowania. Szczegóły: [docs/04](docs/04-points-and-ranking.md).
-- Publiczny ranking, profile graczy, scoreboardy meczów.
+## Weryfikacja
 
-## Stan implementacji
+```bash
+cd backend && ./mvnw verify
+cd ../frontend && npm run lint && npm run typecheck && npm run build
+docker compose config -q
+```
 
-Zaimplementowany jest kompletny backend (wszystkie feature'y z planu: auth, konta, gracze,
-championy, sezony, mecze z pełnym cyklem życia, silnik punktów i ranking) oraz frontend (design
-system + strony publiczne i panel). Weryfikacja: testy jednostkowe backendu, pełny smoke-test
-cyklu życia meczu, build frontendu (lint + typecheck + vite build).
-
-**Świadome uproszczenia względem docelowego planu (do domknięcia w kolejnych iteracjach):**
-
-- Schemat bazy tworzy Hibernate (`ddl-auto=update`); migracje **Flyway** z [docs/02](docs/02-domain-and-database.md)
-  to następny krok hardeningu (Faza 0/7 roadmapy).
-- Odświeżanie tokenu trzyma refresh token po stronie klienta; docelowo httpOnly cookie.
-- Typy API frontu są pisane ręcznie; docelowo generowane z OpenAPI.
+Swagger UI: `/swagger-ui.html`, health: `/actuator/health`.

@@ -17,7 +17,6 @@ spring:
     multipart:
       max-file-size: 6MB
       max-request-size: 6MB
-  # Default datasource is an in-memory H2 so `java -jar` / tests boot with zero setup.
   datasource:
     url: jdbc:h2:mem:driperska;DB_CLOSE_DELAY=-1;MODE=PostgreSQL
     driver-class-name: org.h2.Driver
@@ -26,6 +25,7 @@ spring:
 
 server:
   port: 8080
+  forward-headers-strategy: framework
 
 management:
   endpoints:
@@ -33,7 +33,13 @@ management:
       exposure:
         include: health,info,metrics
 
+info:
+  app:
+    name: Driperska Liga
+    version: 0.1
+
 app:
+  public-url: ${APP_PUBLIC_URL:https://driperska.pl}
   jwt:
     secret: ${JWT_SECRET:dev-secret-please-override-with-a-32plus-byte-value!!}
     access-token-minutes: 15
@@ -71,5 +77,12 @@ spring:
     driver-class-name: org.postgresql.Driver
     username: ${SPRING_DATASOURCE_USERNAME:driperska}
     password: ${SPRING_DATASOURCE_PASSWORD:driperska}
+  flyway:
+    enabled: true
+    baseline-on-migrate: true
+    baseline-version: 0
+    validate-on-migrate: true
   jpa:
     database-platform: org.hibernate.dialect.PostgreSQLDialect
+    hibernate:
+      ddl-auto: validate

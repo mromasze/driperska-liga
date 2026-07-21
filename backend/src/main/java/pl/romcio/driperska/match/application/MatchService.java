@@ -1,20 +1,12 @@
 package pl.romcio.driperska.match.application;
 
-import java.util.List;
-import java.util.Map;
-import java.util.Set;
-import java.util.UUID;
+import java.util.*;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
-import pl.romcio.driperska.common.error.BusinessRuleException;
-import pl.romcio.driperska.common.error.ResourceNotFoundException;
-import pl.romcio.driperska.match.domain.DrawMode;
-import pl.romcio.driperska.match.domain.Match;
-import pl.romcio.driperska.match.domain.MatchEvent;
-import pl.romcio.driperska.match.domain.MatchEventType;
-import pl.romcio.driperska.match.domain.MatchStatus;
+import pl.romcio.driperska.common.error.*;
+import pl.romcio.driperska.match.domain.*;
 import pl.romcio.driperska.match.infra.MatchEventRepository;
 import pl.romcio.driperska.match.infra.MatchRepository;
 import pl.romcio.driperska.player.domain.Player;
@@ -23,8 +15,6 @@ import pl.romcio.driperska.season.application.SeasonService;
 
 @Service
 public class MatchService {
-
-    /** A standard 5v5 game. */
     public static final int REQUIRED_POOL_SIZE = 10;
 
     private final MatchRepository matchRepository;
@@ -33,10 +23,8 @@ public class MatchService {
     private final PlayerRepository playerRepository;
     private final SeasonService seasonService;
 
-    public MatchService(MatchRepository matchRepository,
-                        MatchEventRepository eventRepository,
-                        MatchEventRecorder eventRecorder,
-                        PlayerRepository playerRepository,
+    public MatchService(MatchRepository matchRepository, MatchEventRepository eventRepository,
+                        MatchEventRecorder eventRecorder, PlayerRepository playerRepository,
                         SeasonService seasonService) {
         this.matchRepository = matchRepository;
         this.eventRepository = eventRepository;
@@ -57,6 +45,10 @@ public class MatchService {
         if (players.size() != REQUIRED_POOL_SIZE) {
             throw new BusinessRuleException("Niektórzy gracze z puli nie istnieją");
         }
+        if (players.stream().anyMatch(player -> player.getAccountId() == null)) {
+            throw new BusinessRuleException(
+                    "Każdy uczestnik musi mieć konto logowania przed rozpoczęciem losowania");
+        }
         Match match = new Match(seasonId, drawMode == null ? DrawMode.BALANCED : drawMode, actor);
         match.setPoolPlayerIds(List.copyOf(distinct));
         Match saved = matchRepository.save(match);
@@ -67,20 +59,15 @@ public class MatchService {
 
     @Transactional(readOnly = true)
     public Match get(UUID id) {
-        return matchRepository.findById(id).orElseThrow(() -> ResourceNotFoundException.of("Match", id));
+        return matchRepository.findById(id)
+                .orElseThrow(() -> ResourceNotFoundException.of("Match", id));
     }
 
     @Transactional(readOnly = true)
     public Page<Match> list(MatchStatus status, UUID seasonId, Pageable pageable) {
-        if (status != null && seasonId != null) {
-            return matchRepository.findByStatusAndSeasonId(status, seasonId, pageable);
-        }
-        if (status != null) {
-            return matchRepository.findByStatus(status, pageable);
-        }
-        if (seasonId != null) {
-            return matchRepository.findBySeasonId(seasonId, pageable);
-        }
+        if (status != null && seasonId != null) return matchRepository.findByStatusAndSeasonId(status, seasonId, pageable);
+        if (status != null) return matchRepository.findByStatus(status, pageable);
+        if (seasonId != null) return matchRepository.findBySeasonId(seasonId, pageable);
         return matchRepository.findAll(pageable);
     }
 
