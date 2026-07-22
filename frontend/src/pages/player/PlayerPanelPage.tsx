@@ -261,6 +261,7 @@ function DrawVotingCard({ lobby, myPlayerId, myVote, pending, onVote }: {
             </div>
           )}
           <p className="mt-3 text-center text-xs text-text-lo">6 głosów „za” tworzy lobby Riot. 5 głosów „przeciw” losuje nowe drużyny i strony.</p>
+          <VoteTally lobby={lobby} />
         </div>
       )}
       {lobby.status === 'LOBBY_READY' && (
@@ -315,6 +316,36 @@ function LobbyTeam({ title, players, color, myPlayerId }: { title: string; playe
             <span className="kicker">{roleLabel(player.role)}</span>
           </div>
         ))}
+      </div>
+    </div>
+  );
+}
+
+function VoteTally({ lobby }: { lobby: DrawLobby }) {
+  const players = [...lobby.blue, ...lobby.red];
+  const accepted = new Set(lobby.acceptedPlayerIds);
+  const rejected = new Set(lobby.rejectedPlayerIds);
+  return (
+    <div className="mt-4 border-t border-line pt-4">
+      <div className="mb-2 kicker">Kto jak zagłosował</div>
+      <div className="grid gap-2 sm:grid-cols-2">
+        {players.map((player) => {
+          const vote = accepted.has(player.playerId) ? 'ACCEPT'
+            : rejected.has(player.playerId) ? 'REJECT' : null;
+          return (
+            <div key={player.playerId} className="flex items-center gap-2 rounded-md bg-[color:var(--bg-1)]/60 px-3 py-1.5">
+              <Avatar src={player.avatarUrl} name={player.nickname} size={24} />
+              <span className="min-w-0 flex-1 truncate text-sm text-text-hi">{player.nickname}</span>
+              {vote === 'ACCEPT' ? (
+                <span className="text-xs font-semibold text-win">✓ Gramy</span>
+              ) : vote === 'REJECT' ? (
+                <span className="text-xs font-semibold text-loss">↻ Losuj ponownie</span>
+              ) : (
+                <span className="text-xs text-text-lo">czeka…</span>
+              )}
+            </div>
+          );
+        })}
       </div>
     </div>
   );
