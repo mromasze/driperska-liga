@@ -1,0 +1,286 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* ============================================================
+   Driperska Liga — "Rift Nights" theme.
+   Premium dark esports look: deep midnight base, glass surfaces,
+   gold prestige + cyan/violet energy accents. Components reference
+   the semantic tokens below (and the utility classes at the bottom).
+   ============================================================ */
+:root {
+  /* Backgrounds — deepest → most elevated */
+  --bg: #070912;
+  --bg-1: #0d1120;
+  --bg-2: #141b2d;
+  --bg-3: #1c2740;
+
+  /* Glass surface + hairlines */
+  --glass: rgba(255, 255, 255, 0.035);
+  --glass-strong: rgba(255, 255, 255, 0.06);
+  --line: rgba(255, 255, 255, 0.09);
+  --line-strong: rgba(255, 255, 255, 0.16);
+
+  /* Text */
+  --text-hi: #f3f6ff;
+  --text: #aab6cf;
+  --text-lo: #6a7690;
+
+  /* Prestige + energy accents */
+  --gold: #f2c14e;
+  --gold-soft: #ffe4a3;
+  --cyan: #35e0e0;
+  --violet: #9b8cff;
+
+  /* Team sides */
+  --blue: #4c82f5;
+  --blue-bg: rgba(76, 130, 245, 0.14);
+  --red: #ff5162;
+  --red-bg: rgba(255, 81, 98, 0.14);
+
+  /* Semantics */
+  --win: #35e0a0;
+  --loss: #ff6b7b;
+  --pending: #ffb020;
+  --info: #35e0e0;
+
+  /* Performance Rating scale (0–100) */
+  --pr-low: #7c8aa0;
+  --pr-mid: #35e0e0;
+  --pr-high: #9b8cff;
+  --pr-elite: #f2c14e;
+
+  /* Radii / shadows */
+  --r-sm: 10px;
+  --r-md: 16px;
+  --r-lg: 24px;
+  --r-xl: 32px;
+  --shadow-card: 0 18px 50px -12px rgba(0, 0, 0, 0.65);
+  --shadow-pop: 0 24px 70px -18px rgba(0, 0, 0, 0.8);
+  --glow-gold: 0 0 0 1px rgba(242, 193, 78, 0.35), 0 0 28px -6px rgba(242, 193, 78, 0.5);
+  --glow-cyan: 0 0 0 1px rgba(53, 224, 224, 0.35), 0 0 28px -6px rgba(53, 224, 224, 0.5);
+}
+
+:root[data-theme='light'] {
+  --bg: #eef1f8;
+  --bg-1: #ffffff;
+  --bg-2: #f5f7fc;
+  --bg-3: #eaeef7;
+  --glass: rgba(15, 23, 42, 0.03);
+  --glass-strong: rgba(15, 23, 42, 0.05);
+  --line: rgba(15, 23, 42, 0.1);
+  --line-strong: rgba(15, 23, 42, 0.16);
+  --text-hi: #0a0e1a;
+  --text: #33405a;
+  --text-lo: #6a768c;
+  --shadow-card: 0 18px 40px -16px rgba(15, 23, 42, 0.25);
+}
+
+@layer base {
+  * {
+    border-color: var(--line);
+  }
+
+  html {
+    color-scheme: dark;
+    scroll-behavior: smooth;
+  }
+
+  body {
+    margin: 0;
+    min-height: 100vh;
+    background-color: var(--bg);
+    /* Layered ambient glows fixed behind the content. */
+    background-image:
+      radial-gradient(60rem 40rem at 82% -8%, rgba(155, 140, 255, 0.14), transparent 60%),
+      radial-gradient(52rem 40rem at -8% 12%, rgba(53, 224, 224, 0.1), transparent 60%),
+      radial-gradient(70rem 50rem at 50% 120%, rgba(242, 193, 78, 0.08), transparent 60%);
+    background-attachment: fixed;
+    color: var(--text);
+    font-family: 'Inter', system-ui, sans-serif;
+    -webkit-font-smoothing: antialiased;
+    text-rendering: optimizeLegibility;
+  }
+
+  h1, h2, h3, h4 {
+    font-family: 'Chakra Petch', 'Inter', sans-serif;
+    color: var(--text-hi);
+    font-weight: 700;
+    letter-spacing: -0.01em;
+    line-height: 1.05;
+  }
+
+  .num {
+    font-family: 'Chakra Petch', ui-monospace, monospace;
+    font-variant-numeric: tabular-nums;
+    font-weight: 600;
+  }
+
+  ::selection {
+    background: rgba(242, 193, 78, 0.28);
+    color: var(--text-hi);
+  }
+
+  :focus-visible {
+    outline: 2px solid var(--gold);
+    outline-offset: 2px;
+  }
+
+  /* Slim, themed scrollbars */
+  * {
+    scrollbar-width: thin;
+    scrollbar-color: var(--line-strong) transparent;
+  }
+  *::-webkit-scrollbar {
+    width: 10px;
+    height: 10px;
+  }
+  *::-webkit-scrollbar-thumb {
+    background: var(--line-strong);
+    border-radius: 999px;
+    border: 3px solid transparent;
+    background-clip: content-box;
+  }
+}
+
+@layer components {
+  /* Frosted-glass card — the default surface. */
+  .glass {
+    background: linear-gradient(180deg, var(--glass-strong), var(--glass));
+    backdrop-filter: blur(14px);
+    -webkit-backdrop-filter: blur(14px);
+    border: 1px solid var(--line);
+    border-radius: var(--r-lg);
+    box-shadow: var(--shadow-card);
+  }
+
+  /* Solid elevated panel (admin, forms). */
+  .panel {
+    background: var(--bg-1);
+    border: 1px solid var(--line);
+    border-radius: var(--r-lg);
+    box-shadow: var(--shadow-card);
+  }
+
+  /* Interactive lift on hover. */
+  .lift {
+    transition: transform 0.22s cubic-bezier(0.22, 1, 0.36, 1), border-color 0.22s, box-shadow 0.22s;
+  }
+  .lift:hover {
+    transform: translateY(-3px);
+    border-color: var(--line-strong);
+  }
+
+  /* Small uppercase label. */
+  .kicker {
+    font-family: 'Chakra Petch', sans-serif;
+    text-transform: uppercase;
+    letter-spacing: 0.22em;
+    font-size: 0.68rem;
+    font-weight: 600;
+    color: var(--text-lo);
+  }
+
+  /* Pill / tag. */
+  .chip {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.35rem;
+    padding: 0.2rem 0.6rem;
+    border-radius: 999px;
+    border: 1px solid var(--line);
+    background: var(--glass);
+    font-size: 0.72rem;
+    font-weight: 600;
+    color: var(--text);
+  }
+
+  /* Gradient hairline divider. */
+  .hair {
+    height: 1px;
+    background: linear-gradient(90deg, transparent, var(--line-strong), transparent);
+  }
+}
+
+@layer utilities {
+  .tabnum {
+    font-variant-numeric: tabular-nums;
+  }
+
+  .text-gradient-gold {
+    background: linear-gradient(100deg, var(--gold-soft), var(--gold) 55%, #b98a2e);
+    -webkit-background-clip: text;
+    background-clip: text;
+    color: transparent;
+  }
+
+  .text-gradient-cool {
+    background: linear-gradient(100deg, #ffffff, var(--cyan) 60%, var(--violet));
+    -webkit-background-clip: text;
+    background-clip: text;
+    color: transparent;
+  }
+
+  .glow-gold {
+    box-shadow: var(--glow-gold);
+  }
+  .glow-cyan {
+    box-shadow: var(--glow-cyan);
+  }
+
+  /* Bottom scrim over champion splash art. */
+  .scrim-b {
+    background-image: linear-gradient(
+      to top,
+      var(--bg-1) 4%,
+      rgba(13, 17, 32, 0.82) 42%,
+      rgba(13, 17, 32, 0.15) 100%
+    );
+  }
+  .scrim-side {
+    background-image: linear-gradient(90deg, var(--bg-1) 0%, rgba(13, 17, 32, 0.35) 60%, transparent 100%);
+  }
+
+  /* Faint tech grid overlay for hero panels. */
+  .grid-tex {
+    background-image:
+      linear-gradient(rgba(255, 255, 255, 0.04) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(255, 255, 255, 0.04) 1px, transparent 1px);
+    background-size: 34px 34px;
+  }
+
+  @keyframes rise {
+    from { opacity: 0; transform: translateY(10px); }
+    to { opacity: 1; transform: translateY(0); }
+  }
+  .animate-rise {
+    animation: rise 0.5s cubic-bezier(0.22, 1, 0.36, 1) both;
+  }
+}
+
+@layer components {
+  .form-control {
+    @apply h-10 w-full rounded-md border border-line bg-bg-1 px-3 text-text-hi placeholder:text-text-lo;
+  }
+}
+
+@keyframes draw-card-in {
+  0% { opacity: 0; transform: translateY(16px) scale(0.96); filter: blur(8px); }
+  60% { opacity: 1; filter: blur(0); }
+  100% { opacity: 1; transform: translateY(0) scale(1); filter: blur(0); }
+}
+
+@keyframes draw-stage-pulse {
+  0%, 100% { box-shadow: var(--shadow-card); }
+  50% { box-shadow: var(--shadow-card), 0 0 70px -24px rgba(53, 224, 224, 0.7); }
+}
+
+.draw-stage { animation: draw-stage-pulse 2.4s ease-in-out 1; }
+.draw-player {
+  opacity: 0;
+  animation: draw-card-in 620ms cubic-bezier(0.22, 1, 0.36, 1) forwards;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .draw-stage, .draw-player { animation: none; opacity: 1; }
+}

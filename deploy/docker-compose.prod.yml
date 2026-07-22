@@ -1,0 +1,76 @@
+name: driperska
+
+services:
+  db:
+    image: postgres:16-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: driperska
+      POSTGRES_USER: driperska
+      POSTGRES_PASSWORD: ${DB_PASSWORD:?Set DB_PASSWORD in .env}
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U driperska -d driperska"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+
+  backend:
+    image: ${BACKEND_IMAGE:?BACKEND_IMAGE is set by the deployment workflow}
+    restart: unless-stopped
+    depends_on:
+      db:
+        condition: service_healthy
+    environment:
+      SPRING_PROFILES_ACTIVE: docker
+      SPRING_DATASOURCE_URL: jdbc:postgresql://db:5432/driperska
+      SPRING_DATASOURCE_USERNAME: driperska
+      SPRING_DATASOURCE_PASSWORD: ${DB_PASSWORD}
+      JWT_SECRET: ${JWT_SECRET:?Set JWT_SECRET in .env}
+      MEDIA_DIR: /app/data/media
+      DDRAGON_SYNC_ON_STARTUP: "${DDRAGON_SYNC_ON_STARTUP:-true}"
+      RIOT_API_KEY: ${RIOT_API_KEY:-}
+      RIOT_PLATFORM: ${RIOT_PLATFORM:-eun1}
+      RIOT_PROVIDER_REGION: ${RIOT_PROVIDER_REGION:-EUNE}
+      RIOT_REGIONAL_ROUTE: ${RIOT_REGIONAL_ROUTE:-europe}
+      RIOT_TOURNAMENT_ROUTE: ${RIOT_TOURNAMENT_ROUTE:-americas}
+      RIOT_USE_STUB: ${RIOT_USE_STUB:-true}
+      RIOT_CALLBACK_URL: ${RIOT_CALLBACK_URL:-https://driperska.pl/api/v1/riot/tournament/callback}
+      RIOT_MOCK: ${RIOT_MOCK:-false}
+      DISCORD_BOT_TOKEN: ${DISCORD_BOT_TOKEN:-}
+      DISCORD_GUILD_ID: ${DISCORD_GUILD_ID:-}
+      DISCORD_RESULTS_CHANNEL_ID: ${DISCORD_RESULTS_CHANNEL_ID:-}
+      APP_PUBLIC_URL: ${APP_PUBLIC_URL:-https://driperska.pl}
+      APP_ADMIN_USERNAME: ${APP_ADMIN_USERNAME:-admin}
+      APP_ADMIN_EMAIL: ${APP_ADMIN_EMAIL:-admin@driperska.local}
+      APP_ADMIN_PASSWORD: ${APP_ADMIN_PASSWORD:?Set APP_ADMIN_PASSWORD in .env}
+      DRAW_AUTO_CONFIRM_SECONDS: ${DRAW_AUTO_CONFIRM_SECONDS:-30}
+    volumes:
+      - media:/app/data/media
+    healthcheck:
+      test: ["CMD-SHELL", "wget -qO- http://127.0.0.1:8080/actuator/health | grep -q UP"]
+      interval: 15s
+      timeout: 5s
+      retries: 10
+      start_period: 30s
+
+  web:
+    image: ${WEB_IMAGE:?WEB_IMAGE is set by the deployment workflow}
+    restart: unless-stopped
+    depends_on:
+      backend:
+        condition: service_healthy
+    ports:
+      - "127.0.0.1:${WEB_PORT:-18080}:80"
+    volumes:
+      - media:/media:ro
+    healthcheck:
+      test: ["CMD-SHELL", "wget -qO- http://127.0.0.1/ >/dev/null"]
+      interval: 15s
+      timeout: 5s
+      retries: 5
+
+volumes:
+  pgdata:
+  media:

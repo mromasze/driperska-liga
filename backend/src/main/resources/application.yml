@@ -1,0 +1,126 @@
+spring:
+  application:
+    name: driperska-liga
+  jpa:
+    open-in-view: false
+    hibernate:
+      ddl-auto: update
+    properties:
+      hibernate:
+        format_sql: true
+  flyway:
+    enabled: false
+  threads:
+    virtual:
+      enabled: true
+  servlet:
+    multipart:
+      max-file-size: 512MB
+      max-request-size: 512MB
+  datasource:
+    url: jdbc:h2:mem:driperska;DB_CLOSE_DELAY=-1;MODE=PostgreSQL
+    driver-class-name: org.h2.Driver
+    username: sa
+    password: ""
+
+server:
+  port: 8080
+  forward-headers-strategy: framework
+  tomcat:
+    # Drain the remaining request body on rejected/large uploads so the client gets a proper
+    # error response instead of a connection reset (which behind nginx surfaces as a 502/stack trace).
+    max-swallow-size: -1
+    max-http-form-post-size: 512MB
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info,metrics
+
+info:
+  app:
+    name: Driperska Liga
+    version: 0.2.7
+
+app:
+  public-url: ${APP_PUBLIC_URL:https://driperska.pl}
+  riot:
+    api-key: ${RIOT_API_KEY:}
+    platform: ${RIOT_PLATFORM:eun1}
+    provider-region: ${RIOT_PROVIDER_REGION:EUNE}
+    regional-route: ${RIOT_REGIONAL_ROUTE:europe}
+    # Tournament APIs live on the regional cluster (americas), not the platform host.
+    tournament-route: ${RIOT_TOURNAMENT_ROUTE:americas}
+    # true = tournament-stub-v5 (dev keys; codes NOT playable in-client). false = real tournament-v5 (production key).
+    use-stub: ${RIOT_USE_STUB:true}
+    callback-url: ${RIOT_CALLBACK_URL:}
+    tournament-name: ${RIOT_TOURNAMENT_NAME:Driperska Liga}
+    map-type: SUMMONERS_RIFT
+    pick-type: TOURNAMENT_DRAFT
+    spectator-type: LOBBYONLY
+    team-size: 5
+    # When true, all Riot calls are faked so the full flow can be tested without real accounts.
+    mock: ${RIOT_MOCK:false}
+  discord:
+    bot-token: ${DISCORD_BOT_TOKEN:}
+    guild-id: ${DISCORD_GUILD_ID:}
+    results-channel-id: ${DISCORD_RESULTS_CHANNEL_ID:}
+    announce-channel-id: ${DISCORD_ANNOUNCE_CHANNEL_ID:}
+  turnstile:
+    site-key: ${TURNSTILE_SITE_KEY:}
+    secret: ${TURNSTILE_SECRET:}
+  ollama:
+    base-url: ${OLLAMA_BASE_URL:https://ollama.com}
+    api-key: ${OLLAMA_API_KEY:}
+    vision-model: ${OLLAMA_VISION_MODEL:qwen2.5-vl}
+    timeout-seconds: ${OLLAMA_TIMEOUT_SECONDS:120}
+  jwt:
+    secret: ${JWT_SECRET:dev-secret-please-override-with-a-32plus-byte-value!!}
+    access-token-minutes: 15
+    refresh-token-days: 7
+  draw:
+    # Auto-confirm a drawn squad this many seconds after the draw if voting hasn't resolved. 0 = off.
+    auto-confirm-seconds: ${DRAW_AUTO_CONFIRM_SECONDS:30}
+  storage:
+    media-dir: ${MEDIA_DIR:./data/media}
+    public-base-url: /media
+  ddragon:
+    base-url: https://ddragon.leagueoflegends.com
+    locale: en_US
+    sync-on-startup: ${DDRAGON_SYNC_ON_STARTUP:false}
+  bootstrap:
+    admin-username: ${APP_ADMIN_USERNAME:admin}
+    admin-email: ${APP_ADMIN_EMAIL:admin@driperska.local}
+    admin-password: ${APP_ADMIN_PASSWORD:changeit123}
+
+---
+spring:
+  config:
+    activate:
+      on-profile: dev
+  h2:
+    console:
+      enabled: true
+  jpa:
+    show-sql: true
+
+---
+spring:
+  config:
+    activate:
+      on-profile: docker
+  datasource:
+    url: ${SPRING_DATASOURCE_URL:jdbc:postgresql://db:5432/driperska}
+    driver-class-name: org.postgresql.Driver
+    username: ${SPRING_DATASOURCE_USERNAME:driperska}
+    password: ${SPRING_DATASOURCE_PASSWORD:driperska}
+  flyway:
+    enabled: true
+    baseline-on-migrate: true
+    baseline-version: 0
+    validate-on-migrate: true
+  jpa:
+    database-platform: org.hibernate.dialect.PostgreSQLDialect
+    hibernate:
+      ddl-auto: validate

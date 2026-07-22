@@ -1,0 +1,29 @@
+# Java / Maven
+backend/target/
+*.class
+
+# Node / frontend
+node_modules/
+frontend/dist/
+frontend/node_modules/
+
+# Runtime data & uploads
+data/
+backend/data/
+*.sqlite
+
+# Secrets & local config
+.env
+
+# Logs
+*.log
+
+# IDE / OS
+.idea/
+*.iml
+.vscode/
+.DS_Store
+
+# test helper artifacts (contain generated passwords / real Riot IDs)
+scripts/test-bots.json
+scripts/riot-ids.txt

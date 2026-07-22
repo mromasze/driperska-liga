@@ -1,0 +1,130 @@
+package pl.romcio.driperska.player.domain;
+
+import jakarta.persistence.CollectionTable;
+import jakarta.persistence.Column;
+import jakarta.persistence.ElementCollection;
+import jakarta.persistence.Entity;
+import jakarta.persistence.EnumType;
+import jakarta.persistence.Enumerated;
+import jakarta.persistence.Id;
+import jakarta.persistence.JoinColumn;
+import jakarta.persistence.Table;
+import java.time.Instant;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.UUID;
+import org.hibernate.annotations.UuidGenerator;
+import pl.romcio.driperska.common.domain.Role;
+
+@Entity
+@Table(name = "player")
+public class Player {
+
+    @Id
+    @UuidGenerator
+    private UUID id;
+
+    @Column(nullable = false, unique = true)
+    private String nickname;
+
+    @Column(name = "real_name")
+    private String realName;
+
+    @Column(name = "riot_id")
+    private String riotId;
+
+    @Column(name = "riot_puuid", length = 128)
+    private String riotPuuid;
+
+    @Column(name = "riot_summoner_id", length = 128)
+    private String riotSummonerId;
+
+    @Column(name = "discord_name", nullable = false, length = 80)
+    private String discordName;
+
+    @Column(name = "discord_user_id", length = 32, unique = true)
+    private String discordUserId;
+
+    @Enumerated(EnumType.STRING)
+    @Column(name = "main_role")
+    private Role mainRole;
+
+    @Enumerated(EnumType.STRING)
+    @Column(name = "secondary_role")
+    private Role secondaryRole;
+
+    @Column(name = "avatar_url")
+    private String avatarUrl;
+
+    @Column(columnDefinition = "text")
+    private String bio;
+
+    @Column(name = "opgg_link", length = 500)
+    private String opggLink;
+
+    @ElementCollection(fetch = jakarta.persistence.FetchType.EAGER)
+    @CollectionTable(name = "player_favorite_champion", joinColumns = @JoinColumn(name = "player_id"))
+    @Column(name = "champion_id", nullable = false)
+    private List<Integer> favoriteChampionIds = new ArrayList<>();
+
+    @Column(name = "account_id", unique = true)
+    private UUID accountId;
+
+    @Column(nullable = false)
+    private boolean active = true;
+
+    @Column(name = "joined_at", nullable = false)
+    private Instant joinedAt = Instant.now();
+
+    protected Player() {
+    }
+
+    public Player(String nickname, Role mainRole, String discordName) {
+        this.nickname = nickname;
+        this.mainRole = mainRole;
+        this.discordName = discordName;
+    }
+
+    public UUID getId() { return id; }
+    public String getNickname() { return nickname; }
+    public void setNickname(String nickname) { this.nickname = nickname; }
+    public String getRealName() { return realName; }
+    public void setRealName(String realName) { this.realName = realName; }
+    public String getRiotId() { return riotId; }
+    public void setRiotId(String riotId) {
+        if (!java.util.Objects.equals(this.riotId, riotId)) {
+            this.riotPuuid = null;
+            this.riotSummonerId = null;
+        }
+        this.riotId = riotId;
+    }
+    public String getRiotPuuid() { return riotPuuid; }
+    public void setRiotPuuid(String riotPuuid) { this.riotPuuid = riotPuuid; }
+    public String getRiotSummonerId() { return riotSummonerId; }
+    public void setRiotSummonerId(String riotSummonerId) { this.riotSummonerId = riotSummonerId; }
+    public String getDiscordName() { return discordName; }
+    public void setDiscordName(String discordName) { this.discordName = discordName; }
+    public String getDiscordUserId() { return discordUserId; }
+    public void setDiscordUserId(String discordUserId) { this.discordUserId = discordUserId; }
+    public Role getMainRole() { return mainRole; }
+    public void setMainRole(Role mainRole) { this.mainRole = mainRole; }
+    public Role getSecondaryRole() { return secondaryRole; }
+    public void setSecondaryRole(Role secondaryRole) { this.secondaryRole = secondaryRole; }
+    public String getAvatarUrl() { return avatarUrl; }
+    public void setAvatarUrl(String avatarUrl) { this.avatarUrl = avatarUrl; }
+    public String getBio() { return bio; }
+    public void setBio(String bio) { this.bio = bio; }
+    public String getOpggLink() { return opggLink; }
+    public void setOpggLink(String opggLink) { this.opggLink = opggLink; }
+    public List<Integer> getFavoriteChampionIds() { return favoriteChampionIds; }
+    public void setFavoriteChampionIds(List<Integer> favoriteChampionIds) {
+        this.favoriteChampionIds = favoriteChampionIds == null
+                ? new ArrayList<>()
+                : new ArrayList<>(favoriteChampionIds);
+    }
+    public UUID getAccountId() { return accountId; }
+    public void setAccountId(UUID accountId) { this.accountId = accountId; }
+    public boolean isActive() { return active; }
+    public void setActive(boolean active) { this.active = active; }
+    public Instant getJoinedAt() { return joinedAt; }
+}

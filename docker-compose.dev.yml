@@ -1,0 +1,17 @@
+# Development override: exposes DB and backend ports to the host so you can run the
+# frontend via `npm run dev` (Vite, port 5173) and debug the backend directly.
+#   docker compose -f docker-compose.yml -f docker-compose.dev.yml up
+services:
+  db:
+    ports:
+      - "5432:5432"
+
+  backend:
+    ports:
+      - "8081:8080"
+    environment:
+      DDRAGON_SYNC_ON_STARTUP: "false"
+
+  web:
+    ports:
+      - "8080:80"
