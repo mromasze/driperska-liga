@@ -11,6 +11,10 @@ import pl.romcio.driperska.match.domain.Match;
 import pl.romcio.driperska.match.domain.MatchStatus;
 
 public interface MatchRepository extends JpaRepository<Match, UUID> {
+    @Override
+    @EntityGraph(attributePaths = "participants")
+    Page<Match> findAll(Pageable pageable);
+
     @EntityGraph(attributePaths = "participants")
     Page<Match> findByStatus(MatchStatus status, Pageable pageable);
     @EntityGraph(attributePaths = "participants")

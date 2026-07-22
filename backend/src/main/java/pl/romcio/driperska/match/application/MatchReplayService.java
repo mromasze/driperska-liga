@@ -17,7 +17,7 @@ import pl.romcio.driperska.player.infra.StorageProperties;
 /** Stores a match's League replay (.rofl) on the media volume, served under {@code /media/replays}. */
 @Service
 public class MatchReplayService {
-    private static final long MAX_BYTES = 60L * 1024 * 1024; // LoL replays are tens of MB
+    private static final long MAX_BYTES = 120L * 1024 * 1024; // LoL replays are tens of MB
 
     private final MatchService matchService;
     private final StorageProperties properties;
@@ -41,7 +41,7 @@ public class MatchReplayService {
             throw new BusinessRuleException("Powtórka musi być plikiem .rofl z klienta League of Legends");
         }
         if (file.getSize() > MAX_BYTES) {
-            throw new BusinessRuleException("Powtórka jest za duża (max 60 MB)");
+            throw new BusinessRuleException("Powtórka jest za duża (max 120 MB)");
         }
         try {
             Path dir = Path.of(properties.mediaDir(), "replays");

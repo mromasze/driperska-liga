@@ -1,5 +1,5 @@
 import { useMemo, useRef, useState } from 'react';
-import type { MatchDetail, OcrDraft, Side, SubmitResultsRequest } from '../../api/types';
+import type { MatchDetail, OcrDraft, Role, Side, SubmitResultsRequest } from '../../api/types';
 import { useChampions } from '../../api/hooks/champions';
 import { useOcrResults } from '../../api/hooks/matches';
 import { roleLabel } from '../../lib/format';
@@ -8,6 +8,7 @@ import { Button } from '../ui/Button';
 import { ScoringInfo } from '../ScoringInfo';
 
 interface Row {
+  role: Role;
   championId: number | '';
   kills: number;
   deaths: number;
@@ -19,7 +20,10 @@ interface Row {
   largestMultiKill: number;
 }
 
+const ROLES: Role[] = ['TOP', 'JUNGLE', 'MID', 'ADC', 'SUPPORT'];
+
 const EMPTY: Row = {
+  role: 'MID',
   championId: '',
   kills: 0,
   deaths: 0,
@@ -61,6 +65,7 @@ export function ResultsForm({
         p.playerId,
         {
           ...EMPTY,
+          role: p.role,
           championId: p.championId ?? '',
           kills: p.kills,
           deaths: p.deaths,
@@ -97,6 +102,7 @@ export function ResultsForm({
       for (const r of draft.rows) {
         if (!next[r.playerId]) continue;
         next[r.playerId] = {
+          role: r.role ?? next[r.playerId].role,
           championId: r.championId ?? next[r.playerId].championId,
           kills: r.kills, deaths: r.deaths, assists: r.assists, cs: r.cs, gold: r.gold,
           damageToChampions: r.damageToChampions, visionScore: r.visionScore,
@@ -140,7 +146,7 @@ export function ResultsForm({
         const r = rows[p.playerId];
         return {
           playerId: p.playerId,
-          role: p.role,
+          role: r.role,
           championId: r.championId as number,
           kills: r.kills,
           deaths: r.deaths,
@@ -259,7 +265,16 @@ export function ResultsForm({
                     <tr key={p.playerId} className="border-t border-line">
                       <td className="px-2 py-1.5">
                         <div className="font-medium text-text-hi">{p.nickname}</div>
-                        <div className="kicker">{roleLabel(p.role)}</div>
+                        <select
+                          value={r.role}
+                          onChange={(e) => setRows((prev) => ({
+                            ...prev, [p.playerId]: { ...prev[p.playerId], role: e.target.value as Role },
+                          }))}
+                          title="Pozycja, na której gracz faktycznie grał w tym meczu"
+                          className="mt-0.5 h-7 rounded border border-line bg-bg-1 px-1 text-xs text-text-lo"
+                        >
+                          {ROLES.map((role) => <option key={role} value={role}>{roleLabel(role)}</option>)}
+                        </select>
                       </td>
                       <td className="px-2 py-1.5">
                         <select

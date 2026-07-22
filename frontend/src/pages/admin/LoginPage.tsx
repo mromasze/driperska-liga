@@ -1,19 +1,26 @@
 import { useState } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
-import { useLogin } from '../../api/hooks/auth';
+import { useLogin, usePublicConfig } from '../../api/hooks/auth';
+import { Turnstile } from '../../components/Turnstile';
 import { Button } from '../../components/ui/Button';
 import { ApiError } from '../../api/client';
 
 export function LoginPage() {
   const login = useLogin();
+  const config = usePublicConfig();
   const navigate = useNavigate();
   const location = useLocation();
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
+  const [turnstileToken, setTurnstileToken] = useState<string | null>(null);
+
+  const turnstileEnabled = Boolean(config.data?.turnstileEnabled && config.data.turnstileSiteKey);
+  const blocked = turnstileEnabled && !turnstileToken;
 
   const onSubmit = (event: React.FormEvent) => {
     event.preventDefault();
-    login.mutate({ username, password }, {
+    if (blocked) return;
+    login.mutate({ username, password, turnstileToken }, {
       onSuccess: (tokens) => {
         const requested = (location.state as { from?: string } | null)?.from;
         navigate(requested ?? (tokens.account.role === 'PLAYER' ? '/panel' : '/admin'), { replace: true });
@@ -42,8 +49,11 @@ export function LoginPage() {
           <label className="block"><span className="kicker">Hasło</span>
             <input type="password" value={password} onChange={(e) => setPassword(e.target.value)} autoComplete="current-password" className="form-control mt-1" />
           </label>
+          {turnstileEnabled && config.data?.turnstileSiteKey && (
+            <Turnstile siteKey={config.data.turnstileSiteKey} onToken={setTurnstileToken} />
+          )}
           {errorMsg && <p className="text-sm text-loss">{errorMsg}</p>}
-          <Button type="submit" variant="gold" className="w-full" disabled={login.isPending}>
+          <Button type="submit" variant="gold" className="w-full" disabled={login.isPending || blocked}>
             {login.isPending ? 'Logowanie…' : 'Zaloguj się'}
           </Button>
         </form>

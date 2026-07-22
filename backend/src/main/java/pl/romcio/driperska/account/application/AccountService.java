@@ -101,6 +101,15 @@ public class AccountService {
     }
 
     @Transactional
+    public void changePassword(UUID accountId, String currentPassword, String newPassword) {
+        Account account = get(accountId);
+        if (!passwordEncoder.matches(currentPassword, account.getPasswordHash())) {
+            throw new pl.romcio.driperska.common.error.BusinessRuleException("Aktualne hasło jest nieprawidłowe");
+        }
+        account.setPasswordHash(passwordEncoder.encode(newPassword));
+    }
+
+    @Transactional
     public void deactivate(UUID id) {
         Account account = get(id);
         account.setEnabled(false);

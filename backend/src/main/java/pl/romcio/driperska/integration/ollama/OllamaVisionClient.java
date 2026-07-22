@@ -20,6 +20,12 @@ public class OllamaVisionClient {
     private final ObjectMapper objectMapper;
     private final RestClient client;
 
+    /** Host root for the native Ollama API — tolerates a base URL ending with the OpenAI-compat {@code /v1}. */
+    public static String nativeBase(String baseUrl) {
+        if (baseUrl == null) return "https://ollama.com";
+        return baseUrl.replaceAll("/+$", "").replaceAll("/v1$", "");
+    }
+
     public OllamaVisionClient(OllamaProperties properties, ObjectMapper objectMapper) {
         this.properties = properties;
         this.objectMapper = objectMapper;
@@ -52,7 +58,7 @@ public class OllamaVisionClient {
                         "images", base64Images)));
         try {
             String raw = client.post()
-                    .uri(properties.getBaseUrl().replaceAll("/$", "") + "/api/chat")
+                    .uri(nativeBase(properties.getBaseUrl()) + "/api/chat")
                     .header("Authorization", "Bearer " + properties.getApiKey())
                     .header("Content-Type", "application/json")
                     .body(body)

@@ -11,6 +11,41 @@ export interface ReleaseNote {
  */
 export const RELEASES: ReleaseNote[] = [
   {
+    version: 'v0.2.7',
+    date: '2026-07-22',
+    title: 'Ładniejsza karta wyniku i poprawki panelu',
+    changes: [
+      'Obrazek wyniku na Discord wygląda teraz jak tabela z aplikacji: ikony bohaterów, KDA, CS i kolorowe oceny PR.',
+      'Naprawiona zakładka „Mecze” (nie ładowała się w nieskończoność).',
+      'Pozycję gracza wpisuje się przy wyniku (grana pozycja, nie ulubiona) — edytowalna w formularzu i czytana ze screenshotów.',
+      'Na podsumowaniu meczu stała kolejność: TOP, JUNGLE, MID, BOT, SUPPORT.',
+    ],
+  },
+  {
+    version: 'v0.2.6',
+    date: '2026-07-22',
+    title: 'Oceny meczu, zmiana hasła, zabezpieczenie logowania',
+    changes: [
+      'Po meczu zamiast statystyk: opcjonalna ankieta — jeden plus i jeden minus dla wybranych graczy + notatka z uzasadnieniem.',
+      'Profil gracza zwalnia się po zakończonym meczu.',
+      'Zmiana hasła w ustawieniach konta gracza.',
+      'Cloudflare Turnstile na formularzu logowania (ochrona przed botami).',
+    ],
+  },
+  {
+    version: 'v0.2.5',
+    date: '2026-07-22',
+    title: 'Planowanie meczów, diagnostyka i poprawki',
+    changes: [
+      'Naprawione udostępnianie wyniku na Discord (błąd reactive-streams przy wysyłce obrazka).',
+      'Większy limit wgrywanych plików — koniec „request too large” przy powtórkach i screenshotach.',
+      'Zakładka „Mecze”: tabela wszystkich meczów z edycją i udostępnianiem z poziomu listy.',
+      'Planowanie meczów: termin + zbiorowe ogłoszenie na Discord z linkiem do potwierdzenia obecności; gracze RSVP (Będę / Może / Nie), admin widzi kto potwierdził.',
+      'Wyszukiwarka bohaterów po nazwie w edycji profilu.',
+      'Zakładka „Diagnostyka”: szybkie testy połączenia z AI (Ollama), Discordem i Riot API.',
+    ],
+  },
+  {
     version: 'v0.2.4',
     date: '2026-07-22',
     title: 'Wyniki ze screenshotów (AI)',

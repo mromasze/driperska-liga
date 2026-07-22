@@ -22,17 +22,23 @@ public class AuthService {
     private final AuthenticationManager authenticationManager;
     private final AccountRepository accountRepository;
     private final JwtService jwtService;
+    private final pl.romcio.driperska.integration.turnstile.TurnstileService turnstileService;
 
     public AuthService(AuthenticationManager authenticationManager,
                        AccountRepository accountRepository,
-                       JwtService jwtService) {
+                       JwtService jwtService,
+                       pl.romcio.driperska.integration.turnstile.TurnstileService turnstileService) {
         this.authenticationManager = authenticationManager;
         this.accountRepository = accountRepository;
         this.jwtService = jwtService;
+        this.turnstileService = turnstileService;
     }
 
     @Transactional
-    public TokenResponse login(LoginRequest req) {
+    public TokenResponse login(LoginRequest req, String remoteIp) {
+        if (!turnstileService.verify(req.turnstileToken(), remoteIp)) {
+            throw new BadCredentialsException("Weryfikacja Cloudflare nie powiodła się — odśwież stronę i spróbuj ponownie");
+        }
         authenticationManager.authenticate(
                 new UsernamePasswordAuthenticationToken(req.username(), req.password()));
         Account account = accountRepository.findByUsername(req.username())

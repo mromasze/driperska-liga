@@ -17,7 +17,9 @@ export interface Account {
   id: string; username: string; email: string; role: AccountRole; enabled: boolean;
   createdAt: string; lastLoginAt: string | null;
 }
-export interface LoginRequest { username: string; password: string; }
+export interface LoginRequest { username: string; password: string; turnstileToken?: string | null; }
+export interface PublicConfig { turnstileEnabled: boolean; turnstileSiteKey: string | null; }
+export interface ChangePasswordRequest { currentPassword: string; newPassword: string; }
 export interface AuthTokens { accessToken: string; refreshToken: string; tokenType: string; expiresIn: number; account: Account; }
 export type RefreshResponse = AuthTokens;
 
@@ -110,7 +112,7 @@ export interface DrawSlot { playerId: string; nickname: string; role: Role; mmr:
 export interface ReplacePlayerRequest { removedPlayerId: string; addedPlayerId: string; }
 
 export interface OcrRow {
-  playerId: string; nickname: string; championId: number | null; championName: string | null;
+  playerId: string; nickname: string; role: Role | null; championId: number | null; championName: string | null;
   kills: number; deaths: number; assists: number; cs: number; gold: number;
   damageToChampions: number; visionScore: number; largestMultiKill: number;
 }
@@ -118,6 +120,21 @@ export interface OcrDraft {
   winningSide: Side | null; durationSeconds: number | null;
   rows: OcrRow[]; unmatched: string[]; missing: string[];
 }
+
+export interface FeedbackParticipant { playerId: string; nickname: string; side: Side; role: Role; }
+export interface MyFeedback { upvotePlayerId: string | null; downvotePlayerId: string | null; note: string | null; }
+export interface RateableMatch {
+  matchId: string; completedAt: string | null; participants: FeedbackParticipant[]; myFeedback: MyFeedback | null;
+}
+
+export type RsvpResponse = 'YES' | 'NO' | 'MAYBE';
+export interface RsvpEntry { playerId: string; nickname: string; response: RsvpResponse; }
+export interface PlannedMatch {
+  id: string; scheduledAt: string; note: string | null; status: string; createdAt: string;
+  yes: number; no: number; maybe: number; myResponse: RsvpResponse | null; responses: RsvpEntry[];
+}
+export interface CreatePlannedMatchResult { planned: PlannedMatch; announced: boolean; announceMessage: string; }
+export interface ServiceHealth { ok: boolean; configured: boolean; message: string; }
 export interface DrawBalance { blueMmrAvg: number; redMmrAvg: number; predictedBlueWinPct: number; }
 export interface DrawResult { matchId: string; drawMode: DrawMode; blue: DrawSlot[]; red: DrawSlot[]; balance: DrawBalance; }
 export interface ResultParticipantInput {

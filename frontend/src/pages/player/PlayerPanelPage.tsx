@@ -1,13 +1,17 @@
 import { useEffect, useRef, useState } from 'react';
 import { useChampions } from '../../api/hooks/champions';
 import { useDrawLobby, useVoteOnDraw } from '../../api/hooks/drawLobby';
+import { usePlannedMatches, useRsvpPlannedMatch } from '../../api/hooks/planned';
+import { useRateableMatches, useSubmitFeedback } from '../../api/hooks/feedback';
+import { useChangePassword } from '../../api/hooks/auth';
 import { useMyPlayer, useUpdateMyPlayer, useUploadMyAvatar } from '../../api/hooks/players';
 import type { DrawLobby, LobbyPlayer, Role } from '../../api/types';
 import { Avatar } from '../../components/ui/Avatar';
 import { Badge } from '../../components/ui/Badge';
 import { Button } from '../../components/ui/Button';
 import { ErrorState, LoadingState } from '../../components/ui/States';
-import { roleLabel } from '../../lib/format';
+import { roleLabel, formatDateTime } from '../../lib/format';
+import type { RsvpResponse, RateableMatch } from '../../api/types';
 
 const ROLES: Role[] = ['TOP', 'JUNGLE', 'MID', 'ADC', 'SUPPORT'];
 
@@ -26,6 +30,7 @@ export function PlayerPanelPage() {
   const [opggLink, setOpggLink] = useState('');
   const [bio, setBio] = useState('');
   const [favorites, setFavorites] = useState<number[]>([]);
+  const [champQuery, setChampQuery] = useState('');
 
   useEffect(() => {
     if (!player.data) return;
@@ -79,6 +84,10 @@ export function PlayerPanelPage() {
         onVote={(decision) => lobby && vote.mutate({ matchId: lobby.matchId, decision })}
       />
 
+      <UpcomingMatches />
+
+      <MatchRatingSurvey myPlayerId={p.id} />
+
       <section className="panel p-5 sm:p-7">
         <div className="mb-6 flex flex-wrap items-center gap-4">
           <Avatar src={p.avatarUrl} name={p.nickname} size={72} ring />
@@ -125,8 +134,16 @@ export function PlayerPanelPage() {
               <span className="kicker">Ulubieni bohaterowie</span>
               <span className="num text-xs text-text-lo">{favorites.length}/5</span>
             </div>
+            <input
+              value={champQuery}
+              onChange={(e) => setChampQuery(e.target.value)}
+              placeholder="Szukaj bohatera po nazwie…"
+              className="form-control mb-3"
+            />
             <div className="grid max-h-72 grid-cols-2 gap-2 overflow-y-auto pr-2 sm:grid-cols-3 lg:grid-cols-5">
-              {(champions.data ?? []).map((champion) => {
+              {(champions.data ?? [])
+                .filter((champion) => champion.name.toLowerCase().includes(champQuery.trim().toLowerCase()))
+                .map((champion) => {
                 const active = favorites.includes(champion.id);
                 return (
                   <button type="button" key={champion.id} onClick={() => toggleChampion(champion.id)}
@@ -147,6 +164,8 @@ export function PlayerPanelPage() {
           </div>
         </form>
       </section>
+
+      <ChangePasswordCard />
     </div>
   );
 }
@@ -270,4 +289,169 @@ function LobbyTeam({ title, players, color, myPlayerId }: { title: string; playe
 
 function Field({ label, children }: { label: string; children: React.ReactNode }) {
   return <label className="block"><span className="kicker">{label}</span><div className="mt-1">{children}</div></label>;
+}
+function UpcomingMatches() {
+  const planned = usePlannedMatches();
+  const rsvp = useRsvpPlannedMatch();
+  const list = planned.data ?? [];
+  if (list.length === 0) return null;
+
+  const OPTIONS: { value: RsvpResponse; label: string; variant: 'gold' | 'ghost' | 'danger' }[] = [
+    { value: 'YES', label: '✓ Będę', variant: 'gold' },
+    { value: 'MAYBE', label: '? Może', variant: 'ghost' },
+    { value: 'NO', label: '✗ Nie', variant: 'danger' },
+  ];
+
+  return (
+    <section className="glass grid-tex p-5 sm:p-7">
+      <div className="mb-4">
+        <div className="kicker text-gold">Nadchodzące mecze</div>
+        <h2 className="mt-1 font-display text-2xl">Potwierdź obecność</h2>
+      </div>
+      <div className="space-y-3">
+        {list.map((m) => (
+          <div key={m.id} className="rounded-lg border border-line bg-[color:var(--bg-1)]/70 p-4">
+            <div className="flex flex-wrap items-center justify-between gap-3">
+              <div>
+                <div className="font-semibold text-text-hi">{formatDateTime(m.scheduledAt)}</div>
+                {m.note && <div className="text-sm text-text-lo">{m.note}</div>}
+                <div className="mt-1 text-xs text-text-lo">Będzie: {m.yes} · Może: {m.maybe} · Nie: {m.no}</div>
+              </div>
+              <div className="flex gap-2">
+                {OPTIONS.map((o) => (
+                  <Button key={o.value}
+                    variant={m.myResponse === o.value ? o.variant : 'ghost'}
+                    size="sm"
+                    disabled={rsvp.isPending}
+                    onClick={() => rsvp.mutate({ id: m.id, response: o.value })}>
+                    {o.label}
+                  </Button>
+                ))}
+              </div>
+            </div>
+          </div>
+        ))}
+      </div>
+    </section>
+  );
+}
+
+function MatchRatingSurvey({ myPlayerId }: { myPlayerId: string }) {
+  const rateable = useRateableMatches();
+  const list = rateable.data ?? [];
+  if (list.length === 0) return null;
+  return (
+    <section className="glass grid-tex p-5 sm:p-7">
+      <div className="mb-4">
+        <div className="kicker text-gold">Po meczu</div>
+        <h2 className="mt-1 font-display text-2xl">Oceń mecz (opcjonalnie)</h2>
+        <p className="mt-1 text-sm text-text-lo">
+          Możesz wyróżnić jedną osobę na plus i jedną na minus oraz zostawić krótką notatkę. To dobrowolne.
+        </p>
+      </div>
+      <div className="space-y-5">
+        {list.map((m) => <RatingRow key={m.matchId} match={m} myPlayerId={myPlayerId} />)}
+      </div>
+    </section>
+  );
+}
+
+function RatingRow({ match, myPlayerId }: { match: RateableMatch; myPlayerId: string }) {
+  const submit = useSubmitFeedback();
+  const others = match.participants.filter((p) => p.playerId !== myPlayerId);
+  const [up, setUp] = useState<string>(match.myFeedback?.upvotePlayerId ?? '');
+  const [down, setDown] = useState<string>(match.myFeedback?.downvotePlayerId ?? '');
+  const [note, setNote] = useState<string>(match.myFeedback?.note ?? '');
+  const [saved, setSaved] = useState(false);
+
+  const save = () => {
+    setSaved(false);
+    submit.mutate(
+      { matchId: match.matchId, upvotePlayerId: up || null, downvotePlayerId: down || null, note: note.trim() || null },
+      { onSuccess: () => setSaved(true) },
+    );
+  };
+
+  return (
+    <div className="rounded-lg border border-line bg-[color:var(--bg-1)]/70 p-4">
+      <div className="mb-3 text-xs text-text-lo">
+        Mecz {match.completedAt ? `· ${formatDateTime(match.completedAt)}` : ''}
+      </div>
+      <div className="grid gap-3 sm:grid-cols-2">
+        <label><span className="kicker text-win">👍 Wyróżnij (plus)</span>
+          <select value={up} onChange={(e) => setUp(e.target.value)} className="form-control mt-1">
+            <option value="">— nikt —</option>
+            {others.filter((p) => p.playerId !== down).map((p) => (
+              <option key={p.playerId} value={p.playerId}>{p.nickname} ({roleLabel(p.role)})</option>
+            ))}
+          </select>
+        </label>
+        <label><span className="kicker text-loss">👎 Oceń słabo (minus)</span>
+          <select value={down} onChange={(e) => setDown(e.target.value)} className="form-control mt-1">
+            <option value="">— nikt —</option>
+            {others.filter((p) => p.playerId !== up).map((p) => (
+              <option key={p.playerId} value={p.playerId}>{p.nickname} ({roleLabel(p.role)})</option>
+            ))}
+          </select>
+        </label>
+      </div>
+      <label className="mt-3 block"><span className="kicker">Notatka (kto zagrał źle i dlaczego — opcjonalnie)</span>
+        <textarea value={note} onChange={(e) => setNote(e.target.value)} rows={2} maxLength={500}
+          className="form-control mt-1 h-auto py-2" />
+      </label>
+      <div className="mt-3 flex items-center gap-3">
+        <Button variant="gold" size="sm" disabled={submit.isPending} onClick={save}>
+          {submit.isPending ? 'Zapisywanie…' : match.myFeedback ? 'Zaktualizuj ocenę' : 'Wyślij ocenę'}
+        </Button>
+        {saved && <span className="text-sm text-win">Zapisano.</span>}
+        {submit.isError && <span className="text-sm text-loss">{(submit.error as Error).message}</span>}
+      </div>
+    </div>
+  );
+}
+
+function ChangePasswordCard() {
+  const change = useChangePassword();
+  const [current, setCurrent] = useState('');
+  const [next, setNext] = useState('');
+  const [confirm, setConfirm] = useState('');
+  const [msg, setMsg] = useState<string | null>(null);
+
+  const submit = (e: React.FormEvent) => {
+    e.preventDefault();
+    setMsg(null);
+    if (next.length < 8) { setMsg('⚠ Nowe hasło musi mieć min. 8 znaków'); return; }
+    if (next !== confirm) { setMsg('⚠ Hasła nie są takie same'); return; }
+    change.mutate({ currentPassword: current, newPassword: next }, {
+      onSuccess: () => { setMsg('✓ Hasło zmienione'); setCurrent(''); setNext(''); setConfirm(''); },
+      onError: (err) => setMsg('⚠ ' + (err as Error).message),
+    });
+  };
+
+  return (
+    <section className="panel p-5 sm:p-7">
+      <h2 className="font-display text-2xl">Ustawienia konta</h2>
+      <p className="text-sm text-text-lo">Zmień hasło do logowania.</p>
+      <form onSubmit={submit} className="mt-4 grid max-w-md gap-3">
+        <label><span className="kicker">Aktualne hasło</span>
+          <input type="password" autoComplete="current-password" value={current}
+            onChange={(e) => setCurrent(e.target.value)} className="form-control mt-1" required />
+        </label>
+        <label><span className="kicker">Nowe hasło (min. 8 znaków)</span>
+          <input type="password" autoComplete="new-password" value={next}
+            onChange={(e) => setNext(e.target.value)} className="form-control mt-1" required />
+        </label>
+        <label><span className="kicker">Powtórz nowe hasło</span>
+          <input type="password" autoComplete="new-password" value={confirm}
+            onChange={(e) => setConfirm(e.target.value)} className="form-control mt-1" required />
+        </label>
+        <div className="flex items-center gap-3">
+          <Button type="submit" variant="gold" disabled={change.isPending}>
+            {change.isPending ? 'Zmiana…' : 'Zmień hasło'}
+          </Button>
+          {msg && <span className={`text-sm ${msg.startsWith('✓') ? 'text-win' : 'text-loss'}`}>{msg}</span>}
+        </div>
+      </form>
+    </section>
+  );
 }

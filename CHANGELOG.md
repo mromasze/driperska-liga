@@ -3,6 +3,28 @@
 Wszystkie istotne zmiany Driperskiej Ligi są opisywane tutaj oraz w
 `frontend/src/content/releases.ts`, który zasila patch notes na stronie głównej.
 
+## v0.2.7 — 2026-07-22
+
+- Obrazek wyniku udostępniany na Discord przeprojektowany tak, by odwzorować scoreboard z aplikacji: ciemne panele drużyn, ikony bohaterów, KDA (śmierci na czerwono), CS, kolorowe „pigułki” PR, korona MVP i zwycięzcy, wynik w nagłówku.
+- Naprawiona zakładka „Mecze" w panelu admina — lista wszystkich meczów bez filtra statusu ładowała się w nieskończoność (brak `@EntityGraph` na `findAll` powodował błąd lazy-init przy budowaniu podsumowania).
+- Pozycja zawodnika jest teraz wpisywana przy wyniku (faktycznie grana pozycja, a nie ulubiona): edytowalny wybór roli w formularzu wyników; OCR ze screenshotów również próbuje odczytać pozycję.
+- Podsumowanie meczu i karta na Discord zawsze sortują graczy w kolejności: TOP, JUNGLE, MID, BOT, SUPPORT.
+
+## v0.2.6 — 2026-07-22
+
+- Po zakończonym meczu gracz nie widzi już podsumowania statystyk — profil jest zwolniony, a zamiast tego pojawia się opcjonalna ankieta oceny meczu: jeden upvote i jeden downvote dla wybranych uczestników plus krótka notatka z uzasadnieniem (kto zagrał źle i dlaczego). Ocena jest edytowalna; nie można ocenić samego siebie ani dać tej samej osobie plusa i minusa.
+- Zmiana hasła w ustawieniach konta gracza (weryfikacja aktualnego hasła, min. 8 znaków).
+- Cloudflare Turnstile na formularzu logowania — weryfikacja tokenu po stronie serwera (`app.turnstile.*` / `TURNSTILE_SITE_KEY` + `TURNSTILE_SECRET`); klucz publiczny wystawiany przez `GET /api/v1/config`. Zaktualizowano CSP nginx o `challenges.cloudflare.com`.
+
+## v0.2.5 — 2026-07-22
+
+- Naprawiony błąd udostępniania wyniku na Discord (`NoClassDefFoundError: org/reactivestreams/Publisher`) — multipart bez zależności reaktywnych.
+- Zwiększony limit wielkości uploadu: nginx `client_max_body_size 128m` + Spring multipart 128 MB (koniec „request too large" przy powtórkach/screenach ~10 MB).
+- Zakładka „Mecze" (panel admina): tabela wszystkich meczów z filtrem statusu, edycją i udostępnianiem karty na Discord z listy.
+- Planowanie meczów: termin + notatka, zbiorowe ogłoszenie na Discord (@everyone) z linkiem do potwierdzenia obecności; gracze RSVP (Będę/Może/Nie) w panelu, admin widzi listę potwierdzeń. Konfiguracja kanału: `DISCORD_ANNOUNCE_CHANNEL_ID` (fallback do kanału wyników).
+- Wyszukiwarka bohaterów po nazwie w edycji profilu gracza.
+- Zakładka „Diagnostyka": lekkie testy połączenia z Ollama, Discordem i Riot API (bez zmiany danych).
+
 ## v0.2.4 — 2026-07-22
 
 Tymczasowe uzupełnianie wyników ze zrzutów ekranu (do czasu produkcyjnego dostępu do Riot Tournament API):

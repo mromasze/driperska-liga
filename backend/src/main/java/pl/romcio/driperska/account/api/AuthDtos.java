@@ -10,11 +10,17 @@ public final class AuthDtos {
 
     public record LoginRequest(
             @NotBlank String username,
-            @NotBlank String password) {
+            @NotBlank String password,
+            String turnstileToken) {
     }
 
     public record RefreshRequest(
             @NotBlank String refreshToken) {
+    }
+
+    public record ChangePasswordRequest(
+            @NotBlank String currentPassword,
+            @NotBlank @jakarta.validation.constraints.Size(min = 8, max = 100) String newPassword) {
     }
 
     public record TokenResponse(

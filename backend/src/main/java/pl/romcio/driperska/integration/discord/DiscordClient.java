@@ -1,16 +1,21 @@
 package pl.romcio.driperska.integration.discord;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
+import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import java.util.List;
 import java.util.Locale;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.core.ParameterizedTypeReference;
 import org.springframework.core.io.ByteArrayResource;
+import org.springframework.http.HttpEntity;
+import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;
-import org.springframework.http.client.MultipartBodyBuilder;
 import org.springframework.http.client.SimpleClientHttpRequestFactory;
 import org.springframework.stereotype.Component;
+import org.springframework.util.LinkedMultiValueMap;
+import org.springframework.util.MultiValueMap;
 import org.springframework.web.client.RestClient;
 import org.springframework.web.client.RestClientException;
 import org.springframework.web.client.RestClientResponseException;
@@ -20,11 +25,13 @@ public class DiscordClient {
     private static final String BASE = "https://discord.com/api/v10";
     private static final Logger log = LoggerFactory.getLogger(DiscordClient.class);
     private final DiscordProperties properties;
+    private final ObjectMapper objectMapper;
     private final RestClient client = RestClient.builder()
             .requestFactory(timeoutFactory()).build();
 
-    public DiscordClient(DiscordProperties properties) {
+    public DiscordClient(DiscordProperties properties, ObjectMapper objectMapper) {
         this.properties = properties;
+        this.objectMapper = objectMapper;
     }
 
     private static SimpleClientHttpRequestFactory timeoutFactory() {
@@ -40,18 +47,31 @@ public class DiscordClient {
             return Delivery.failed("Kanał wyników Discord nie jest skonfigurowany (DISCORD_RESULTS_CHANNEL_ID)");
         }
         try {
-            MultipartBodyBuilder body = new MultipartBodyBuilder();
-            body.part("payload_json",
-                    new MessageRequest(caption, new AllowedMentions(List.of(), List.of())),
-                    MediaType.APPLICATION_JSON);
-            body.part("files[0]", new ByteArrayResource(png)).filename(filename)
-                    .contentType(MediaType.IMAGE_PNG);
+            // Plain servlet multipart (LinkedMultiValueMap) — avoids MultipartBodyBuilder, which
+            // drags in reactive-streams (WebFlux) that isn't on the classpath.
+            String payloadJson = objectMapper.writeValueAsString(
+                    new MessageRequest(caption, new AllowedMentions(List.of(), List.of())));
+            HttpHeaders jsonHeaders = new HttpHeaders();
+            jsonHeaders.setContentType(MediaType.APPLICATION_JSON);
+
+            ByteArrayResource fileResource = new ByteArrayResource(png) {
+                @Override public String getFilename() { return filename; }
+            };
+            HttpHeaders fileHeaders = new HttpHeaders();
+            fileHeaders.setContentType(MediaType.IMAGE_PNG);
+
+            MultiValueMap<String, Object> body = new LinkedMultiValueMap<>();
+            body.add("payload_json", new HttpEntity<>(payloadJson, jsonHeaders));
+            body.add("files[0]", new HttpEntity<>(fileResource, fileHeaders));
+
             client.post().uri(BASE + "/channels/" + properties.getResultsChannelId() + "/messages")
                     .header("Authorization", "Bot " + properties.getBotToken())
                     .contentType(MediaType.MULTIPART_FORM_DATA)
-                    .body(body.build())
+                    .body(body)
                     .retrieve().toBodilessEntity();
             return Delivery.resultSent(properties.getResultsChannelId());
+        } catch (JsonProcessingException ex) {
+            return Delivery.failed("Nie udało się przygotować wiadomości Discord");
         } catch (RestClientResponseException ex) {
             log.warn("Discord result upload failed with HTTP {}: {}", ex.getStatusCode().value(),
                     responseExcerpt(ex));
@@ -59,6 +79,28 @@ public class DiscordClient {
         } catch (RestClientException ex) {
             log.warn("Discord result upload failed before a response was received", ex);
             return Delivery.failed("Nie udało się połączyć z Discordem (timeout/sieć)");
+        }
+    }
+
+    /** Posts a plain announcement (with @everyone) to the announcements channel. */
+    public Delivery sendAnnouncement(String content) {
+        if (!properties.announceChannelConfigured()) {
+            return Delivery.failed("Brak kanału ogłoszeń Discord (DISCORD_ANNOUNCE_CHANNEL_ID / DISCORD_RESULTS_CHANNEL_ID)");
+        }
+        try {
+            client.post().uri(BASE + "/channels/" + properties.announceChannel() + "/messages")
+                    .header("Authorization", "Bot " + properties.getBotToken())
+                    .body(new MessageRequest(content, new AllowedMentions(List.of("everyone"), List.of())))
+                    .retrieve().toBodilessEntity();
+            return Delivery.resultSent(properties.announceChannel());
+        } catch (RestClientResponseException ex) {
+            int s = ex.getStatusCode().value();
+            String msg = (s == 401) ? "Nieprawidłowy token bota"
+                    : (s == 403) ? "Bot nie ma uprawnień do pisania na kanale ogłoszeń"
+                    : "Discord odrzucił ogłoszenie (HTTP " + s + ")";
+            return Delivery.failed(msg);
+        } catch (RestClientException ex) {
+            return Delivery.failed("Brak połączenia z Discordem");
         }
     }
 

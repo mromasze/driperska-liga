@@ -9,7 +9,7 @@ class ResultImageGeneratorTest {
     @Test
     void rendersAValidPngWithText() {
         var row = new ResultImageGenerator.Row(
-                "Gracz", "MID", "Ahri", 10, 2, 8, 220, 78, true);
+                "Gracz", "MID", "Ahri", null, 10, 2, 8, 220, 78, true);
         var card = new ResultImageGenerator.Card(
                 "Driperska Liga — Wynik meczu", "Czas: 32:10 · patch 26.14",
                 true, true, 31, 18, List.of(row), List.of(row));

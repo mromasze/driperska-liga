@@ -75,32 +75,47 @@ public class MatchShareService {
         List<Player> players = playerRepository.findByIdIn(match.getPoolPlayerIds());
         Map<UUID, String> nicks = new HashMap<>();
         players.forEach(p -> nicks.put(p.getId(), p.getNickname()));
-        Map<Integer, String> champs = new HashMap<>();
-        championRepository.findAll().forEach(c -> champs.put(c.getId(), c.getName()));
+        Map<Integer, Champion> champs = new HashMap<>();
+        championRepository.findAll().forEach(c -> champs.put(c.getId(), c));
 
         List<ResultImageGenerator.Row> blue = rowsFor(match, Side.BLUE, nicks, champs);
         List<ResultImageGenerator.Row> red = rowsFor(match, Side.RED, nicks, champs);
-        String subtitle = "Czas: " + clock(match.getDurationSeconds())
-                + (match.getPatch() != null ? "  ·  patch " + match.getPatch() : "");
-        return new ResultImageGenerator.Card("Driperska Liga — Wynik meczu", subtitle,
+        String title = "DRIPERSKA LIGA — WYNIK MECZU"
+                + (match.getPatch() != null ? "   ·   PATCH " + match.getPatch() : "");
+        String subtitle = clock(match.getDurationSeconds());
+        return new ResultImageGenerator.Card(title, subtitle,
                 match.getWinningSide() == Side.BLUE, match.getWinningSide() != null,
                 sideKills(match, Side.BLUE), sideKills(match, Side.RED), blue, red);
     }
 
     private List<ResultImageGenerator.Row> rowsFor(Match match, Side side, Map<UUID, String> nicks,
-                                                   Map<Integer, String> champs) {
+                                                   Map<Integer, Champion> champs) {
         List<ResultImageGenerator.Row> rows = new ArrayList<>();
         match.getParticipants().stream()
                 .filter(p -> p.getSide() == side)
                 .sorted(Comparator.comparingInt(p -> ROLE_ORDER.getOrDefault(p.getRole(), 9)))
-                .forEach(p -> rows.add(new ResultImageGenerator.Row(
-                        nicks.getOrDefault(p.getPlayerId(), "?"),
-                        p.getRole() == null ? "" : p.getRole().name(),
-                        p.getChampionId() == null ? "—" : champs.getOrDefault(p.getChampionId(), "—"),
-                        p.getKills(), p.getDeaths(), p.getAssists(), p.getCs(),
-                        p.getPerformanceRating() == null ? null : (int) Math.round(p.getPerformanceRating()),
-                        p.isMvp())));
+                .forEach(p -> {
+                    Champion c = p.getChampionId() == null ? null : champs.get(p.getChampionId());
+                    rows.add(new ResultImageGenerator.Row(
+                            nicks.getOrDefault(p.getPlayerId(), "?"),
+                            p.getRole() == null ? "" : roleLabel(p.getRole()),
+                            c == null ? "—" : c.getName(),
+                            c == null ? null : c.getIconUrl(),
+                            p.getKills(), p.getDeaths(), p.getAssists(), p.getCs(),
+                            p.getPerformanceRating() == null ? null : (int) Math.round(p.getPerformanceRating()),
+                            p.isMvp()));
+                });
         return rows;
+    }
+
+    private static String roleLabel(pl.romcio.driperska.common.domain.Role role) {
+        return switch (role) {
+            case TOP -> "TOP";
+            case JUNGLE -> "JUNGLE";
+            case MID -> "MID";
+            case ADC -> "BOT";
+            case SUPPORT -> "SUPPORT";
+        };
     }
 
     private static int sideKills(Match match, Side side) {

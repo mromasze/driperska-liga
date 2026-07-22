@@ -1,8 +1,24 @@
 import { useMutation, useQuery } from '@tanstack/react-query';
 import { api } from '../client';
 import { queryKeys } from '../queryKeys';
-import type { Account, AuthTokens, LoginRequest } from '../types';
+import type { Account, AuthTokens, ChangePasswordRequest, LoginRequest, PublicConfig } from '../types';
 import { useAuthStore } from '../../store/auth';
+
+/** GET /config — public runtime config (Turnstile site key etc.). */
+export function usePublicConfig() {
+  return useQuery({
+    queryKey: ['public-config'],
+    queryFn: () => api.get<PublicConfig>('/config', { skipAuth: true }),
+    staleTime: Infinity,
+  });
+}
+
+/** POST /auth/change-password for the logged-in account. */
+export function useChangePassword() {
+  return useMutation({
+    mutationFn: (body: ChangePasswordRequest) => api.post<void>('/auth/change-password', body),
+  });
+}
 
 /** POST /auth/login → stores tokens + account in the auth store. */
 export function useLogin() {

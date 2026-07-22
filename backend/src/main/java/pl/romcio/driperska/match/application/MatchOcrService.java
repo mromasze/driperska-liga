@@ -108,7 +108,8 @@ public class MatchOcrService {
             used.add(playerId);
             String champName = pl.path("champion").asText(null);
             Integer champId = champName == null ? null : champByName.get(norm(champName));
-            rows.add(new OcrRow(playerId, nickById.get(playerId), champId, champName,
+            rows.add(new OcrRow(playerId, nickById.get(playerId), mapRole(pl.path("role").asText(null)),
+                    champId, champName,
                     pl.path("kills").asInt(0), pl.path("deaths").asInt(0), pl.path("assists").asInt(0),
                     pl.path("cs").asInt(0), pl.path("gold").asInt(0), pl.path("damage").asInt(0),
                     pl.path("vision").asInt(0), Math.max(1, pl.path("largestMultiKill").asInt(1))));
@@ -163,6 +164,8 @@ public class MatchOcrService {
                 Wyodrębnij WSZYSTKICH graczy (zwykle 10). Dla każdego podaj:
                 - name: nazwa przywoływacza / Riot ID pokazana przy graczu (bez #TAG jeśli jest),
                 - champion: nazwa bohatera,
+                - role: pozycja na jakiej grał (TOP/JUNGLE/MID/BOT/SUPPORT) — jeśli widać po ikonie
+                  pozycji lub można wywnioskować z bohatera/lane; jeśli nie wiadomo, pomiń,
                 - team: BLUE (niebiescy) lub RED (czerwoni),
                 - win: true jeśli jego drużyna wygrała,
                 - kills, deaths, assists: z kolumny KDA (K/D/A),
@@ -181,6 +184,7 @@ public class MatchOcrService {
         Map<String, Object> playerProps = obj(
                 "name", Map.of("type", "string"),
                 "champion", Map.of("type", "string"),
+                "role", Map.of("type", "string", "enum", List.of("TOP", "JUNGLE", "MID", "BOT", "SUPPORT")),
                 "team", Map.of("type", "string", "enum", List.of("BLUE", "RED")),
                 "win", Map.of("type", "boolean"),
                 "kills", intType, "deaths", intType, "assists", intType, "cs", intType,
@@ -204,7 +208,19 @@ public class MatchOcrService {
         return m;
     }
 
-    public record OcrRow(UUID playerId, String nickname, Integer championId, String championName,
+    private static String mapRole(String raw) {
+        if (raw == null) return null;
+        return switch (raw.trim().toUpperCase(Locale.ROOT)) {
+            case "TOP" -> "TOP";
+            case "JUNGLE", "JG", "JUNG" -> "JUNGLE";
+            case "MID", "MIDDLE" -> "MID";
+            case "BOT", "BOTTOM", "ADC", "AD", "CARRY" -> "ADC";
+            case "SUPPORT", "SUP", "SUPP", "UTILITY" -> "SUPPORT";
+            default -> null;
+        };
+    }
+
+    public record OcrRow(UUID playerId, String nickname, String role, Integer championId, String championName,
                          int kills, int deaths, int assists, int cs, int gold,
                          int damageToChampions, int visionScore, int largestMultiKill) {}
 
