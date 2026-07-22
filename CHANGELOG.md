@@ -3,6 +3,15 @@
 Wszystkie istotne zmiany Driperskiej Ligi są opisywane tutaj oraz w
 `frontend/src/content/releases.ts`, który zasila patch notes na stronie głównej.
 
+## v0.2.3 — 2026-07-22
+
+Automatyzacja wdrożeń, klipy i pełne zarządzanie meczami:
+
+- Deploy produkcyjny uruchamia się automatycznie po udanym workflow CI na `main`; ręczne uruchomienie pozostaje dostępne.
+- Panel „Zagrywki” przyjmuje MP4/WebM i odtwarza klipy jako przygaszone tło strony głównej; pliki zostają w trwałym woluminie mediów.
+- Naprawione generowanie kart wyników w obrazie produkcyjnym (fonty Java2D), szczegółowe komunikaty błędów Discord i logowanie wyjątków 500/503 ze stack trace.
+- Nowy widok wszystkich meczów z filtrowaniem, wejściem do edycji dowolnego wyniku i ponownym udostępnianiem na Discordzie.
+
 ## v0.2.2 — 2026-07-22
 
 Wygoda panelu admina i lepsza diagnostyka Discord:

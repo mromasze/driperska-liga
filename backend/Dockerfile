@@ -11,7 +11,7 @@ FROM eclipse-temurin:21-jre AS runtime
 WORKDIR /app
 # gosu lets the entrypoint fix volume ownership as root, then drop to the 'app' user.
 RUN apt-get update \
-  && apt-get install -y --no-install-recommends gosu \
+  && apt-get install -y --no-install-recommends fontconfig fonts-dejavu-core gosu \
   && rm -rf /var/lib/apt/lists/* \
   && useradd -r -u 1001 app && mkdir -p /app/data/media && chown -R app /app
 COPY --from=build /app/target/*.jar app.jar

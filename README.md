@@ -1,4 +1,4 @@
-# Driperska Liga v0.2
+# Driperska Liga v0.2.3
 
 Aplikacja do prowadzenia amatorskiej ligi League of Legends: ranking i wyniki,
 profile graczy, panel administracyjny oraz głosowane losowanie drużyn w czasie rzeczywistym.
@@ -34,7 +34,7 @@ npm install
 npm run dev
 ```
 
-## Najważniejsze funkcje v0.2
+## Najważniejsze funkcje
 
 - Admin tworzy gracza z obowiązkową nazwą Discord. Bot wysyła login i losowe hasło
   na DM; panel pozwala też skopiować wiadomość i wygenerować oraz wysłać nowe hasło.
@@ -49,7 +49,8 @@ npm run dev
 - Gracz edytuje role, ulubionych championów, Riot ID, bio, zdjęcie i OP.GG.
 - Bazowa migracja v0.2 zawiera cały schemat dla pustej bazy. Deploy robi backup i nie usuwa
   wolumenów PostgreSQL ani mediów.
-- Strona główna pokazuje patch notes z `frontend/src/content/releases.ts`.
+- Strona główna pokazuje patch notes oraz przygaszone klipy najlepszych zagrań z trwałego magazynu mediów.
+- Panel admina udostępnia listę wszystkich meczów, ich edycję i ponowne wysyłanie kart wyników na Discord.
 
 Tournament API wymaga produkcyjnego klucza z przyznanym dostępem do produktu Tournament.
 Callback `RIOT_CALLBACK_URL` musi być publicznym adresem HTTPS. Sekretów nie zapisuj

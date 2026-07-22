@@ -9,6 +9,7 @@ import { StatTile } from '../components/ui/StatTile';
 import { Button } from '../components/ui/Button';
 import { LoadingState, EmptyState } from '../components/ui/States';
 import { ScoringInfo } from '../components/ScoringInfo';
+import { HeroVideoBackground } from '../components/highlight/HeroVideoBackground';
 import { RELEASES } from '../content/releases';
 import type { MatchDetail } from '../api/types';
 
@@ -26,11 +27,12 @@ export function HomePage() {
 
   return (
     <div className="space-y-12">
-      <section className="glass grid-tex relative overflow-hidden px-6 py-12 sm:px-12 sm:py-16">
+      <section className="glass grid-tex relative min-h-[24rem] overflow-hidden px-6 py-12 sm:px-12 sm:py-16">
+        <HeroVideoBackground />
         <div className="relative z-10 max-w-2xl animate-rise">
           <div className="mb-3 flex items-center gap-3">
             <span className="kicker text-gold">{season.data?.name ?? 'Inhouse League of Legends'}</span>
-            <span className="chip border-[color:var(--gold)]/30 text-gold">v0.2.2</span>
+            <span className="chip border-[color:var(--gold)]/30 text-gold">v0.2.3</span>
           </div>
           <h1 className="font-display text-4xl font-bold leading-none sm:text-6xl">
             DRIPERSKA <span className="text-gradient-gold">LIGA</span>

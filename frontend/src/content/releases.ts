@@ -11,6 +11,17 @@ export interface ReleaseNote {
  */
 export const RELEASES: ReleaseNote[] = [
   {
+    version: 'v0.2.3',
+    date: '2026-07-22',
+    title: 'Deploy, zagrywki i zarządzanie meczami',
+    changes: [
+      'Automatyczny deploy produkcyjny po udanym CI na gałęzi main.',
+      'Najlepsze zagrywki MP4/WebM odtwarzane jako subtelne tło strony głównej, z uploadem w panelu.',
+      'Naprawione generowanie obrazka wyniku w Dockerze oraz czytelne błędy i logi integracji Discord.',
+      'Lista wszystkich meczów z filtrowaniem, edycją i ponownym udostępnianiem wyniku na Discordzie.',
+    ],
+  },
+  {
     version: 'v0.2.2',
     date: '2026-07-22',
     title: 'Wygoda panelu i diagnostyka Discord',

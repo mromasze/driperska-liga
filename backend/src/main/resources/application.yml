@@ -15,8 +15,8 @@ spring:
       enabled: true
   servlet:
     multipart:
-      max-file-size: 64MB
-      max-request-size: 64MB
+      max-file-size: 128MB
+      max-request-size: 128MB
   datasource:
     url: jdbc:h2:mem:driperska;DB_CLOSE_DELAY=-1;MODE=PostgreSQL
     driver-class-name: org.h2.Driver
@@ -36,7 +36,7 @@ management:
 info:
   app:
     name: Driperska Liga
-    version: 0.2.2
+    version: 0.2.3
 
 app:
   public-url: ${APP_PUBLIC_URL:https://driperska.pl}

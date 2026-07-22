@@ -3,6 +3,8 @@ package pl.romcio.driperska.match.api;
 import jakarta.validation.Valid;
 import java.util.UUID;
 import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.Sort;
+import org.springframework.data.web.PageableDefault;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 import pl.romcio.driperska.common.domain.Side;
@@ -50,7 +52,8 @@ public class MatchController {
     @GetMapping
     public PageResponse<MatchSummaryResponse> list(
             @RequestParam(required = false) MatchStatus status,
-            @RequestParam(required = false) UUID seasonId, Pageable pageable) {
+            @RequestParam(required = false) UUID seasonId,
+            @PageableDefault(sort = "createdAt", direction = Sort.Direction.DESC) Pageable pageable) {
         MatchStatus effective = CurrentAccount.optional().isPresent() ? status : MatchStatus.APPROVED;
         return PageResponse.of(matchService.list(effective, seasonId, pageable).map(assembler::toSummary));
     }

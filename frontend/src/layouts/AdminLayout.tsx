@@ -6,7 +6,9 @@ import { useMatches } from '../api/hooks/matches';
 
 const NAV = [
   { to: '/admin', label: 'Pulpit', end: true },
+  { to: '/admin/matches', label: 'Mecze', end: true },
   { to: '/admin/matches/new', label: 'Nowy mecz', end: false },
+  { to: '/admin/highlights', label: 'Zagrywki', end: false },
   { to: '/admin/approvals', label: 'Akceptacje', end: false },
   { to: '/admin/players', label: 'Gracze', end: false },
 ];

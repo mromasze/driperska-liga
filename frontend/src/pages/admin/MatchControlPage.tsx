@@ -357,7 +357,7 @@ export function MatchControlPage() {
           {m.status === 'APPROVED' && (
             <div className="flex flex-wrap items-center justify-between gap-2 rounded-lg border border-line p-4">
               <span className="text-sm text-text-lo">Mecz zatwierdzony i policzony do rankingu.</span>
-              <Button variant="ghost" size="sm" disabled={reopen.isPending} onClick={() => reopen.mutate()}>
+              <Button variant="ghost" size="sm" disabled={reopen.isPending} onClick={() => reopen.mutate(undefined, { onSuccess: () => setEditingResults(true) })}>
                 {reopen.isPending ? 'Otwieranie…' : 'Edytuj wynik (ponów akceptację)'}
               </Button>
             </div>

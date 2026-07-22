@@ -72,7 +72,9 @@ public class ResultImageGenerator {
         g.dispose();
         try {
             ByteArrayOutputStream out = new ByteArrayOutputStream();
-            ImageIO.write(img, "png", out);
+            if (!ImageIO.write(img, "png", out)) {
+                throw new IllegalStateException("Brak kodera PNG w środowisku Java");
+            }
             return out.toByteArray();
         } catch (IOException ex) {
             throw new UncheckedIOException(ex);

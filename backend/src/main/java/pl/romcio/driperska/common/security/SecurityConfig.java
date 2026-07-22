@@ -48,6 +48,7 @@ public class SecurityConfig {
                         .requestMatchers(HttpMethod.GET, "/api/v1/matches/*/events").authenticated()
                         // public reads
                         .requestMatchers(HttpMethod.GET,
+                                "/api/v1/highlights",
                                 "/api/v1/players/**",
                                 "/api/v1/ranking/**",
                                 "/api/v1/champions/**",

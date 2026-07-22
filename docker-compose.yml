@@ -20,7 +20,7 @@ services:
     build:
       context: ./backend
       labels:
-        pl.driperska.version: "${APP_VERSION:-0.2.2}"
+        pl.driperska.version: "${APP_VERSION:-0.2.3}"
     restart: unless-stopped
     depends_on:
       db:
@@ -61,7 +61,7 @@ services:
     build:
       context: ./frontend
       labels:
-        pl.driperska.version: "${APP_VERSION:-0.2.2}"
+        pl.driperska.version: "${APP_VERSION:-0.2.3}"
     restart: unless-stopped
     depends_on:
       backend:

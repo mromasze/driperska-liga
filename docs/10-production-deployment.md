@@ -60,7 +60,7 @@ ss -ltn | grep ':18080' || true
 W `/opt/driperska/.env` umieść konfigurację na podstawie `.env.example`:
 
 ```dotenv
-APP_VERSION=0.1.0
+APP_VERSION=0.2.3
 APP_PUBLIC_URL=https://driperska.pl
 WEB_PORT=18080
 DB_PASSWORD=<losowe: openssl rand -base64 36>
@@ -126,8 +126,8 @@ a zdjęcia w `media`.
 
 ## 6. Automatyczny deploy z GitHub Actions
 
-Workflow `.github/workflows/deploy.yml` najpierw uruchamia testy i build, a dopiero potem
-kopiuje release przez SSH i wywołuje ten sam skrypt deployu. Utwórz środowisko GitHub
+Workflow `.github/workflows/deploy.yml` czeka na udane zakończenie workflow CI dla `main`,
+następnie kopiuje dokładnie sprawdzony commit przez SSH i wywołuje ten sam skrypt deployu. Utwórz środowisko GitHub
 **production** (warto włączyć required reviewer) i dodaj sekrety:
 
 | Secret | Przykład |
@@ -142,7 +142,7 @@ Sekrety środowiska są udostępniane dopiero jobom wskazującym dane environmen
 [GitHub environments](https://docs.github.com/en/actions/reference/workflows-and-actions/deployments-and-environments)
 oraz [GitHub Actions secrets](https://docs.github.com/en/actions/reference/security/secrets).
 
-Push do `main` uruchamia deploy. Można go też wywołać ręcznie przez **Actions → Deploy
+Udany CI po pushu do `main` uruchamia deploy. Można go też wywołać ręcznie przez **Actions → Deploy
 production → Run workflow**. Plik `.env` i katalog `backups` są wyłączone z rsync.
 
 ## 7. Migracje i aktualizacje bez utraty danych

@@ -16,6 +16,8 @@ import { AdminPlayersPage } from '../pages/admin/AdminPlayersPage';
 import { ApprovalsPage } from '../pages/admin/ApprovalsPage';
 import { MatchCreatePage } from '../pages/admin/MatchCreatePage';
 import { MatchControlPage } from '../pages/admin/MatchControlPage';
+import { AdminMatchesPage } from '../pages/admin/AdminMatchesPage';
+import { AdminHighlightsPage } from '../pages/admin/AdminHighlightsPage';
 import { PlayerPanelPage } from '../pages/player/PlayerPanelPage';
 
 export function AppRoutes() {
@@ -44,7 +46,9 @@ export function AppRoutes() {
           <Route path="/admin" element={<DashboardPage />} />
           <Route path="/admin/players" element={<AdminPlayersPage />} />
           <Route path="/admin/approvals" element={<ApprovalsPage />} />
+          <Route path="/admin/matches" element={<AdminMatchesPage />} />
           <Route path="/admin/matches/new" element={<MatchCreatePage />} />
+          <Route path="/admin/highlights" element={<AdminHighlightsPage />} />
           <Route path="/admin/matches/:id/control" element={<MatchControlPage />} />
         </Route>
       </Route>

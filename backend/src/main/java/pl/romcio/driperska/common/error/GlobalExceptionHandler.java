@@ -2,6 +2,8 @@ package pl.romcio.driperska.common.error;
 
 import java.net.URI;
 import java.util.List;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ProblemDetail;
 import org.springframework.security.access.AccessDeniedException;
@@ -16,9 +18,13 @@ import org.springframework.web.bind.annotation.RestControllerAdvice;
 public class GlobalExceptionHandler {
 
     private static final String BASE = "https://driperska.liga/errors/";
+    private static final Logger log = LoggerFactory.getLogger(GlobalExceptionHandler.class);
 
     @ExceptionHandler(ApiException.class)
     public ProblemDetail handleApi(ApiException ex) {
+        if (ex.getStatus().is5xxServerError()) {
+            log.warn("Request failed because a dependency is unavailable: {}", ex.getMessage(), ex);
+        }
         return problem(ex.getStatus(), ex.getType(), ex.getMessage(), null);
     }
 
@@ -45,6 +51,7 @@ public class GlobalExceptionHandler {
 
     @ExceptionHandler(Exception.class)
     public ProblemDetail handleUnexpected(Exception ex) {
+        log.error("Unhandled request failure", ex);
         return problem(HttpStatus.INTERNAL_SERVER_ERROR, "internal",
                 "Wystąpił nieoczekiwany błąd", null);
     }

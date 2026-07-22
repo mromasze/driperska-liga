@@ -3,6 +3,8 @@ package pl.romcio.driperska.integration.discord;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import java.util.List;
 import java.util.Locale;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.core.ParameterizedTypeReference;
 import org.springframework.core.io.ByteArrayResource;
 import org.springframework.http.MediaType;
@@ -16,6 +18,7 @@ import org.springframework.web.client.RestClientResponseException;
 @Component
 public class DiscordClient {
     private static final String BASE = "https://discord.com/api/v10";
+    private static final Logger log = LoggerFactory.getLogger(DiscordClient.class);
     private final DiscordProperties properties;
     private final RestClient client = RestClient.builder()
             .requestFactory(timeoutFactory()).build();
@@ -48,9 +51,14 @@ public class DiscordClient {
                     .contentType(MediaType.MULTIPART_FORM_DATA)
                     .body(body.build())
                     .retrieve().toBodilessEntity();
-            return Delivery.sent(properties.getResultsChannelId());
+            return Delivery.resultSent(properties.getResultsChannelId());
+        } catch (RestClientResponseException ex) {
+            log.warn("Discord result upload failed with HTTP {}: {}", ex.getStatusCode().value(),
+                    responseExcerpt(ex));
+            return Delivery.failed(explainResultError(ex));
         } catch (RestClientException ex) {
-            return Delivery.failed("Discord odrzucił wysyłkę obrazka; sprawdź token bota i uprawnienia na kanale wyników");
+            log.warn("Discord result upload failed before a response was received", ex);
+            return Delivery.failed("Nie udało się połączyć z Discordem (timeout/sieć)");
         }
     }
 
@@ -74,10 +82,31 @@ public class DiscordClient {
         } catch (DiscordLookupException ex) {
             return Delivery.failed(ex.getMessage());
         } catch (RestClientResponseException ex) {
+            log.warn("Discord DM failed with HTTP {}: {}", ex.getStatusCode().value(),
+                    responseExcerpt(ex));
             return Delivery.failed(explainDmError(ex));
         } catch (RestClientException ex) {
+            log.warn("Discord DM failed before a response was received", ex);
             return Delivery.failed("Nie udało się połączyć z Discordem (timeout/sieć)");
         }
+    }
+
+    private static String explainResultError(RestClientResponseException ex) {
+        int status = ex.getStatusCode().value();
+        String body = ex.getResponseBodyAsString();
+        if (status == 401) return "Discord odrzucił token bota (HTTP 401) — ustaw poprawny DISCORD_BOT_TOKEN.";
+        if (status == 403) return "Bot nie może pisać ani dodawać plików na kanale wyników (HTTP 403).";
+        if (status == 404 || body.contains("10003")) {
+            return "Kanał wyników Discord nie istnieje albo bot go nie widzi — sprawdź DISCORD_RESULTS_CHANNEL_ID.";
+        }
+        if (status == 413) return "Wygenerowany obraz wyniku przekracza limit plików serwera Discord.";
+        if (status == 429) return "Discord ograniczył liczbę wiadomości — spróbuj ponownie za chwilę.";
+        return "Discord odrzucił obraz wyniku (HTTP " + status + ").";
+    }
+
+    private static String responseExcerpt(RestClientResponseException ex) {
+        String body = ex.getResponseBodyAsString().replaceAll("[\\r\\n]+", " ");
+        return body.substring(0, Math.min(body.length(), 500));
     }
 
     /** Turns a Discord API error into an actionable message for the admin. */
@@ -149,6 +178,9 @@ public class DiscordClient {
     public record Delivery(boolean sent, String discordUserId, String message) {
         static Delivery sent(String userId) {
             return new Delivery(true, userId, "Dane logowania wysłane na Discord DM");
+        }
+        static Delivery resultSent(String channelId) {
+            return new Delivery(true, channelId, "Wynik wysłany na kanał Discord");
         }
         static Delivery failed(String message) {
             return new Delivery(false, null, message);
