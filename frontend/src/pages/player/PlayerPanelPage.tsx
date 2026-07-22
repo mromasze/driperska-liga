@@ -219,6 +219,12 @@ function DrawVotingCard({ lobby, myPlayerId, myVote, pending, onVote }: {
             Kopiuj kod lobby
           </Button>
           <p className="mt-3 text-xs text-text-lo">Wejdź przez Graj → Turniej → wklej kod. Admin uruchomi mecz, gdy wszyscy dołączą.</p>
+          {lobby.tournamentCode?.startsWith('STUB') && (
+            <p className="mt-3 text-xs text-loss">
+              ⚠ To jest kod TESTOWY (Riot stub) — nie zadziała w kliencie gry. Zagrajcie zwykłe lobby custom,
+              a wynik admin wpisze ręcznie. Prawdziwe kody wymagają produkcyjnego dostępu Tournament API.
+            </p>
+          )}
         </div>
       )}
       {lobby.status === 'LIVE' && (

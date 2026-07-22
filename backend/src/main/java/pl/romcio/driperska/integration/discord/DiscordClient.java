@@ -11,6 +11,7 @@ import org.springframework.http.client.SimpleClientHttpRequestFactory;
 import org.springframework.stereotype.Component;
 import org.springframework.web.client.RestClient;
 import org.springframework.web.client.RestClientException;
+import org.springframework.web.client.RestClientResponseException;
 
 @Component
 public class DiscordClient {
@@ -72,21 +73,52 @@ public class DiscordClient {
             return Delivery.sent(userId);
         } catch (DiscordLookupException ex) {
             return Delivery.failed(ex.getMessage());
+        } catch (RestClientResponseException ex) {
+            return Delivery.failed(explainDmError(ex));
         } catch (RestClientException ex) {
-            return Delivery.failed("Discord odrzucił wiadomość DM; sprawdź nazwę, wspólny serwer i ustawienia prywatności");
+            return Delivery.failed("Nie udało się połączyć z Discordem (timeout/sieć)");
         }
+    }
+
+    /** Turns a Discord API error into an actionable message for the admin. */
+    private static String explainDmError(RestClientResponseException ex) {
+        String body = ex.getResponseBodyAsString();
+        int status = ex.getStatusCode().value();
+        if (body.contains("50007")) {
+            return "Discord blokuje DM do tej osoby — musi mieć włączone „Wiadomości od członków serwera”"
+                    + " (Ustawienia prywatności serwera) i być na wspólnym serwerze z botem. Użyj przycisku"
+                    + " kopiowania i wyślij dane ręcznie.";
+        }
+        if (status == 404) {
+            return "Nieznany użytkownik Discord — sprawdź nazwę albo podaj numeryczny Discord User ID.";
+        }
+        if (status == 401 || status == 403) {
+            return "Bot nie ma uprawnień (HTTP " + status + ") — sprawdź token bota i obecność na serwerze.";
+        }
+        return "Discord odrzucił wiadomość DM (HTTP " + status + ").";
     }
 
     private String resolveUserId(String rawName) {
         String query = normalize(rawName);
-        if (query.matches("\\d{15,22}")) return query;
-        List<GuildMember> members = client.get()
-                .uri(builder -> builder.scheme("https").host("discord.com")
-                        .path("/api/v10/guilds/").pathSegment(properties.getGuildId())
-                        .path("/members/search").queryParam("query", query)
-                        .queryParam("limit", 20).build())
-                .header("Authorization", "Bot " + properties.getBotToken())
-                .retrieve().body(new ParameterizedTypeReference<List<GuildMember>>() {});
+        if (query.matches("\\d{15,22}")) return query; // already a numeric user id — most reliable
+        List<GuildMember> members;
+        try {
+            members = client.get()
+                    .uri(builder -> builder.scheme("https").host("discord.com")
+                            .path("/api/v10/guilds/").pathSegment(properties.getGuildId())
+                            .path("/members/search").queryParam("query", query)
+                            .queryParam("limit", 20).build())
+                    .header("Authorization", "Bot " + properties.getBotToken())
+                    .retrieve().body(new ParameterizedTypeReference<List<GuildMember>>() {});
+        } catch (RestClientResponseException ex) {
+            if (ex.getStatusCode().value() == 403) {
+                throw new DiscordLookupException(
+                        "Wyszukiwanie po nazwie wymaga włączenia „Server Members Intent” w portalu Discord"
+                        + " (Bot → Privileged Gateway Intents). Alternatywnie podaj numeryczny Discord User ID.");
+            }
+            throw new DiscordLookupException("Discord nie pozwolił wyszukać osoby (HTTP "
+                    + ex.getStatusCode().value() + "); podaj numeryczny Discord User ID.");
+        }
         List<GuildMember> exact = (members == null ? List.<GuildMember>of() : members).stream()
                 .filter(member -> matches(member, query)).toList();
         if (exact.isEmpty()) {

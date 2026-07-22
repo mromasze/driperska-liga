@@ -199,6 +199,17 @@ export function useRiotLobbyStatus(matchId: string, enabled: boolean) {
   });
 }
 
+export function useCancelMatch(matchId: string) {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: () => api.post<MatchDetail>(`/matches/${matchId}/cancel`),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: queryKeys.match(matchId) });
+      qc.invalidateQueries({ queryKey: ['matches'] });
+    },
+  });
+}
+
 export function useReopenMatch(matchId: string) {
   const qc = useQueryClient();
   return useMutation({

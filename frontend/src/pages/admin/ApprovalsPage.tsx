@@ -1,7 +1,9 @@
-import { useMatches, useMatch, useApproveMatch, useRejectMatch } from '../../api/hooks/matches';
+import { useState } from 'react';
+import { useMatches, useMatch, useApproveMatch, useRejectMatch, useShareMatchToDiscord } from '../../api/hooks/matches';
 import { useAuthStore } from '../../store/auth';
 import { Scoreboard } from '../../components/match/Scoreboard';
 import { SignOffPanel } from '../../components/admin/SignOffPanel';
+import { Button } from '../../components/ui/Button';
 import { LoadingState, EmptyState } from '../../components/ui/States';
 import { Badge } from '../../components/ui/Badge';
 import { formatDateTime } from '../../lib/format';
@@ -39,12 +41,23 @@ function ApprovalItem({ matchId }: { matchId: string }) {
   const match = useMatch(matchId);
   const approve = useApproveMatch(matchId);
   const reject = useRejectMatch(matchId);
+  const share = useShareMatchToDiscord(matchId);
   const account = useAuthStore((s) => s.account);
+  const [shareMsg, setShareMsg] = useState<string | null>(null);
 
   if (match.isLoading || !match.data) return <LoadingState />;
 
   const m = match.data;
   const submittedAt = m.approval?.submittedAt;
+
+  const doShare = () => {
+    if (!window.confirm('Wygenerować obrazek wyników i wysłać go na kanał Discord?')) return;
+    setShareMsg(null);
+    share.mutate(undefined, {
+      onSuccess: (r) => setShareMsg(r.sent ? '✓ Wysłano na Discord.' : '⚠ ' + r.message),
+      onError: (e) => setShareMsg('⚠ ' + (e as Error).message),
+    });
+  };
 
   return (
     <div className="space-y-4 rounded-lg border border-line p-4 sm:p-6">
@@ -54,6 +67,13 @@ function ApprovalItem({ matchId }: { matchId: string }) {
       </div>
 
       <Scoreboard match={m} />
+
+      <div className="flex flex-wrap items-center gap-3">
+        <Button variant="ghost" size="sm" disabled={share.isPending} onClick={doShare}>
+          {share.isPending ? 'Wysyłanie…' : '📤 Udostępnij wynik na Discord'}
+        </Button>
+        {shareMsg && <span className="text-sm text-text-lo">{shareMsg}</span>}
+      </div>
 
       <SignOffPanel
         defaultSignature={account?.username ?? ''}

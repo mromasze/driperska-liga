@@ -15,6 +15,7 @@ import {
   useReopenMatch,
   useUploadReplay,
   useShareMatchToDiscord,
+  useCancelMatch,
 } from '../../api/hooks/matches';
 import { DrawBoard } from '../../components/match/DrawBoard';
 import { usePlayers } from '../../api/hooks/players';
@@ -41,6 +42,7 @@ export function MatchControlPage() {
   const submit = useSubmitResults(id);
   const edit = useEditResults(id);
   const reopen = useReopenMatch(id);
+  const cancel = useCancelMatch(id);
   const uploadReplay = useUploadReplay(id);
   const shareDiscord = useShareMatchToDiscord(id);
   const replayInput = useRef<HTMLInputElement>(null);
@@ -87,15 +89,29 @@ export function MatchControlPage() {
 
   return (
     <div className="space-y-6">
-      <div>
-        <Link to="/admin" className="text-sm text-text-lo hover:text-text">
-          ← Pulpit
-        </Link>
-        <div className="mt-1 flex items-center gap-3">
-          <h1 className="font-display text-3xl">Kontrola meczu</h1>
-          <Badge tone="info">{m.status}</Badge>
+      <div className="flex items-start justify-between gap-3">
+        <div>
+          <Link to="/admin" className="text-sm text-text-lo hover:text-text">
+            ← Pulpit
+          </Link>
+          <div className="mt-1 flex items-center gap-3">
+            <h1 className="font-display text-3xl">Kontrola meczu</h1>
+            <Badge tone="info">{m.status}</Badge>
+          </div>
         </div>
+        {m.status !== 'APPROVED' && m.status !== 'CANCELLED' && (
+          <Button variant="danger" size="sm" disabled={cancel.isPending}
+            onClick={() => { if (window.confirm('Anulować ten mecz? Tej operacji nie można cofnąć.')) cancel.mutate(); }}>
+            {cancel.isPending ? 'Anulowanie…' : 'Anuluj mecz'}
+          </Button>
+        )}
       </div>
+      {cancel.isError && <p className="text-sm text-loss">{cancel.error.message}</p>}
+      {m.status === 'CANCELLED' && (
+        <div className="rounded-lg border border-[color:var(--loss)]/40 bg-[color:var(--loss)]/10 p-4 text-sm text-loss">
+          Ten mecz został anulowany.
+        </div>
+      )}
 
       {(m.status === 'TEAMS_DRAWN' || m.status === 'LOBBY_READY') && (
         <section className="panel p-4">
@@ -231,6 +247,12 @@ export function MatchControlPage() {
             <div className="my-2 select-all break-all font-mono text-lg text-text-hi">{m.riot.tournamentCode}</div>
             <Button size="sm" variant="ghost"
               onClick={() => navigator.clipboard.writeText(m.riot.tournamentCode ?? '')}>Kopiuj kod</Button>
+            {m.riot.tournamentCode?.startsWith('STUB') && (
+              <p className="mt-2 text-xs text-loss">
+                ⚠ Kod testowy (Riot stub) — niegrywalny w kliencie. Do prawdziwych meczów potrzebny produkcyjny
+                klucz z dostępem Tournament API (wtedy ustaw RIOT_USE_STUB=false).
+              </p>
+            )}
           </div>
           {riotLobby.data && (
             <div>

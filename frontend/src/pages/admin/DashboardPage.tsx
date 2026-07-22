@@ -11,10 +11,14 @@ export function DashboardPage() {
   const account = useAuthStore((s) => s.account);
   const pending = useMatches({ status: 'RESULTS_SUBMITTED', size: 20 });
   const live = useMatches({ status: 'LIVE', size: 20 });
+  const drawn = useMatches({ status: 'TEAMS_DRAWN', size: 20 });
+  const lobby = useMatches({ status: 'LOBBY_READY', size: 20 });
   const players = usePlayers({ active: true, size: 1 });
 
   const pendingList = pending.data?.content ?? [];
   const liveList = live.data?.content ?? [];
+  const prepList = [...(drawn.data?.content ?? []), ...(lobby.data?.content ?? [])]
+    .sort((a, b) => (b.createdAt ?? '').localeCompare(a.createdAt ?? ''));
 
   return (
     <div className="space-y-8">
@@ -37,6 +41,29 @@ export function DashboardPage() {
           <Button variant="ghost">Kolejka akceptacji</Button>
         </Link>
       </div>
+
+      {prepList.length > 0 && (
+        <section>
+          <h2 className="mb-3 font-display text-xl">Mecze w przygotowaniu</h2>
+          <div className="space-y-2">
+            {prepList.map((m) => (
+              <Link
+                key={m.id}
+                to={`/admin/matches/${m.id}/control`}
+                className="glass lift flex items-center justify-between p-4"
+              >
+                <div>
+                  <div className="font-medium text-text-hi">
+                    {m.status === 'LOBBY_READY' ? 'Lobby gotowe' : 'Losowanie / głosowanie'}
+                  </div>
+                  <div className="num text-xs text-text-lo">{formatDateTime(m.createdAt)}</div>
+                </div>
+                <Badge tone="info">Wróć do meczu →</Badge>
+              </Link>
+            ))}
+          </div>
+        </section>
+      )}
 
       {liveList.length > 0 && (
         <section>
