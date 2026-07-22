@@ -9,6 +9,8 @@ Wszystkie istotne zmiany Driperskiej Ligi są opisywane tutaj oraz w
 - Naprawiona zakładka „Mecze" w panelu admina — lista wszystkich meczów bez filtra statusu ładowała się w nieskończoność (brak `@EntityGraph` na `findAll` powodował błąd lazy-init przy budowaniu podsumowania).
 - Pozycja zawodnika jest teraz wpisywana przy wyniku (faktycznie grana pozycja, a nie ulubiona): edytowalny wybór roli w formularzu wyników; OCR ze screenshotów również próbuje odczytać pozycję.
 - Podsumowanie meczu i karta na Discord zawsze sortują graczy w kolejności: TOP, JUNGLE, MID, BOT, SUPPORT.
+- Post z wynikiem na Discordzie zawiera link do strony szczegółów meczu (`/matches/{id}`).
+- W panelu gracza zakończony mecz znika (aktywne są tylko stany w toku); po zatwierdzeniu zostaje sama ankieta oceny, z nagłówkiem informującym o dacie meczu i składach obu drużyn.
 
 ## v0.2.6 — 2026-07-22
 

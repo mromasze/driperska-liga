@@ -19,6 +19,8 @@ export const RELEASES: ReleaseNote[] = [
       'Naprawiona zakładka „Mecze” (nie ładowała się w nieskończoność).',
       'Pozycję gracza wpisuje się przy wyniku (grana pozycja, nie ulubiona) — edytowalna w formularzu i czytana ze screenshotów.',
       'Na podsumowaniu meczu stała kolejność: TOP, JUNGLE, MID, BOT, SUPPORT.',
+      'Post z wynikiem na Discordzie zawiera link do szczegółów meczu.',
+      'W panelu gracza mecz znika po zakończeniu — zostaje sama ankieta oceny z informacją, którego meczu dotyczy (data i składy).',
     ],
   },
   {

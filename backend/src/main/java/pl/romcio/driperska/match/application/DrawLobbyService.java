@@ -66,9 +66,10 @@ public class DrawLobbyService {
     public DrawLobbyResponse active(UUID accountId) {
         Player player = playerRepository.findByAccountId(accountId)
                 .orElseThrow(() -> new BusinessRuleException("Konto nie jest połączone z graczem"));
+        // Only ongoing matches appear in the player's panel; once results are submitted the match
+        // "disappears" and the post-match survey takes over.
         return matchRepository.findForPlayerAndStatuses(player.getId(),
-                        EnumSet.of(MatchStatus.TEAMS_DRAWN, MatchStatus.LOBBY_READY,
-                                MatchStatus.LIVE, MatchStatus.RESULTS_SUBMITTED, MatchStatus.REJECTED),
+                        EnumSet.of(MatchStatus.TEAMS_DRAWN, MatchStatus.LOBBY_READY, MatchStatus.LIVE),
                         PageRequest.of(0, 1))
                 .stream().findFirst().map(this::toResponse).orElse(null);
     }

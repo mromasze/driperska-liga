@@ -35,16 +35,19 @@ public class MatchShareService {
     private final ResultImageGenerator imageGenerator;
     private final DiscordClient discordClient;
     private final MatchEventRecorder eventRecorder;
+    private final String publicUrl;
 
     public MatchShareService(MatchRepository matchRepository, PlayerRepository playerRepository,
                              ChampionRepository championRepository, ResultImageGenerator imageGenerator,
-                             DiscordClient discordClient, MatchEventRecorder eventRecorder) {
+                             DiscordClient discordClient, MatchEventRecorder eventRecorder,
+                             @org.springframework.beans.factory.annotation.Value("${app.public-url:https://driperska.pl}") String publicUrl) {
         this.matchRepository = matchRepository;
         this.playerRepository = playerRepository;
         this.championRepository = championRepository;
         this.imageGenerator = imageGenerator;
         this.discordClient = discordClient;
         this.eventRecorder = eventRecorder;
+        this.publicUrl = publicUrl.replaceAll("/$", "");
     }
 
     @Transactional(readOnly = true)
@@ -63,7 +66,8 @@ public class MatchShareService {
         Match match = matchRepository.findById(matchId).orElseThrow();
         int blue = sideKills(match, Side.BLUE);
         int red = sideKills(match, Side.RED);
-        String caption = "🏆 **Driperska Liga** — wynik meczu\nNiebiescy **" + blue + "** : **" + red + "** Czerwoni";
+        String caption = "🏆 **Driperska Liga** — wynik meczu\nNiebiescy **" + blue + "** : **" + red + "** Czerwoni"
+                + "\n🔗 Szczegóły meczu: " + publicUrl + "/matches/" + matchId;
         Delivery delivery = discordClient.sendResultImage(caption, png, "wynik-" + matchId + ".png");
         if (delivery.sent()) {
             eventRecorder.record(matchId, MatchEventType.DISCORD_SHARED, actor, null);

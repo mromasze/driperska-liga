@@ -374,8 +374,18 @@ function RatingRow({ match, myPlayerId }: { match: RateableMatch; myPlayerId: st
 
   return (
     <div className="rounded-lg border border-line bg-[color:var(--bg-1)]/70 p-4">
-      <div className="mb-3 text-xs text-text-lo">
-        Mecz {match.completedAt ? `· ${formatDateTime(match.completedAt)}` : ''}
+      <div className="mb-3">
+        <div className="text-sm font-medium text-text-hi">
+          Mecz {match.completedAt ? `z ${formatDateTime(match.completedAt)}` : ''}
+        </div>
+        <div className="mt-0.5 text-xs text-text-lo">
+          <span style={{ color: 'var(--blue)' }}>Niebiescy:</span>{' '}
+          {match.participants.filter((p) => p.side === 'BLUE').map((p) => p.nickname).join(', ')}
+        </div>
+        <div className="text-xs text-text-lo">
+          <span style={{ color: 'var(--red)' }}>Czerwoni:</span>{' '}
+          {match.participants.filter((p) => p.side === 'RED').map((p) => p.nickname).join(', ')}
+        </div>
       </div>
       <div className="grid gap-3 sm:grid-cols-2">
         <label><span className="kicker text-win">👍 Wyróżnij (plus)</span>
