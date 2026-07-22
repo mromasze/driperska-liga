@@ -18,6 +18,7 @@ export const RELEASES: ReleaseNote[] = [
       'Panel gracza podzielony na zakładki: „Dashboard” (losowanie/gra, potwierdzanie obecności i ocena meczu) oraz „Profil i ustawienia” (edycja profilu, ulubieni bohaterowie, zdjęcie i zmiana hasła).',
       'Na publicznym profilu gracza widać teraz jego ulubionych bohaterów.',
       'Naprawiona zmiana zdjęcia profilowego — dało się je ustawić tylko raz; teraz stare zdjęcie jest usuwane, a nowe od razu widoczne (koniec problemu z cache przeglądarki).',
+      'Naprawione wgrywanie „Zagrywek” i powtórek — kończyło się błędem „Access Denied” przy większych plikach.',
     ],
   },
   {

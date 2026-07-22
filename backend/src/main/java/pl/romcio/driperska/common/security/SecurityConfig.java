@@ -1,5 +1,6 @@
 package pl.romcio.driperska.common.security;
 
+import jakarta.servlet.DispatcherType;
 import java.util.List;
 import org.springframework.boot.context.properties.EnableConfigurationProperties;
 import org.springframework.context.annotation.Bean;
@@ -37,6 +38,13 @@ public class SecurityConfig {
                 .cors(cors -> cors.configurationSource(corsConfigurationSource()))
                 .sessionManagement(sm -> sm.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
                 .authorizeHttpRequests(auth -> auth
+                        // Authorization runs on the initial REQUEST dispatch. Large multipart uploads
+                        // (clips/replays) are re-dispatched ASYNC by Tomcat; the JWT filter (a
+                        // OncePerRequestFilter) skips async dispatches, so re-authorizing them would run
+                        // with no authentication and wrongly deny with "Access Denied". Permit the
+                        // non-REQUEST dispatcher types — they were already authorized on the first pass.
+                        .dispatcherTypeMatchers(DispatcherType.ASYNC, DispatcherType.FORWARD, DispatcherType.ERROR)
+                        .permitAll()
                         // public auth + docs + health + media
                         .requestMatchers(HttpMethod.POST,
                                 "/api/v1/riot/tournament/callback").permitAll()
