@@ -32,12 +32,14 @@ public class MatchController {
     private final RiotResultImportService riotResultImportService;
     private final MatchReplayService replayService;
     private final MatchShareService shareService;
+    private final MatchOcrService ocrService;
 
     public MatchController(MatchService matchService, DrawLobbyService drawLobbyService,
                            ResultService resultService, ApprovalService approvalService,
                            MatchAssembler assembler, TournamentMatchService tournamentMatchService,
                            RiotResultImportService riotResultImportService,
-                           MatchReplayService replayService, MatchShareService shareService) {
+                           MatchReplayService replayService, MatchShareService shareService,
+                           MatchOcrService ocrService) {
         this.matchService = matchService;
         this.drawLobbyService = drawLobbyService;
         this.resultService = resultService;
@@ -47,6 +49,7 @@ public class MatchController {
         this.riotResultImportService = riotResultImportService;
         this.replayService = replayService;
         this.shareService = shareService;
+        this.ocrService = ocrService;
     }
 
     @GetMapping
@@ -205,6 +208,15 @@ public class MatchController {
     @PreAuthorize("hasAnyRole('ADMIN','EDITOR')")
     public MatchShareService.ShareResult shareToDiscord(@PathVariable UUID id) {
         return shareService.shareToDiscord(id, CurrentAccount.require().accountId());
+    }
+
+    /** Reads LoL end-game screenshot(s) via Ollama vision and returns an editable results draft. */
+    @PostMapping(value = "/{id}/results/ocr", consumes = "multipart/form-data")
+    @PreAuthorize("hasAnyRole('ADMIN','EDITOR')")
+    public MatchOcrService.OcrDraft ocrResults(@PathVariable UUID id,
+                                               @org.springframework.web.bind.annotation.RequestParam("files")
+                                               java.util.List<org.springframework.web.multipart.MultipartFile> files) {
+        return ocrService.extract(id, files);
     }
 
     private DrawResponse toDrawResponse(UUID matchId, DrawResult result) {

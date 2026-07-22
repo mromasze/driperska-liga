@@ -11,6 +11,17 @@ export interface ReleaseNote {
  */
 export const RELEASES: ReleaseNote[] = [
   {
+    version: 'v0.2.4',
+    date: '2026-07-22',
+    title: 'Wyniki ze screenshotów (AI)',
+    changes: [
+      'Wczytywanie statystyk z ekranu podsumowania LoL przez model wizyjny (Ollama Cloud) — tabela wypełnia się sama.',
+      'Można wgrać kilka zrzutów naraz (np. osobne zakładki KDA / obrażenia / wizja); dane łączone są po graczu.',
+      'AI dopasowuje graczy po nazwie w grze / Riot ID oraz championy po nazwie — admin sprawdza i poprawia przed wysłaniem.',
+      'Rozwiązanie tymczasowe, dopóki nie dostaniemy produkcyjnego dostępu do Riot Tournament API.',
+    ],
+  },
+  {
     version: 'v0.2.3',
     date: '2026-07-22',
     title: 'Deploy, zagrywki i zarządzanie meczami',

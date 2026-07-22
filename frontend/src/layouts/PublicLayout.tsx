@@ -44,7 +44,7 @@ export function PublicLayout() {
       <main className="mx-auto w-full max-w-content flex-1 px-4 py-8 sm:px-6 sm:py-10"><Outlet /></main>
       <footer className="border-t border-line py-8 text-center text-xs text-text-lo">
         <div className="mx-auto max-w-content space-y-1 px-4">
-          <div>Driperska Liga v0.2.2 · inhouse League of Legends</div>
+          <div>Driperska Liga v0.2.4 · inhouse League of Legends</div>
           <div>
             Stworzone przez{' '}
             <a href="https://mromasze.github.io/" target="_blank" rel="noopener noreferrer"

@@ -14,6 +14,7 @@ import type {
   ReplacePlayerRequest,
   RiotLobbyStatus,
   DrawLobby,
+  OcrDraft,
   SubmitResultsRequest,
 } from '../types';
 
@@ -236,6 +237,17 @@ export function useUploadReplay(matchId: string) {
 export function useShareMatchToDiscord(matchId: string) {
   return useMutation({
     mutationFn: () => api.post<{ sent: boolean; message: string }>(`/matches/${matchId}/share/discord`),
+  });
+}
+
+/** POST /matches/{id}/results/ocr — read LoL screenshots into an editable results draft. */
+export function useOcrResults(matchId: string) {
+  return useMutation({
+    mutationFn: (files: File[]) => {
+      const form = new FormData();
+      files.forEach((f) => form.append('files', f));
+      return api.upload<OcrDraft>(`/matches/${matchId}/results/ocr`, form);
+    },
   });
 }
 

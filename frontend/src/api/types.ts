@@ -108,6 +108,16 @@ export interface MatchesQuery { status?: MatchStatus; seasonId?: string; page?: 
 export interface CreateMatchRequest { seasonId: string; drawMode: DrawMode; playerIds: string[]; }
 export interface DrawSlot { playerId: string; nickname: string; role: Role; mmr: number; }
 export interface ReplacePlayerRequest { removedPlayerId: string; addedPlayerId: string; }
+
+export interface OcrRow {
+  playerId: string; nickname: string; championId: number | null; championName: string | null;
+  kills: number; deaths: number; assists: number; cs: number; gold: number;
+  damageToChampions: number; visionScore: number; largestMultiKill: number;
+}
+export interface OcrDraft {
+  winningSide: Side | null; durationSeconds: number | null;
+  rows: OcrRow[]; unmatched: string[]; missing: string[];
+}
 export interface DrawBalance { blueMmrAvg: number; redMmrAvg: number; predictedBlueWinPct: number; }
 export interface DrawResult { matchId: string; drawMode: DrawMode; blue: DrawSlot[]; red: DrawSlot[]; balance: DrawBalance; }
 export interface ResultParticipantInput {

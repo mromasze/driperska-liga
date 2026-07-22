@@ -20,7 +20,7 @@ services:
     build:
       context: ./backend
       labels:
-        pl.driperska.version: "${APP_VERSION:-0.2.3}"
+        pl.driperska.version: "${APP_VERSION:-0.2.4}"
     restart: unless-stopped
     depends_on:
       db:
@@ -44,6 +44,9 @@ services:
       DISCORD_BOT_TOKEN: ${DISCORD_BOT_TOKEN:-}
       DISCORD_GUILD_ID: ${DISCORD_GUILD_ID:-}
       DISCORD_RESULTS_CHANNEL_ID: ${DISCORD_RESULTS_CHANNEL_ID:-}
+      OLLAMA_BASE_URL: ${OLLAMA_BASE_URL:-https://ollama.com}
+      OLLAMA_API_KEY: ${OLLAMA_API_KEY:-}
+      OLLAMA_VISION_MODEL: ${OLLAMA_VISION_MODEL:-qwen2.5-vl}
       APP_PUBLIC_URL: ${APP_PUBLIC_URL:-https://driperska.pl}
       APP_ADMIN_USERNAME: ${APP_ADMIN_USERNAME:-admin}
       APP_ADMIN_EMAIL: ${APP_ADMIN_EMAIL:-admin@driperska.local}
@@ -61,7 +64,7 @@ services:
     build:
       context: ./frontend
       labels:
-        pl.driperska.version: "${APP_VERSION:-0.2.3}"
+        pl.driperska.version: "${APP_VERSION:-0.2.4}"
     restart: unless-stopped
     depends_on:
       backend:

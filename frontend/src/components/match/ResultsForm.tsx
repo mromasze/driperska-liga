@@ -1,6 +1,7 @@
-import { useMemo, useState } from 'react';
-import type { MatchDetail, Side, SubmitResultsRequest } from '../../api/types';
+import { useMemo, useRef, useState } from 'react';
+import type { MatchDetail, OcrDraft, Side, SubmitResultsRequest } from '../../api/types';
 import { useChampions } from '../../api/hooks/champions';
+import { useOcrResults } from '../../api/hooks/matches';
 import { roleLabel } from '../../lib/format';
 import { cn } from '../../lib/cn';
 import { Button } from '../ui/Button';
@@ -83,6 +84,49 @@ export function ResultsForm({
     setRows((prev) => ({ ...prev, [playerId]: { ...prev[playerId], [key]: value } }));
   };
 
+  const ocr = useOcrResults(match.id);
+  const shotInput = useRef<HTMLInputElement>(null);
+  const [ocrNote, setOcrNote] = useState<string | null>(null);
+  const [shots, setShots] = useState<File[]>([]);
+
+  const applyDraft = (draft: OcrDraft) => {
+    if (draft.winningSide) setWinningSide(draft.winningSide);
+    if (draft.durationSeconds && draft.durationSeconds > 0) setDuration(draft.durationSeconds);
+    setRows((prev) => {
+      const next = { ...prev };
+      for (const r of draft.rows) {
+        if (!next[r.playerId]) continue;
+        next[r.playerId] = {
+          championId: r.championId ?? next[r.playerId].championId,
+          kills: r.kills, deaths: r.deaths, assists: r.assists, cs: r.cs, gold: r.gold,
+          damageToChampions: r.damageToChampions, visionScore: r.visionScore,
+          largestMultiKill: r.largestMultiKill,
+        };
+      }
+      return next;
+    });
+    const parts: string[] = [`Uzupełniono ${draft.rows.length}/${match.participants.length} graczy.`];
+    if (draft.missing.length) parts.push(`Bez danych: ${draft.missing.join(', ')}.`);
+    if (draft.unmatched.length) parts.push(`Niedopasowani ze screena: ${draft.unmatched.join(', ')}.`);
+    parts.push('Sprawdź i popraw ręcznie przed wysłaniem.');
+    setOcrNote(parts.join(' '));
+  };
+
+  // Accumulate screenshots and re-send the whole set each time, so adding tabs one-by-one
+  // still merges correctly (the model combines all images).
+  const addShots = (files: FileList | null) => {
+    const added = files ? Array.from(files) : [];
+    if (added.length === 0) return;
+    const all = [...shots, ...added];
+    setShots(all);
+    setOcrNote(null);
+    ocr.mutate(all, {
+      onSuccess: applyDraft,
+      onError: (e) => setOcrNote('⚠ ' + (e as Error).message),
+    });
+  };
+  const clearShots = () => { setShots([]); setOcrNote(null); };
+
   const allChampionsPicked = match.participants.every((p) => rows[p.playerId]?.championId !== '');
   const canSubmit = winningSide !== '' && duration > 0 && allChampionsPicked;
 
@@ -113,6 +157,29 @@ export function ResultsForm({
 
   return (
     <div className="space-y-5">
+      <div className="rounded-lg border border-[color:var(--cyan)]/40 bg-[color:var(--cyan)]/10 p-4">
+        <div className="flex flex-wrap items-center justify-between gap-3">
+          <div>
+            <div className="font-semibold text-text-hi">🤖 Uzupełnij ze screenshotów (AI)</div>
+            <p className="text-xs text-text-lo">
+              Wgraj zrzut(y) ekranu podsumowania z LoL — AI odczyta statystyki i wypełni tabelę.
+              Możesz dodać kilka naraz (np. osobne zakładki: KDA, obrażenia, wizja).
+            </p>
+          </div>
+          <div className="flex items-center gap-2">
+            <input ref={shotInput} type="file" accept="image/*" multiple className="hidden"
+              onChange={(e) => { addShots(e.target.files); e.currentTarget.value = ''; }} />
+            <Button variant="ghost" size="sm" disabled={ocr.isPending} onClick={() => shotInput.current?.click()}>
+              {ocr.isPending ? 'Analizuję…' : shots.length ? `Dodaj kolejny (${shots.length})` : 'Wgraj screenshoty'}
+            </Button>
+            {shots.length > 0 && !ocr.isPending && (
+              <Button variant="ghost" size="sm" onClick={clearShots}>Wyczyść</Button>
+            )}
+          </div>
+        </div>
+        {ocrNote && <p className="mt-2 text-sm text-text">{ocrNote}</p>}
+      </div>
+
       <div className="panel flex flex-wrap items-end gap-4 p-4">
         <div>
           <span className="kicker">Zwycięska strona</span>
