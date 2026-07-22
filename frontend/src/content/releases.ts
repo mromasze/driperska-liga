@@ -22,6 +22,7 @@ export const RELEASES: ReleaseNote[] = [
       'Panel admina: lista meczów zwijana do rozwijanych elementów (dropdown) — zwarta i czytelna.',
       'Poprawione wyświetlanie panelu admina na telefonach — chowane menu (hamburger) zamiast ściśniętego paska zakładek.',
       'Podczas głosowania nad składem każdy widzi, kto jak zagłosował (Gramy / Losuj ponownie / czeka) — na żywo.',
+      'Dłuższa sesja logowania — koniec wylogowywania po kilku minutach. Token ważny domyślnie 12 godzin (a odświeżanie utrzymuje sesję do 30 dni).',
     ],
   },
   {

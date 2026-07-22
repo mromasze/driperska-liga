@@ -77,8 +77,8 @@ app:
     timeout-seconds: ${OLLAMA_TIMEOUT_SECONDS:120}
   jwt:
     secret: ${JWT_SECRET:dev-secret-please-override-with-a-32plus-byte-value!!}
-    access-token-minutes: 15
-    refresh-token-days: 7
+    access-token-minutes: ${JWT_ACCESS_TOKEN_MINUTES:720}
+    refresh-token-days: ${JWT_REFRESH_TOKEN_DAYS:30}
   draw:
     # Auto-confirm a drawn squad this many seconds after the draw if voting hasn't resolved. 0 = off.
     auto-confirm-seconds: ${DRAW_AUTO_CONFIRM_SECONDS:30}
