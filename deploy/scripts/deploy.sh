@@ -16,11 +16,18 @@ else
   echo "First deployment: database is not running yet, skipping pre-deploy backup."
 fi
 
-echo "Building release..."
-docker compose --env-file .env build --pull
+image_archive="$root_dir/release/docker-images.tar.gz"
+if [[ ! -s "$image_archive" ]]; then
+  echo "Missing prebuilt Docker package: $image_archive" >&2
+  exit 1
+fi
+
+echo "Loading prebuilt application images..."
+docker image load --input "$image_archive"
+docker image inspect driperska-backend:latest driperska-web:latest >/dev/null
 
 echo "Applying Flyway migrations and replacing application containers..."
-docker compose --env-file .env up -d --remove-orphans
+docker compose --env-file .env up -d --remove-orphans --no-build
 
 echo "Waiting for healthy containers..."
 deadline=$((SECONDS + 180))

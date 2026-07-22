@@ -15,7 +15,7 @@ export const RELEASES: ReleaseNote[] = [
     date: '2026-07-22',
     title: 'Deploy, zagrywki i zarządzanie meczami',
     changes: [
-      'Automatyczny deploy produkcyjny po udanym CI na gałęzi main.',
+      'CI wysyła na serwer gotowe obrazy Dockera i uruchamia je bez nadpisywania serwerowych .env oraz docker-compose.yml.',
       'Najlepsze zagrywki MP4/WebM odtwarzane jako subtelne tło strony głównej, z uploadem w panelu.',
       'Naprawione generowanie obrazka wyniku w Dockerze oraz czytelne błędy i logi integracji Discord.',
       'Lista wszystkich meczów z filtrowaniem, edycją i ponownym udostępnianiem wyniku na Discordzie.',

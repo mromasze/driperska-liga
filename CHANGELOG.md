@@ -7,7 +7,7 @@ Wszystkie istotne zmiany Driperskiej Ligi są opisywane tutaj oraz w
 
 Automatyzacja wdrożeń, klipy i pełne zarządzanie meczami:
 
-- Deploy produkcyjny uruchamia się automatycznie po udanym workflow CI na `main`; ręczne uruchomienie pozostaje dostępne.
+- CI buduje i pakuje obrazy Dockera, a deploy po udanym `main` przesyła gotową paczkę i uruchamia ją bez kompilacji na serwerze; serwerowe `.env` i `docker-compose.yml` pozostają nietknięte.
 - Panel „Zagrywki” przyjmuje MP4/WebM i odtwarza klipy jako przygaszone tło strony głównej; pliki zostają w trwałym woluminie mediów.
 - Naprawione generowanie kart wyników w obrazie produkcyjnym (fonty Java2D), szczegółowe komunikaty błędów Discord i logowanie wyjątków 500/503 ze stack trace.
 - Nowy widok wszystkich meczów z filtrowaniem, wejściem do edycji dowolnego wyniku i ponownym udostępnianiem na Discordzie.

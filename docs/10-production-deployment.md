@@ -103,21 +103,17 @@ losowania docierał natychmiast.
 Firewall powinien wystawiać tylko używane usługi, typowo SSH, 80 i 443. Portu 18080 nie
 otwieraj — Compose wiąże go z `127.0.0.1`.
 
-## 5. Pierwsze wdrożenie ręczne
+## 5. Pierwsze wdrożenie
 
-Po skopiowaniu repozytorium do `/opt/driperska`:
-
-```bash
-cd /opt/driperska
-chmod +x deploy/scripts/*.sh
-./deploy/scripts/deploy.sh
-```
+Na serwerze przygotuj `/opt/driperska/.env` oraz własny `/opt/driperska/docker-compose.yml`.
+Następnie uruchom **Actions → Deploy production → Run workflow**. Workflow wyśle gotowe obrazy
+oraz skrypt, a `deploy.sh` nie wymaga źródeł ani narzędzi Java/Node na serwerze.
 
 Skrypt:
 
 1. tworzy skompresowany `pg_dump`,
-2. buduje obrazy,
-3. uruchamia kontenery bez usuwania wolumenów,
+2. ładuje obrazy skompilowane wcześniej przez GitHub CI,
+3. uruchamia kontenery z `--no-build` bez usuwania wolumenów,
 4. Flyway wykonuje wyłącznie brakujące migracje,
 5. czeka, aż frontend i backend będą healthy.
 
@@ -126,8 +122,9 @@ a zdjęcia w `media`.
 
 ## 6. Automatyczny deploy z GitHub Actions
 
-Workflow `.github/workflows/deploy.yml` czeka na udane zakończenie workflow CI dla `main`,
-następnie kopiuje dokładnie sprawdzony commit przez SSH i wywołuje ten sam skrypt deployu. Utwórz środowisko GitHub
+Workflow `.github/workflows/deploy.yml` czeka na udane zakończenie workflow CI dla `main`.
+CI zapisuje gotowe obrazy backendu i frontendu w `docker-images.tar.gz`; deploy przesyła tę
+paczkę przez SSH, wykonuje `docker load` i uruchamia Compose z opcją `--no-build`. Utwórz środowisko GitHub
 **production** (warto włączyć required reviewer) i dodaj sekrety:
 
 | Secret | Przykład |
@@ -143,7 +140,10 @@ Sekrety środowiska są udostępniane dopiero jobom wskazującym dane environmen
 oraz [GitHub Actions secrets](https://docs.github.com/en/actions/reference/security/secrets).
 
 Udany CI po pushu do `main` uruchamia deploy. Można go też wywołać ręcznie przez **Actions → Deploy
-production → Run workflow**. Plik `.env` i katalog `backups` są wyłączone z rsync.
+production → Run workflow**. Workflow nie wysyła ani nie usuwa serwerowych plików `.env` i `docker-compose.yml`.
+Wysyłane są tylko obrazy, `VERSION` oraz `deploy/scripts`. Konfiguracja Springa
+`application.yml` pochodzi z nowego obrazu i pobiera wartości środowiskowe przekazane
+przez serwerowy Compose z zachowanego `.env`.
 
 ## 7. Migracje i aktualizacje bez utraty danych
 
