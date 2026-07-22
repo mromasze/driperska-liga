@@ -9,6 +9,8 @@ Wszystkie istotne zmiany Driperskiej Ligi są opisywane tutaj oraz w
 - Na publicznym profilu gracza pokazują się jego ulubieni bohaterowie (do 5, ustawiani w panelu gracza).
 - Naprawiona zmiana zdjęcia profilowego: dało się je ustawić tylko raz, a kolejne wgranie nie było widoczne, bo plik zapisywał się zawsze pod tą samą nazwą (`<id>.png`) i przeglądarka serwowała starą wersję z cache. Teraz stary plik jest usuwany, a nowy zapisywany pod unikalną nazwą — URL zmienia się przy każdym wgraniu, więc zdjęcie odświeża się natychmiast.
 - Naprawione wgrywanie „Zagrywek” (klipów) i powtórek — kończyło się błędem „Access Denied” w logach. Duży upload multipart Tomcat obsługuje przez re-dispatch ASYNC, a filtr JWT (jako `OncePerRequestFilter`) pomija dyspozycje async, więc Spring Security ponownie autoryzował żądanie bez tokenu i odrzucał je. Autoryzacja jest teraz wykonywana tylko na pierwotnej dyspozycji `REQUEST`; dyspozycje `ASYNC`/`FORWARD`/`ERROR` są przepuszczane.
+- Panel admina: lista wszystkich meczów jest teraz zwijana — każdy mecz to rozwijany element (dropdown) z podsumowaniem w nagłówku i akcjami (udostępnij na Discord, otwórz/edytuj) po rozwinięciu; lista jest zwarta i czytelna, szczególnie na telefonie.
+- Poprawione wyświetlanie panelu admina na telefonach: pasek nawigacji zastąpiony chowanym menu (hamburger) z pełną listą zakładek, licznikiem oczekujących akceptacji i wylogowaniem; nagłówek pokazuje nazwę bieżącej sekcji i jest przyklejony u góry.
 
 ## v0.2.7 — 2026-07-22
 

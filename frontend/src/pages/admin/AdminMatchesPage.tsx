@@ -38,20 +38,25 @@ function MatchRow({ match }: { match: MatchSummary }) {
     && ['RESULTS_SUBMITTED', 'APPROVED', 'REJECTED'].includes(match.status);
 
   return (
-    <article className="glass p-4">
-      <div className="flex flex-wrap items-center justify-between gap-4">
-        <div className="min-w-0">
-          <div className="mb-2 flex flex-wrap items-center gap-2">
-            <Badge tone={tone(match.status)}>{STATUS_LABEL[match.status]}</Badge>
-            <span className="font-mono text-xs text-text-lo">{match.id.slice(0, 8)}</span>
-          </div>
-          <div className="text-sm text-text-hi">
+    <details className="match-dropdown glass overflow-hidden">
+      <summary className="flex cursor-pointer list-none items-center gap-3 p-4">
+        <Badge tone={tone(match.status)}>{STATUS_LABEL[match.status]}</Badge>
+        <div className="min-w-0 flex-1">
+          <div className="truncate text-sm text-text-hi">
             {match.participantCount} graczy
-            {match.completedAt ? ` · rozegrany ${formatDateTime(match.completedAt)}` : ''}
+            {match.completedAt ? ` · ${formatDateTime(match.completedAt)}` : ''}
           </div>
-          <div className="mt-1 text-xs text-text-lo">Utworzony {formatDateTime(match.createdAt)}</div>
+          <div className="truncate font-mono text-xs text-text-lo">{match.id.slice(0, 8)}</div>
         </div>
-        <div className="flex flex-wrap gap-2">
+        <span className="match-dropdown-chevron shrink-0 text-text-lo transition-transform">▾</span>
+      </summary>
+      <div className="border-t border-line p-4">
+        <div className="text-sm text-text-hi">
+          {match.participantCount} graczy
+          {match.completedAt ? ` · rozegrany ${formatDateTime(match.completedAt)}` : ''}
+        </div>
+        <div className="mt-1 text-xs text-text-lo">Utworzony {formatDateTime(match.createdAt)}</div>
+        <div className="mt-3 flex flex-wrap gap-2">
           {canShare && (
             <Button
               variant="ghost"
@@ -75,9 +80,9 @@ function MatchRow({ match }: { match: MatchSummary }) {
             Otwórz / edytuj
           </Link>
         </div>
+        {message && <p className="mt-3 text-xs text-text-lo">{message}</p>}
       </div>
-      {message && <p className="mt-3 text-xs text-text-lo">{message}</p>}
-    </article>
+    </details>
   );
 }
 

@@ -19,6 +19,8 @@ export const RELEASES: ReleaseNote[] = [
       'Na publicznym profilu gracza widać teraz jego ulubionych bohaterów.',
       'Naprawiona zmiana zdjęcia profilowego — dało się je ustawić tylko raz; teraz stare zdjęcie jest usuwane, a nowe od razu widoczne (koniec problemu z cache przeglądarki).',
       'Naprawione wgrywanie „Zagrywek” i powtórek — kończyło się błędem „Access Denied” przy większych plikach.',
+      'Panel admina: lista meczów zwijana do rozwijanych elementów (dropdown) — zwarta i czytelna.',
+      'Poprawione wyświetlanie panelu admina na telefonach — chowane menu (hamburger) zamiast ściśniętego paska zakładek.',
     ],
   },
   {

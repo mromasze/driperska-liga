@@ -284,3 +284,7 @@
 @media (prefers-reduced-motion: reduce) {
   .draw-stage, .draw-player { animation: none; opacity: 1; }
 }
+/* Collapsible match rows in the admin panel */
+.match-dropdown > summary { list-style: none; }
+.match-dropdown > summary::-webkit-details-marker { display: none; }
+.match-dropdown[open] .match-dropdown-chevron { transform: rotate(180deg); }
