@@ -11,6 +11,9 @@ Wszystkie istotne zmiany Driperskiej Ligi są opisywane tutaj oraz w
 - Podsumowanie meczu i karta na Discord zawsze sortują graczy w kolejności: TOP, JUNGLE, MID, BOT, SUPPORT.
 - Post z wynikiem na Discordzie zawiera link do strony szczegółów meczu (`/matches/{id}`).
 - W panelu gracza zakończony mecz znika (aktywne są tylko stany w toku); po zatwierdzeniu zostaje sama ankieta oceny, z nagłówkiem informującym o dacie meczu i składach obu drużyn.
+- Naprawione wgrywanie klipów („Zagrywki") i powtórek na produkcji: limit multipart podniesiony do 512 MB, `server.tomcat.max-swallow-size=-1` (Tomcat domyka odrzucone zbyt duże uploady zamiast resetować połączenie, co za nginx dawało 502 i stack trace), `client_max_body_size 512m` + `proxy_request_buffering off` w nginx, klip do 400 MB, oraz czytelny błąd 413 zamiast nieobsłużonego wyjątku przy przekroczeniu limitu.
+- Utwardzenie strumienia SSE (`/draw-lobby/stream`): emitter domykany w `onTimeout`, więc wygaśnięcie połączenia nie powoduje `AsyncRequestTimeoutException` w logach.
+- Wszystkie daty i godziny wyświetlane w formacie 24-godzinnym i wymuszonej strefie czasowej Europe/Warsaw (niezależnie od strefy przeglądarki).
 
 ## v0.2.6 — 2026-07-22
 

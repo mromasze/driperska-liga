@@ -23,11 +23,13 @@ public class DrawRealtimeService {
         emitters.computeIfAbsent(accountId, ignored -> new CopyOnWriteArrayList<>()).add(emitter);
         Runnable cleanup = () -> remove(accountId, emitter);
         emitter.onCompletion(cleanup);
-        emitter.onTimeout(cleanup);
+        // Completing the emitter on timeout is required — otherwise Spring MVC raises
+        // AsyncRequestTimeoutException on the async dispatch and logs a full stack trace.
+        emitter.onTimeout(() -> { cleanup.run(); emitter.complete(); });
         emitter.onError(ignored -> cleanup.run());
         try {
             emitter.send(SseEmitter.event().name("connected").data("{\"ok\":true}"));
-        } catch (IOException ex) {
+        } catch (IOException | IllegalStateException ex) {
             cleanup.run();
         }
         return emitter;

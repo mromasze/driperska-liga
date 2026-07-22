@@ -15,8 +15,8 @@ spring:
       enabled: true
   servlet:
     multipart:
-      max-file-size: 128MB
-      max-request-size: 128MB
+      max-file-size: 512MB
+      max-request-size: 512MB
   datasource:
     url: jdbc:h2:mem:driperska;DB_CLOSE_DELAY=-1;MODE=PostgreSQL
     driver-class-name: org.h2.Driver
@@ -26,6 +26,11 @@ spring:
 server:
   port: 8080
   forward-headers-strategy: framework
+  tomcat:
+    # Drain the remaining request body on rejected/large uploads so the client gets a proper
+    # error response instead of a connection reset (which behind nginx surfaces as a 502/stack trace).
+    max-swallow-size: -1
+    max-http-form-post-size: 512MB
 
 management:
   endpoints:

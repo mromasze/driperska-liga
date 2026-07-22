@@ -23,7 +23,7 @@ import pl.romcio.driperska.player.infra.StorageProperties;
 /** Stores homepage highlight clips in the persistent media volume. */
 @Service
 public class HighlightService {
-    private static final long MAX_BYTES = 100L * 1024 * 1024;
+    private static final long MAX_BYTES = 400L * 1024 * 1024;
     private static final Set<String> EXTENSIONS = Set.of("mp4", "webm");
     private static final Pattern STORED_NAME =
             Pattern.compile("[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}\\.(mp4|webm)");
@@ -87,7 +87,7 @@ public class HighlightService {
             throw new BusinessRuleException("Plik wideo jest pusty");
         }
         if (file.getSize() > MAX_BYTES) {
-            throw new BusinessRuleException("Klip jest za duży (maksymalnie 100 MB)");
+            throw new BusinessRuleException("Klip jest za duży (maksymalnie 400 MB)");
         }
         String extension = extension(file.getOriginalFilename());
         if (!EXTENSIONS.contains(extension)) {

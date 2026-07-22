@@ -49,6 +49,14 @@ public class GlobalExceptionHandler {
         return problem(HttpStatus.FORBIDDEN, "access-denied", "Brak uprawnień do tej operacji", null);
     }
 
+    @ExceptionHandler({
+            org.springframework.web.multipart.MaxUploadSizeExceededException.class,
+            org.springframework.web.multipart.MultipartException.class})
+    public ProblemDetail handleUploadTooLarge(Exception ex) {
+        return problem(HttpStatus.PAYLOAD_TOO_LARGE, "upload-too-large",
+                "Plik jest za duży lub nie udało się go przesłać. Zmniejsz rozmiar i spróbuj ponownie.", null);
+    }
+
     @ExceptionHandler(Exception.class)
     public ProblemDetail handleUnexpected(Exception ex) {
         log.error("Unhandled request failure", ex);

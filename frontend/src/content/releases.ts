@@ -21,6 +21,9 @@ export const RELEASES: ReleaseNote[] = [
       'Na podsumowaniu meczu stała kolejność: TOP, JUNGLE, MID, BOT, SUPPORT.',
       'Post z wynikiem na Discordzie zawiera link do szczegółów meczu.',
       'W panelu gracza mecz znika po zakończeniu — zostaje sama ankieta oceny z informacją, którego meczu dotyczy (data i składy).',
+      'Naprawione wgrywanie klipów i powtórek na produkcji — większe limity (do 512 MB przez nginx i backend, klipy do 400 MB) i czytelny komunikat zamiast błędu przy zbyt dużym pliku.',
+      'Drobne utwardzenie strumienia na żywo (SSE) — brak wyjątku w logach po wygaśnięciu połączenia.',
+      'Godziny wyświetlane w formacie 24-godzinnym i w polskiej strefie czasowej (Europe/Warsaw).',
     ],
   },
   {
