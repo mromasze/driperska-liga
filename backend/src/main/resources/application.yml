@@ -41,7 +41,7 @@ management:
 info:
   app:
     name: Driperska Liga
-    version: 0.2.7
+    version: 0.2.8
 
 app:
   public-url: ${APP_PUBLIC_URL:https://driperska.pl}

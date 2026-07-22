@@ -15,6 +15,8 @@ import type { RsvpResponse, RateableMatch } from '../../api/types';
 
 const ROLES: Role[] = ['TOP', 'JUNGLE', 'MID', 'ADC', 'SUPPORT'];
 
+type PanelTab = 'dashboard' | 'profile';
+
 export function PlayerPanelPage() {
   const player = useMyPlayer();
   const draw = useDrawLobby();
@@ -24,6 +26,7 @@ export function PlayerPanelPage() {
   const champions = useChampions();
   const fileInput = useRef<HTMLInputElement>(null);
 
+  const [tab, setTab] = useState<PanelTab>('dashboard');
   const [mainRole, setMainRole] = useState<Role>('MID');
   const [secondaryRole, setSecondaryRole] = useState<Role | ''>('');
   const [riotId, setRiotId] = useState('');
@@ -70,24 +73,47 @@ export function PlayerPanelPage() {
   };
 
   return (
-    <div className="space-y-10">
+    <div className="space-y-8">
       <header>
         <div className="kicker text-gold">Zalogowano jako {p.nickname}</div>
         <h1 className="mt-1 font-display text-4xl">Centrum gracza</h1>
       </header>
 
-      <DrawVotingCard
-        lobby={lobby}
-        myPlayerId={p.id}
-        myVote={myVote}
-        pending={vote.isPending}
-        onVote={(decision) => lobby && vote.mutate({ matchId: lobby.matchId, decision })}
-      />
+      <nav className="flex flex-wrap gap-2 border-b border-line">
+        {TABS.map((t) => (
+          <button
+            key={t.id}
+            type="button"
+            onClick={() => setTab(t.id)}
+            className={`-mb-px border-b-2 px-4 py-2.5 font-display text-sm font-semibold transition ${
+              tab === t.id
+                ? 'border-gold text-text-hi'
+                : 'border-transparent text-text-lo hover:text-text'
+            }`}
+          >
+            {t.label}
+          </button>
+        ))}
+      </nav>
 
-      <UpcomingMatches />
+      {tab === 'dashboard' && (
+        <div className="space-y-10">
+          <DrawVotingCard
+            lobby={lobby}
+            myPlayerId={p.id}
+            myVote={myVote}
+            pending={vote.isPending}
+            onVote={(decision) => lobby && vote.mutate({ matchId: lobby.matchId, decision })}
+          />
 
-      <MatchRatingSurvey myPlayerId={p.id} />
+          <UpcomingMatches />
 
+          <MatchRatingSurvey myPlayerId={p.id} />
+        </div>
+      )}
+
+      {tab === 'profile' && (
+        <div className="space-y-10">
       <section className="panel p-5 sm:p-7">
         <div className="mb-6 flex flex-wrap items-center gap-4">
           <Avatar src={p.avatarUrl} name={p.nickname} size={72} ring />
@@ -165,10 +191,17 @@ export function PlayerPanelPage() {
         </form>
       </section>
 
-      <ChangePasswordCard />
+          <ChangePasswordCard />
+        </div>
+      )}
     </div>
   );
 }
+
+const TABS: { id: PanelTab; label: string }[] = [
+  { id: 'dashboard', label: 'Dashboard' },
+  { id: 'profile', label: 'Profil i ustawienia' },
+];
 
 function DrawVotingCard({ lobby, myPlayerId, myVote, pending, onVote }: {
   lobby?: DrawLobby; myPlayerId: string; myVote: 'ACCEPT' | 'REJECT' | null;

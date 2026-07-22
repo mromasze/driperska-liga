@@ -10,7 +10,7 @@
 	</parent>
 	<groupId>pl.romcio</groupId>
 	<artifactId>driperska-liga</artifactId>
-	<version>0.2.7</version>
+	<version>0.2.8</version>
 	<name>driperska-liga</name>
 	<description>Driperska Liga — inhouse LoL league management (backend)</description>
 

@@ -29,6 +29,9 @@ export function PlayerProfilePage() {
   const topChampId = pool[0]?.championId;
   const topSlug = champions.data?.find((c) => c.id === topChampId)?.slug;
   const splash = championSplashUrl(topSlug);
+  const favoriteChampions = (p.favoriteChampionIds ?? [])
+    .map((cid) => champions.data?.find((c) => c.id === cid))
+    .filter((c): c is NonNullable<typeof c> => Boolean(c));
 
   return (
     <div className="space-y-8">
@@ -51,6 +54,22 @@ export function PlayerProfilePage() {
               {p.realName && <span>· {p.realName}</span>}
             </div>
             {p.bio && <p className="mt-3 max-w-xl text-sm text-text">{p.bio}</p>}
+            {favoriteChampions.length > 0 && (
+              <div className="mt-4">
+                <div className="kicker mb-2">Ulubieni bohaterowie</div>
+                <div className="flex flex-wrap gap-2">
+                  {favoriteChampions.map((c) => (
+                    <div
+                      key={c.id}
+                      className="flex items-center gap-2 rounded-full border border-line bg-[color:var(--bg-1)]/70 py-1 pl-1 pr-3"
+                    >
+                      <ChampionIcon iconUrl={c.iconUrl} name={c.name} size={28} className="rounded-full" />
+                      <span className="text-sm font-medium text-text-hi">{c.name}</span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
           </div>
         </div>
       </section>

@@ -3,6 +3,12 @@
 Wszystkie istotne zmiany Driperskiej Ligi są opisywane tutaj oraz w
 `frontend/src/content/releases.ts`, który zasila patch notes na stronie głównej.
 
+## v0.2.8 — 2026-07-22
+
+- Panel gracza podzielony na zakładki: „Dashboard” (losowanie/gra, potwierdzanie obecności na nadchodzące mecze i ankieta oceny po meczu) oraz „Profil i ustawienia” (edycja profilu, ulubieni bohaterowie, zdjęcie oraz zmiana hasła) — mniej przewijania i wyraźny podział na to, co „na dziś”, i ustawienia konta.
+- Na publicznym profilu gracza pokazują się jego ulubieni bohaterowie (do 5, ustawiani w panelu gracza).
+- Naprawiona zmiana zdjęcia profilowego: dało się je ustawić tylko raz, a kolejne wgranie nie było widoczne, bo plik zapisywał się zawsze pod tą samą nazwą (`<id>.png`) i przeglądarka serwowała starą wersję z cache. Teraz stary plik jest usuwany, a nowy zapisywany pod unikalną nazwą — URL zmienia się przy każdym wgraniu, więc zdjęcie odświeża się natychmiast.
+
 ## v0.2.7 — 2026-07-22
 
 - Obrazek wyniku udostępniany na Discord przeprojektowany tak, by odwzorować scoreboard z aplikacji: ciemne panele drużyn, ikony bohaterów, KDA (śmierci na czerwono), CS, kolorowe „pigułki” PR, korona MVP i zwycięzcy, wynik w nagłówku.

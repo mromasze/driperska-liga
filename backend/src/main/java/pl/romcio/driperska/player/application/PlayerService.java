@@ -155,14 +155,14 @@ public class PlayerService {
     @Transactional
     public Player updateAvatar(UUID id, MultipartFile file) {
         Player player = get(id);
-        player.setAvatarUrl(avatarStorage.store(player.getId(), file));
+        player.setAvatarUrl(avatarStorage.store(player.getId(), file, player.getAvatarUrl()));
         return player;
     }
 
     @Transactional
     public Player updateSelfAvatar(UUID accountId, MultipartFile file) {
         Player player = getByAccountId(accountId);
-        player.setAvatarUrl(avatarStorage.store(player.getId(), file));
+        player.setAvatarUrl(avatarStorage.store(player.getId(), file, player.getAvatarUrl()));
         return player;
     }
 

@@ -11,6 +11,16 @@ export interface ReleaseNote {
  */
 export const RELEASES: ReleaseNote[] = [
   {
+    version: 'v0.2.8',
+    date: '2026-07-22',
+    title: 'Zakładki w panelu gracza i poprawka zdjęcia profilowego',
+    changes: [
+      'Panel gracza podzielony na zakładki: „Dashboard” (losowanie/gra, potwierdzanie obecności i ocena meczu) oraz „Profil i ustawienia” (edycja profilu, ulubieni bohaterowie, zdjęcie i zmiana hasła).',
+      'Na publicznym profilu gracza widać teraz jego ulubionych bohaterów.',
+      'Naprawiona zmiana zdjęcia profilowego — dało się je ustawić tylko raz; teraz stare zdjęcie jest usuwane, a nowe od razu widoczne (koniec problemu z cache przeglądarki).',
+    ],
+  },
+  {
     version: 'v0.2.7',
     date: '2026-07-22',
     title: 'Ładniejsza karta wyniku i poprawki panelu',
