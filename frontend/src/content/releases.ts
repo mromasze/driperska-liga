@@ -11,6 +11,19 @@ export interface ReleaseNote {
  */
 export const RELEASES: ReleaseNote[] = [
   {
+    version: 'v0.2.2',
+    date: '2026-07-22',
+    title: 'Wygoda panelu i diagnostyka Discord',
+    changes: [
+      'Mecz nie znika po odświeżeniu — sekcja „Mecze w przygotowaniu” na pulpicie prowadzi z powrotem do trwającego meczu.',
+      'Przycisk „Anuluj mecz” w panelu kontroli meczu.',
+      'Udostępnianie obrazka z wynikiem na Discord dostępne także w kolejce akceptacji.',
+      'Czytelne komunikaty, gdy DM na Discord nie dojdzie (Server Members Intent, prywatność odbiorcy, numeryczny User ID).',
+      'Ostrzeżenie na ekranie lobby, że kod testowy (stub) nie zadziała w kliencie bez produkcyjnego dostępu Tournament API.',
+      'Plik weryfikacyjny riot.txt hostowany w korzeniu domeny (rejestracja Tournament API).',
+    ],
+  },
+  {
     version: 'v0.2.1',
     date: '2026-07-21',
     title: 'Poprawki: Riot, zdjęcia, podsumowanie',
