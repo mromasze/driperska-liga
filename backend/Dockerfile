@@ -9,9 +9,15 @@ RUN mvn -q -DskipTests package
 # --- runtime stage ---
 FROM eclipse-temurin:21-jre AS runtime
 WORKDIR /app
-# gosu lets the entrypoint fix volume ownership as root, then drop to the 'app' user.
-RUN apt-get update \
-  && apt-get install -y --no-install-recommends fontconfig fonts-dejavu-core gosu \
+# gosu (static binary) lets the entrypoint fix volume ownership as root, then drop to the
+# 'app' user. We copy it from the official image instead of apt-get, because fetching it
+# from the Ubuntu archive in CI is slow and frequently fails ("Connection failed").
+COPY --from=tianon/gosu:1.17 /usr/local/bin/gosu /usr/local/bin/gosu
+# fontconfig + a base font are required for Java2D result-card rendering. Retry apt to
+# ride out transient CI network hiccups; the base image already ships these packages.
+RUN set -eux \
+  && apt-get -o Acquire::Retries=5 update \
+  && apt-get -o Acquire::Retries=5 install -y --no-install-recommends fontconfig fonts-dejavu-core \
   && rm -rf /var/lib/apt/lists/* \
   && useradd -r -u 1001 app && mkdir -p /app/data/media && chown -R app /app
 COPY --from=build /app/target/*.jar app.jar
