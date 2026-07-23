@@ -18,28 +18,12 @@
 #
 set -euo pipefail
 
-BASE_URL="${BASE_URL:-http://localhost:8080}"
-SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-BOTS_FILE="${BOTS_FILE:-$SCRIPT_DIR/test-bots.json}"
-
-command -v jq   >/dev/null || { echo "jq is required (apt install jq)" >&2; exit 1; }
-command -v curl >/dev/null || { echo "curl is required"               >&2; exit 1; }
-[[ -f "$BOTS_FILE" ]] || { echo "✗ Nie znaleziono $BOTS_FILE — uruchom najpierw seed-test-players.sh" >&2; exit 1; }
+# Shared helpers + local backend auto-detection (BASE_URL, REQ, jq/curl checks).
+source "$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)/lib/common.sh"
+require_bots_file
 
 TOTAL="$(jq 'length' "$BOTS_FILE")"
 ACCEPTS="${ACCEPTS:-$TOTAL}"
-
-# REQ METHOD PATH [BODY] [BEARER] -> sets globals RESP (body) and HTTP_CODE.
-RESP=""; HTTP_CODE=""
-REQ() {
-  local method="$1" path="$2" body="${3:-}" token="${4:-}"
-  local args=(-sS -X "$method" "$BASE_URL$path" -H 'Content-Type: application/json')
-  [[ -n "$token" ]] && args+=(-H "Authorization: Bearer $token")
-  [[ -n "$body"  ]] && args+=(-d "$body")
-  local out; out="$(curl "${args[@]}" -w '%{http_code}' 2>/dev/null || true)"
-  HTTP_CODE="${out: -3}"
-  RESP="${out:0:${#out}-3}"
-}
 
 echo "→ ${ACCEPTS}/${TOTAL} botów zagłosuje ACCEPT na $BASE_URL"
 echo

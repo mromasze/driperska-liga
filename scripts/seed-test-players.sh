@@ -27,31 +27,14 @@
 #
 set -euo pipefail
 
-BASE_URL="${BASE_URL:-http://localhost:8080}"
-ADMIN_USER="${ADMIN_USER:-admin}"
-ADMIN_PASS="${ADMIN_PASS:-changeit123}"
+# Shared helpers + local backend auto-detection (BASE_URL, REQ, jq/curl checks).
+source "$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)/lib/common.sh"
+
 BOT_COUNT="${BOT_COUNT:-9}"
-SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-BOTS_FILE="${BOTS_FILE:-$SCRIPT_DIR/test-bots.json}"
+SCRIPT_DIR="$SCRIPTS_DIR"
 RIOT_IDS_FILE="${RIOT_IDS_FILE:-$SCRIPT_DIR/riot-ids.txt}"
 
 ROLES=(TOP JUNGLE MID ADC SUPPORT)
-
-command -v jq   >/dev/null || { echo "jq is required (apt install jq)"   >&2; exit 1; }
-command -v curl >/dev/null || { echo "curl is required"                  >&2; exit 1; }
-
-# REQ METHOD PATH [BODY] [BEARER] -> sets globals RESP (body) and HTTP_CODE.
-RESP=""; HTTP_CODE=""
-REQ() {
-  local method="$1" path="$2" body="${3:-}" token="${4:-}"
-  local args=(-sS -X "$method" "$BASE_URL$path" -H 'Content-Type: application/json')
-  [[ -n "$token" ]] && args+=(-H "Authorization: Bearer $token")
-  [[ -n "$body"  ]] && args+=(-d "$body")
-  # curl appends the 3-digit status at the very end of stdout; slice it off.
-  local out; out="$(curl "${args[@]}" -w '%{http_code}' 2>/dev/null || true)"
-  HTTP_CODE="${out: -3}"
-  RESP="${out:0:${#out}-3}"
-}
 
 echo "→ Logowanie jako admin ($ADMIN_USER) na $BASE_URL"
 REQ POST /api/v1/auth/login "$(jq -n --arg u "$ADMIN_USER" --arg p "$ADMIN_PASS" '{username:$u,password:$p}')"

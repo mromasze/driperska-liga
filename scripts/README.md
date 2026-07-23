@@ -17,7 +17,7 @@ Wszystkie mają sensowne domyślne wartości — nadpisz w razie potrzeby:
 
 | Zmienna | Domyślnie | Opis |
 |---|---|---|
-| `BASE_URL` | `http://localhost:8080` | Adres backendu/API |
+| `BASE_URL` | auto | Adres backendu/API. Domyślnie **auto-wykrywany** lokalnie: skrypty sprawdzają `localhost:8080`, `127.0.0.1:8080`, `localhost:8081`, `127.0.0.1:8081` (endpoint `/api/v1/config`) i biorą pierwszy działający. Ustaw ręcznie, by pominąć wykrywanie. |
 | `ADMIN_USER` | `admin` | Login admina |
 | `ADMIN_PASS` | `changeit123` | Hasło admina (ustaw jak w Twoim `.env` / `APP_ADMIN_PASSWORD`) |
 | `HUMAN_PLAYER` | — | Nick (lub UUID) Twojego gracza — konto, którym grasz w przeglądarce |
