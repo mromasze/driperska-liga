@@ -1,6 +1,12 @@
 package pl.romcio.driperska.match.application;
 
 import com.fasterxml.jackson.databind.JsonNode;
+import java.awt.Graphics2D;
+import java.awt.RenderingHints;
+import java.awt.image.BufferedImage;
+import java.io.ByteArrayInputStream;
+import java.io.ByteArrayOutputStream;
+import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Base64;
 import java.util.HashMap;
@@ -9,6 +15,7 @@ import java.util.List;
 import java.util.Locale;
 import java.util.Map;
 import java.util.UUID;
+import javax.imageio.ImageIO;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.multipart.MultipartFile;
@@ -63,8 +70,10 @@ public class MatchOcrService {
                 throw new BusinessRuleException("Dozwolone są tylko obrazy (PNG/JPG)");
             }
             try {
-                b64.add(Base64.getEncoder().encodeToString(file.getBytes()));
-            } catch (java.io.IOException ex) {
+                // Downscale + re-encode so multiple/large screenshots stay well under Ollama's
+                // request-body limit (a raw 12 MB PNG base64s to ~16 MB; several would 400).
+                b64.add(downscaleToBase64(file.getBytes()));
+            } catch (IOException ex) {
                 throw new BusinessRuleException("Nie udało się odczytać pliku: " + file.getOriginalFilename());
             }
         }
@@ -154,6 +163,49 @@ public class MatchOcrService {
 
     private static String norm(String s) {
         return s == null ? "" : s.toLowerCase(Locale.ROOT).replaceAll("[^a-z0-9]", "");
+    }
+
+    /** Longest edge for images sent to the vision model — plenty to read a scoreboard, tiny payload. */
+    private static final int MAX_DIM = 1600;
+
+    /** Resize to {@code MAX_DIM} and re-encode as JPEG (q≈0.85); falls back to raw bytes if unreadable. */
+    static String downscaleToBase64(byte[] data) throws IOException {
+        BufferedImage src = ImageIO.read(new ByteArrayInputStream(data));
+        if (src == null) {
+            return Base64.getEncoder().encodeToString(data); // unknown format — send as-is
+        }
+        int w = src.getWidth(), h = src.getHeight();
+        double scale = Math.min(1.0, (double) MAX_DIM / Math.max(w, h));
+        int nw = Math.max(1, (int) Math.round(w * scale));
+        int nh = Math.max(1, (int) Math.round(h * scale));
+        BufferedImage rgb = new BufferedImage(nw, nh, BufferedImage.TYPE_INT_RGB); // flatten alpha for JPEG
+        Graphics2D g = rgb.createGraphics();
+        g.setRenderingHint(RenderingHints.KEY_INTERPOLATION, RenderingHints.VALUE_INTERPOLATION_BILINEAR);
+        g.setRenderingHint(RenderingHints.KEY_RENDERING, RenderingHints.VALUE_RENDER_QUALITY);
+        g.drawImage(src, 0, 0, nw, nh, null);
+        g.dispose();
+
+        ByteArrayOutputStream bos = new ByteArrayOutputStream();
+        if (!writeJpeg(rgb, bos)) {
+            ImageIO.write(rgb, "jpg", bos);
+        }
+        return Base64.getEncoder().encodeToString(bos.toByteArray());
+    }
+
+    private static boolean writeJpeg(BufferedImage img, ByteArrayOutputStream bos) throws IOException {
+        var writers = ImageIO.getImageWritersByFormatName("jpeg");
+        if (!writers.hasNext()) return false;
+        javax.imageio.ImageWriter writer = writers.next();
+        javax.imageio.ImageWriteParam param = writer.getDefaultWriteParam();
+        param.setCompressionMode(javax.imageio.ImageWriteParam.MODE_EXPLICIT);
+        param.setCompressionQuality(0.85f);
+        try (javax.imageio.stream.ImageOutputStream ios = ImageIO.createImageOutputStream(bos)) {
+            writer.setOutput(ios);
+            writer.write(null, new javax.imageio.IIOImage(img, null, null), param);
+        } finally {
+            writer.dispose();
+        }
+        return true;
     }
 
     private static String prompt() {
