@@ -11,8 +11,14 @@ import pl.romcio.driperska.champion.infra.ChampionRepository;
 import pl.romcio.driperska.match.api.MatchDtos.ApprovalResponse;
 import pl.romcio.driperska.match.api.MatchDtos.MatchResponse;
 import pl.romcio.driperska.match.api.MatchDtos.MatchSummaryResponse;
+import pl.romcio.driperska.match.api.MatchDtos.LpBreakdown;
+import pl.romcio.driperska.match.api.MatchDtos.LpComponent;
 import pl.romcio.driperska.match.api.MatchDtos.ParticipantResponse;
 import pl.romcio.driperska.match.api.MatchDtos.RiotInfoResponse;
+import pl.romcio.driperska.common.domain.Side;
+import pl.romcio.driperska.ranking.application.ScoringConfigProvider;
+import pl.romcio.driperska.ranking.domain.ScoringConfig;
+import java.util.ArrayList;
 import pl.romcio.driperska.match.domain.Match;
 import pl.romcio.driperska.match.domain.MatchApproval;
 import pl.romcio.driperska.match.domain.MatchParticipant;
@@ -30,15 +36,18 @@ public class MatchAssembler {
     private final PlayerRepository playerRepository;
     private final ChampionRepository championRepository;
     private final MatchApprovalRepository approvalRepository;
+    private final ScoringConfigProvider scoringConfigProvider;
 
     public MatchAssembler(MatchRepository matchRepository,
                           PlayerRepository playerRepository,
                           ChampionRepository championRepository,
-                          MatchApprovalRepository approvalRepository) {
+                          MatchApprovalRepository approvalRepository,
+                          ScoringConfigProvider scoringConfigProvider) {
         this.matchRepository = matchRepository;
         this.playerRepository = playerRepository;
         this.championRepository = championRepository;
         this.approvalRepository = approvalRepository;
+        this.scoringConfigProvider = scoringConfigProvider;
     }
 
     /** Reloads the match inside this read-only transaction so lazy collections resolve safely. */
@@ -48,8 +57,9 @@ public class MatchAssembler {
                 .orElseThrow(() -> ResourceNotFoundException.of("Match", detached.getId()));
         Map<UUID, Player> players = playersFor(match);
         Map<Integer, Champion> champions = championsFor(match);
+        Map<UUID, LpBreakdown> breakdowns = lpBreakdowns(match);
         List<ParticipantResponse> participants = match.getParticipants().stream()
-                .map(p -> toParticipant(p, players, champions))
+                .map(p -> toParticipant(p, players, champions, breakdowns.get(p.getPlayerId())))
                 .toList();
         ApprovalResponse approval = approvalRepository.findByMatchId(match.getId())
                 .map(MatchAssembler::toApproval)
@@ -74,7 +84,7 @@ public class MatchAssembler {
     }
 
     private ParticipantResponse toParticipant(MatchParticipant p, Map<UUID, Player> players,
-                                              Map<Integer, Champion> champions) {
+                                              Map<Integer, Champion> champions, LpBreakdown lpBreakdown) {
         Player player = players.get(p.getPlayerId());
         Champion champion = p.getChampionId() == null ? null : champions.get(p.getChampionId());
         return new ParticipantResponse(
@@ -86,7 +96,55 @@ public class MatchAssembler {
                 champion != null ? champion.getIconUrl() : null,
                 p.getKills(), p.getDeaths(), p.getAssists(), round2(p.kda()),
                 p.getCs(), p.getGold(), p.getDamageToChampions(), p.getVisionScore(),
-                p.getLargestMultiKill(), p.getPerformanceRating(), p.getLpAwarded(), p.isMvp());
+                p.getLargestMultiKill(), p.getPerformanceRating(), p.getLpAwarded(), p.isMvp(),
+                lpBreakdown);
+    }
+
+    /**
+     * Explains each player's LP for a scored match — mirrors {@link pl.romcio.driperska.ranking.domain.PointsEngine}
+     * so the total matches the awarded LP. Empty until the match has a winning side + ratings.
+     */
+    private Map<UUID, LpBreakdown> lpBreakdowns(Match match) {
+        Side winning = match.getWinningSide();
+        if (winning == null) return Map.of();
+        ScoringConfig cfg = scoringConfigProvider.forSeason(match.getSeasonId());
+        // ACE = highest performance rating on the losing side.
+        UUID aceId = null;
+        double bestLoserPr = -1;
+        for (MatchParticipant p : match.getParticipants()) {
+            if (p.getSide() == winning) continue;
+            double pr = p.getPerformanceRating() == null ? 0.0 : p.getPerformanceRating();
+            if (pr > bestLoserPr) { bestLoserPr = pr; aceId = p.getPlayerId(); }
+        }
+        Map<UUID, LpBreakdown> out = new HashMap<>();
+        for (MatchParticipant p : match.getParticipants()) {
+            if (p.getPerformanceRating() == null && p.getLpAwarded() == null) continue;
+            out.put(p.getPlayerId(), lpBreakdownFor(p, winning, cfg, p.getPlayerId().equals(aceId)));
+        }
+        return out;
+    }
+
+    private static LpBreakdown lpBreakdownFor(MatchParticipant p, Side winning, ScoringConfig cfg, boolean isAce) {
+        boolean won = p.getSide() == winning;
+        double pr = p.getPerformanceRating() == null ? 0.0 : p.getPerformanceRating();
+        List<LpComponent> c = new ArrayList<>();
+        c.add(new LpComponent(won ? "Zwycięstwo" : "Porażka", won ? cfg.lpWin() : cfg.lpLoss()));
+        c.add(new LpComponent("Występ (PR " + Math.round(pr) + " ÷ " + cfg.lpPerformanceDivisor() + ")",
+                (int) Math.round(pr / cfg.lpPerformanceDivisor())));
+        if (p.isMvp()) c.add(new LpComponent("MVP meczu", cfg.lpMvpBonus()));
+        if (isAce && !won) c.add(new LpComponent("ACE przegranej drużyny", cfg.lpAceBonus()));
+        if (p.getLargestMultiKill() >= 5) c.add(new LpComponent("Pentakill", cfg.lpPentaBonus()));
+        else if (p.getLargestMultiKill() == 4) c.add(new LpComponent("Quadrakill", cfg.lpQuadraBonus()));
+        if (p.getDeaths() == 0 && (p.getKills() + p.getAssists()) >= 1) {
+            c.add(new LpComponent("Bez śmierci", cfg.lpFlawlessBonus()));
+        }
+        int total = Math.max(0, c.stream().mapToInt(LpComponent::points).sum());
+        String formula = "Baza: +" + cfg.lpWin() + " za wygraną / +" + cfg.lpLoss()
+                + " za przegraną. Występ: zaokrąglone PR ÷ " + cfg.lpPerformanceDivisor()
+                + ". Bonusy: MVP +" + cfg.lpMvpBonus() + ", ACE +" + cfg.lpAceBonus()
+                + ", penta +" + cfg.lpPentaBonus() + ", quadra +" + cfg.lpQuadraBonus()
+                + ", bez śmierci +" + cfg.lpFlawlessBonus() + ". Minimum 0 LP.";
+        return new LpBreakdown(c, total, formula);
     }
 
     private Map<UUID, Player> playersFor(Match match) {

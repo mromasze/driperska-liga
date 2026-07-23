@@ -1,6 +1,7 @@
 import { useParams, Link } from 'react-router-dom';
 import { useMatch } from '../api/hooks/matches';
 import { Scoreboard } from '../components/match/Scoreboard';
+import { MatchPointsBreakdown } from '../components/match/MatchPointsBreakdown';
 import { PlayerOpinions } from '../components/match/PlayerOpinions';
 import { Badge } from '../components/ui/Badge';
 import { LoadingState, ErrorState, EmptyState } from '../components/ui/States';
@@ -45,6 +46,8 @@ export function MatchPage() {
       </div>
 
       <Scoreboard match={m} />
+
+      <MatchPointsBreakdown match={m} />
 
       <PlayerOpinions matchId={m.id} />
 

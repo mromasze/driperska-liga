@@ -100,8 +100,15 @@ public final class MatchDtos {
             int largestMultiKill,
             Double performanceRating,
             Integer lpAwarded,
-            boolean mvp) {
+            boolean mvp,
+            LpBreakdown lpBreakdown) {
     }
+
+    /** One line of a player's LP math (e.g. "Zwycięstwo" → +10, "Występ (PR 68 ÷ 10)" → +7). */
+    public record LpComponent(String label, int points) {}
+
+    /** Full explanation of how a player's LP for a match adds up, with the formula/przelicznik. */
+    public record LpBreakdown(List<LpComponent> components, int total, String formula) {}
 
     public record ApprovalResponse(
             ApprovalDecision decision,

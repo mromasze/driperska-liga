@@ -77,12 +77,15 @@ export interface RankingRow {
   mmr: number; mvpCount: number; pentaCount: number;
 }
 
+export interface LpComponent { label: string; points: number; }
+export interface LpBreakdown { components: LpComponent[]; total: number; formula: string; }
 export interface MatchParticipant {
   playerId: string; nickname: string; avatarUrl: string | null; side: Side; role: Role;
   championId: number | null; championName: string | null; championIconUrl: string | null;
   kills: number; deaths: number; assists: number; kda: number; cs: number; gold: number;
   damageToChampions: number; visionScore: number; largestMultiKill: number;
   performanceRating: number | null; lpAwarded: number | null; mvp: boolean;
+  lpBreakdown: LpBreakdown | null;
 }
 export interface Approval {
   decision: ApprovalDecision; submittedBy: string | null; submittedAt: string | null;

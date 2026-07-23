@@ -20,6 +20,7 @@ export const RELEASES: ReleaseNote[] = [
       'Poprawiony wygląd na telefonach: górne menu strony głównej chowa się pod hamburger, wersja aplikacji pobierana jest z jednego źródła (package.json).',
       'Szybszy i stabilniejszy odczyt wyników ze screenshotów (OCR): wyłączone „myślenie” modelu i dłuższy limit czasu (koniec timeoutów).',
       'Lepsze rozpoznawanie postaci w OCR: mocniejszy model wizyjny (qwen3.5:397b), włączony atlas referencyjny championów (dopasowanie portretu do nazwy), a normalne screenshoty (~0,5 MB) wysyłane są bez kompresji — kompresja rozmazywała małe ikonki i psuła rozpoznawanie.',
+      'Na stronie meczu rozpisana punktacja LP: dla każdego gracza widać z czego składają się punkty (baza za wygraną/przegraną, występ = PR ÷ przelicznik, bonusy MVP/ACE/multikill/bez śmierci) i ile wyszło razem.',
     ],
   },
   {
