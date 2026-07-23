@@ -205,22 +205,32 @@ public class MatchOcrService {
         return s == null ? "" : s.toLowerCase(Locale.ROOT).replaceAll("[^a-z0-9]", "");
     }
 
-    /** Longest edge for images sent to the vision model — plenty to read a scoreboard, tiny payload. */
-    private static final int MAX_DIM = 1600;
+    /** Only shrink genuinely huge images; otherwise keep full detail so tiny champion portraits stay
+     *  readable. Longest edge cap + raw-byte threshold below which the screenshot is sent untouched. */
+    private static final int MAX_DIM = 2560;
+    private static final int PASSTHROUGH_BYTES = 4 * 1024 * 1024; // 4 MB — normal screenshots (~0.5–2 MB)
 
-    /** Resize to {@code MAX_DIM} and re-encode as JPEG (q≈0.85); falls back to raw bytes if unreadable. */
+    /**
+     * Base64-encode a screenshot for the vision model. Small/normal screenshots are sent AS-IS (no
+     * re-encode, no downscale) to preserve champion-portrait sharpness — recompression blurs the tiny
+     * icons and hurts recognition. Only oversized images (huge dimensions or many MB) are downscaled
+     * to keep the request under Ollama's body limit.
+     */
     static String downscaleToBase64(byte[] data) throws IOException {
         BufferedImage src = ImageIO.read(new ByteArrayInputStream(data));
         if (src == null) {
             return Base64.getEncoder().encodeToString(data); // unknown format — send as-is
         }
         int w = src.getWidth(), h = src.getHeight();
+        if (data.length <= PASSTHROUGH_BYTES && Math.max(w, h) <= MAX_DIM) {
+            return Base64.getEncoder().encodeToString(data); // already small — keep full quality
+        }
         double scale = Math.min(1.0, (double) MAX_DIM / Math.max(w, h));
         int nw = Math.max(1, (int) Math.round(w * scale));
         int nh = Math.max(1, (int) Math.round(h * scale));
         BufferedImage rgb = new BufferedImage(nw, nh, BufferedImage.TYPE_INT_RGB); // flatten alpha for JPEG
         Graphics2D g = rgb.createGraphics();
-        g.setRenderingHint(RenderingHints.KEY_INTERPOLATION, RenderingHints.VALUE_INTERPOLATION_BILINEAR);
+        g.setRenderingHint(RenderingHints.KEY_INTERPOLATION, RenderingHints.VALUE_INTERPOLATION_BICUBIC);
         g.setRenderingHint(RenderingHints.KEY_RENDERING, RenderingHints.VALUE_RENDER_QUALITY);
         g.drawImage(src, 0, 0, nw, nh, null);
         g.dispose();
@@ -238,7 +248,7 @@ public class MatchOcrService {
         javax.imageio.ImageWriter writer = writers.next();
         javax.imageio.ImageWriteParam param = writer.getDefaultWriteParam();
         param.setCompressionMode(javax.imageio.ImageWriteParam.MODE_EXPLICIT);
-        param.setCompressionQuality(0.85f);
+        param.setCompressionQuality(0.92f);
         try (javax.imageio.stream.ImageOutputStream ios = ImageIO.createImageOutputStream(bos)) {
             writer.setOutput(ios);
             writer.write(null, new javax.imageio.IIOImage(img, null, null), param);

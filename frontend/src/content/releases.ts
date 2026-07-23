@@ -18,7 +18,8 @@ export const RELEASES: ReleaseNote[] = [
       'Zagrywki w tle strony głównej płynnie się przenikają — każdy klip pojawia się i znika łagodnym fade in/out.',
       'Na stronie meczu (dla zalogowanych) sekcja „Opinie graczy”: gracz z największą liczbą plusów i ten z największą liczbą minusów, a obok każdego dynamiczny slider z anonimowymi komentarzami o jego grze (pozytywnymi i negatywnymi).',
       'Poprawiony wygląd na telefonach: górne menu strony głównej chowa się pod hamburger, wersja aplikacji pobierana jest z jednego źródła (package.json).',
-      'Szybszy i stabilniejszy odczyt wyników ze screenshotów (OCR): wyłączone „myślenie” modelu, atlas championów domyślnie wyłączony (dwa ciężkie obrazy potrafiły powodować timeout), dłuższy limit czasu i domyślny sprawdzony model wizyjny gemma4:31b-cloud.',
+      'Szybszy i stabilniejszy odczyt wyników ze screenshotów (OCR): wyłączone „myślenie” modelu i dłuższy limit czasu (koniec timeoutów).',
+      'Lepsze rozpoznawanie postaci w OCR: mocniejszy model wizyjny (qwen3.5:397b), włączony atlas referencyjny championów (dopasowanie portretu do nazwy), a normalne screenshoty (~0,5 MB) wysyłane są bez kompresji — kompresja rozmazywała małe ikonki i psuła rozpoznawanie.',
     ],
   },
   {

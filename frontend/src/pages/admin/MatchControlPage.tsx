@@ -22,6 +22,7 @@ import { useResetDraft } from '../../api/hooks/drawLobby';
 import { usePlayers } from '../../api/hooks/players';
 import { ResultsForm } from '../../components/match/ResultsForm';
 import { Scoreboard } from '../../components/match/Scoreboard';
+import { PlayerOpinions } from '../../components/match/PlayerOpinions';
 import { Button } from '../../components/ui/Button';
 import { Badge } from '../../components/ui/Badge';
 import { LoadingState, ErrorState, EmptyState } from '../../components/ui/States';
@@ -395,6 +396,9 @@ export function MatchControlPage() {
           {m.status === 'APPROVED' && matchTools}
         </>
       )}
+
+      {/* Peer feedback (shows once players have rated) — same view as the public match page. */}
+      <PlayerOpinions matchId={id} />
     </div>
   );
 }
