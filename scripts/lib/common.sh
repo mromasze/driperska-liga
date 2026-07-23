@@ -67,13 +67,18 @@ REQ() {
 # (env TURNSTILE_BYPASS_TOKEN). Harmless when Turnstile is disabled. See README.
 TURNSTILE_TOKEN="${TURNSTILE_TOKEN:-local-bot-bypass}"
 
-# login USER PASS -> echoes access token (empty on failure).
+# login USER PASS -> echoes access token (empty on failure). Diagnostics go to stderr so they
+# are visible even when called via $(login ...) in a subshell.
 login() {
   local user="$1" pass="$2"
   REQ POST /api/v1/auth/login \
     "$(jq -n --arg u "$user" --arg p "$pass" --arg t "$TURNSTILE_TOKEN" \
         '{username:$u,password:$p,turnstileToken:$t}')"
-  [[ "$HTTP_CODE" == "200" ]] || return 1
+  if [[ "$HTTP_CODE" != "200" ]]; then
+    echo "  ↳ login '$user' → HTTP ${HTTP_CODE:-brak połączenia}: $(jq -r '.detail // .title // .' <<<"$RESP" 2>/dev/null || echo "$RESP")" >&2
+    [[ "$HTTP_CODE" == "401" ]] && echo "  ↳ 401 zwykle = Turnstile. Ustaw TURNSTILE_BYPASS_TOKEN w .env backendu i przebuduj: docker compose up -d --build backend" >&2
+    return 1
+  fi
   jq -r '.accessToken' <<<"$RESP"
 }
 
