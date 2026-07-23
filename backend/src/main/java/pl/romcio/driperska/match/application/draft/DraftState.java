@@ -49,8 +49,15 @@ public class DraftState {
     public UUID redCaptain;
     public List<Integer> blueBans = new ArrayList<>();
     public List<Integer> redBans = new ArrayList<>();
+    /** Draft order per team, top→bottom: captain first, then the rest (random). Drives pick turns. */
+    public List<UUID> blueOrder = new ArrayList<>();
+    public List<UUID> redOrder = new ArrayList<>();
     public List<Swap> swaps = new ArrayList<>();
     public boolean complete;
+
+    public List<UUID> orderFor(Side side) {
+        return side == Side.BLUE ? blueOrder : redOrder;
+    }
 
     /** The canonical LoL tournament pick/ban order: 5 bans + 5 picks per team. */
     public static List<Step> tournamentSequence() {

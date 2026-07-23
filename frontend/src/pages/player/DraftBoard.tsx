@@ -11,9 +11,13 @@ import { cn } from '../../lib/cn';
 import { roleLabel } from '../../lib/format';
 
 const STEP_SECONDS = 30;
-const ROLE_ORDER: Record<string, number> = { TOP: 0, JUNGLE: 1, MID: 2, ADC: 3, SUPPORT: 4 };
-const sortByRole = (players: LobbyPlayer[]) =>
-  [...players].sort((a, b) => (ROLE_ORDER[a.role] ?? 9) - (ROLE_ORDER[b.role] ?? 9));
+/** Order a team top→bottom by the draft order (captain first); picks flow down this list. */
+const sortByOrder = (players: LobbyPlayer[], order: string[]) =>
+  [...players].sort((a, b) => {
+    const ia = order.indexOf(a.playerId);
+    const ib = order.indexOf(b.playerId);
+    return (ia < 0 ? 99 : ia) - (ib < 0 ? 99 : ib);
+  });
 
 /** Seconds remaining until an ISO deadline, ticking every second (0 when past/absent). */
 export function useCountdown(deadline: string | null): number {
@@ -101,11 +105,11 @@ export function DraftBoard({ lobby, myPlayerId }: { lobby: DrawLobby; myPlayerId
       </div>
 
       <div className="grid gap-4 md:grid-cols-2">
-        <DraftTeam title="Niebiescy" side="BLUE" color="var(--blue)" players={sortByRole(lobby.blue)}
+        <DraftTeam title="Niebiescy" side="BLUE" color="var(--blue)" players={sortByOrder(lobby.blue, draft.blueOrder)}
           bans={draft.blueBans} champById={champById} draft={draft} myPlayerId={myPlayerId}
           isDone={isDone} mySide={mySide} swapMenu={swapMenu} setSwapMenu={setSwapMenu}
           onSwap={(target, type) => { requestSwap.mutate({ targetPlayerId: target, type }); setSwapMenu(null); }} />
-        <DraftTeam title="Czerwoni" side="RED" color="var(--red)" players={sortByRole(lobby.red)}
+        <DraftTeam title="Czerwoni" side="RED" color="var(--red)" players={sortByOrder(lobby.red, draft.redOrder)}
           bans={draft.redBans} champById={champById} draft={draft} myPlayerId={myPlayerId}
           isDone={isDone} mySide={mySide} swapMenu={swapMenu} setSwapMenu={setSwapMenu}
           onSwap={(target, type) => { requestSwap.mutate({ targetPlayerId: target, type }); setSwapMenu(null); }} />

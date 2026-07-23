@@ -169,6 +169,7 @@ export interface DraftView {
   currentType: DraftStepType | null;
   blueCaptain: string | null; redCaptain: string | null;
   currentPlayerId: string | null;
+  blueOrder: string[]; redOrder: string[];
   blueBans: number[]; redBans: number[];
   sequence: DraftStepView[];
   swaps: DraftSwapView[];
