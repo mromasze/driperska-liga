@@ -27,3 +27,4 @@ backend/data/
 # test helper artifacts (contain generated passwords / real Riot IDs)
 scripts/test-bots.json
 scripts/riot-ids.txt
+scripts/.human.txt
