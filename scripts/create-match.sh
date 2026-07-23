@@ -3,24 +3,26 @@
 # create-match.sh — admin creates a fresh match from your player + the mock bots,
 # which immediately draws teams (status TEAMS_DRAWN, voting opens).
 #
-# The match needs exactly 10 players. By default that's YOU (one human player) +
-# 9 bots from test-bots.json. Pass your player's nickname (the one you log into
-# the browser with) so the draft has a human slot for you to test.
+# The match needs exactly 10 players: YOU + 9 bots from test-bots.json. Your player
+# defaults to "mromasze" (the account you operate in the browser). Override with
+# HUMAN_PLAYER, or set HUMAN_PLAYER="" for a fully-automatable 10-bot match.
 #
 # Usage:
-#   HUMAN_PLAYER="TwójNick" ./scripts/create-match.sh
-#   HUMAN_PLAYER="" ./scripts/create-match.sh        # 10 bots, fully automatable (seed BOT_COUNT=10 first)
+#   ./scripts/create-match.sh                        # mromasze + 9 bots
+#   HUMAN_PLAYER="InnyNick" ./scripts/create-match.sh
+#   HUMAN_PLAYER="" ./scripts/create-match.sh         # 10 bots (seed BOT_COUNT=10 first)
 #
 # Config (env vars):
-#   HUMAN_PLAYER  Your player's nickname or UUID (default: none → all bots)
-#   DRAW_MODE     PURE_RANDOM | BALANCED | MANUAL   (default: PURE_RANDOM)
+#   HUMAN_PLAYER  Your player's nickname or UUID  (default: mromasze; "" = all bots)
+#   DRAW_MODE     PURE_RANDOM | BALANCED | MANUAL  (default: PURE_RANDOM)
 #   + BASE_URL / ADMIN_USER / ADMIN_PASS / BOTS_FILE (see lib/common.sh)
 #
 source "$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)/lib/common.sh"
 require_bots_file
 admin_login
 
-HUMAN_PLAYER="${HUMAN_PLAYER:-}"
+# Default to your own player; HUMAN_PLAYER="" (explicitly empty) means all-bots.
+HUMAN_PLAYER="${HUMAN_PLAYER-mromasze}"
 DRAW_MODE="${DRAW_MODE:-PURE_RANDOM}"
 
 # Resolve the human player id (if provided) and remember it for the draft driver.

@@ -20,7 +20,7 @@ Wszystkie mają sensowne domyślne wartości — nadpisz w razie potrzeby:
 | `BASE_URL` | auto | Adres backendu/API. Domyślnie **auto-wykrywany** lokalnie: skrypty sprawdzają `localhost:8080`, `127.0.0.1:8080`, `localhost:8081`, `127.0.0.1:8081` (endpoint `/api/v1/config`) i biorą pierwszy działający. Ustaw ręcznie, by pominąć wykrywanie. |
 | `ADMIN_USER` | `admin` | Login admina |
 | `ADMIN_PASS` | `changeit123` | Hasło admina (ustaw jak w Twoim `.env` / `APP_ADMIN_PASSWORD`) |
-| `HUMAN_PLAYER` | — | Nick (lub UUID) Twojego gracza — konto, którym grasz w przeglądarce |
+| `HUMAN_PLAYER` | `mromasze` | Nick (lub UUID) Twojego gracza — konto, którym grasz w przeglądarce. `HUMAN_PLAYER=""` = sam boty. |
 
 ### Cloudflare Turnstile a logowanie botów
 Jeśli lokalny backend ma włączony Turnstile (`turnstileEnabled:true`), curl-owe logowanie botów
@@ -45,15 +45,15 @@ przekazywany w `deploy/docker-compose.prod.yml`, więc na serwer i tak nie trafi
 # 2) Upewnij się, że Riot API jest WYŁĄCZONE (akceptacja składu → draft, nie lobby Riot)
 ./scripts/toggle-riot.sh off
 ```
-W przeglądarce: zaloguj się na swoje konto **gracza** (ten sam nick, który podasz w `HUMAN_PLAYER`)
-oraz — w drugiej karcie/incognito — na konto **admina**.
+W przeglądarce: zaloguj się na swoje konto **gracza** (`mromasze`) oraz — w drugiej
+karcie/incognito — na konto **admina**.
 
 ---
 
 ## Use case 1 — pełny draft (happy path)
 ```bash
 # Stwórz mecz z Tobą + 9 botami (od razu losuje drużyny → głosowanie)
-HUMAN_PLAYER="TwójNick" ./scripts/create-match.sh
+./scripts/create-match.sh
 
 # 5 botów głosuje ZA — 6. głos oddajesz Ty w przeglądarce (panel gracza)
 ./scripts/bots-vote.sh accept 5
@@ -68,14 +68,14 @@ boty czekają na Ciebie i uzupełniają resztę. Jeśli jesteś kapitanem, robis
 ```bash
 BOT_COUNT=10 ./scripts/seed-test-players.sh     # 10 botów
 ./scripts/toggle-riot.sh off
-./scripts/create-match.sh                        # bez HUMAN_PLAYER = 10 botów
+HUMAN_PLAYER="" ./scripts/create-match.sh        # 10 botów (bez Ciebie)
 ./scripts/bots-vote.sh accept 6                  # od razu zatwierdza i startuje draft
 ./scripts/draft-bots.sh                          # boty rozegrają cały draft
 ```
 
 ## Use case 3 — bug głosowania (odświeżenie / logowanie w trakcie)
 ```bash
-HUMAN_PLAYER="TwójNick" ./scripts/create-match.sh
+./scripts/create-match.sh
 ./scripts/bots-vote.sh accept 3                  # trochę głosów, bez zatwierdzenia
 ```
 W przeglądarce (panel gracza): **odśwież stronę** albo wyloguj się i zaloguj ponownie —
@@ -83,7 +83,7 @@ składy i przyciski głosowania powinny pojawić się od razu, wraz z odliczanie
 
 ## Use case 4 — ponowne losowanie (reroll)
 ```bash
-HUMAN_PLAYER="TwójNick" ./scripts/create-match.sh
+./scripts/create-match.sh
 ./scripts/bots-vote.sh reject 5                  # 5 głosów PRZECIW → nowe drużyny (nowa runda)
 ```
 
