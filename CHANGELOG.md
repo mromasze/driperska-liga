@@ -3,6 +3,16 @@
 Wszystkie istotne zmiany Driperskiej Ligi są opisywane tutaj oraz w
 `frontend/src/content/releases.ts`, który zasila patch notes na stronie głównej.
 
+## v0.3.0 — 2026-07-23
+
+- Nowość — **draft turniejowy** rozgrywany po zaakceptowaniu składu (gdy wsparcie Riot API jest wyłączone). Kolejność banów i picków jest kanoniczna dla LoL: bany B‑R‑B‑R‑B‑R, picki B‑R‑R‑B‑B‑R, bany R‑B‑R‑B, picki R‑B‑B‑R (5 banów i 5 pików na drużynę). Bany wykonuje losowo wyznaczony kapitan drużyny; każdy gracz sam blokuje swoją postać w swojej turze; postać zbanowana lub wybrana jest niedostępna dla obu drużyn.
+- Każdy krok draftu ma licznik 30 s (konfigurowalny `DRAFT_STEP_SECONDS`) z odliczaniem na żywo; po upływie czasu przypisywana jest losowa dostępna postać. Egzekwuje to `DraftScheduler`.
+- Po zakończeniu draftu gracze mogą w obrębie drużyny zamienić się **pozycją** lub **postacią** — jedna osoba wysyła prośbę (strzałka przy graczu), druga akceptuje. Admin może **zresetować** cały draft z panelu kontroli meczu.
+- Nowy, trwały przełącznik **„Wsparcie Riot API”** w panelu (`/admin/settings`, tabela `app_setting`). Wyłączony (domyślnie) → `DrawService.confirm` startuje draft wewnętrzny zamiast tworzyć lobby Riot; włączony → zachowanie jak dotychczas. Naprawia to pokazywanie niedziałającego kodu Riot, gdy nie mamy dostępu do Tournament API.
+- Poprawka głosowania: strumień SSE wysyła teraz aktualny stan lobby natychmiast po połączeniu, więc odświeżenie strony lub zalogowanie w trakcie głosowania od razu pokazuje składy i przyciski głosowania. `/draw-lobby/active` zwraca `null` zamiast pustej odpowiedzi (React Query nie akceptuje `undefined`).
+- Timer głosowania nad składem wydłużony 30 → 60 s (`DRAW_AUTO_CONFIRM_SECONDS`), a `voteDeadline` jest wystawiany do klienta, który pokazuje odliczanie każdemu uczestnikowi.
+- Nowe statusy meczu `DRAFTING` i `DRAFTED`; ręczne rozpoczęcie meczu działa też po draftcie. Migracja `V5` dodaje tabele `app_setting` i `match_draft` (stan draftu trzymany jako JSON).
+
 ## v0.2.8 — 2026-07-22
 
 - Panel gracza podzielony na zakładki: „Dashboard” (losowanie/gra, potwierdzanie obecności na nadchodzące mecze i ankieta oceny po meczu) oraz „Profil i ustawienia” (edycja profilu, ulubieni bohaterowie, zdjęcie oraz zmiana hasła) — mniej przewijania i wyraźny podział na to, co „na dziś”, i ustawienia konta.

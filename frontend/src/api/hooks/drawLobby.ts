@@ -11,7 +11,8 @@ export function useDrawLobby() {
   const token = useAuthStore((state) => state.accessToken);
   const query = useQuery({
     queryKey: DRAW_KEY,
-    queryFn: () => api.get<DrawLobby | undefined>('/draw-lobby/active'),
+    // Coalesce the 204/empty "no active lobby" response to null — React Query rejects `undefined`.
+    queryFn: async () => (await api.get<DrawLobby | undefined>('/draw-lobby/active')) ?? null,
     refetchOnWindowFocus: true,
   });
 
@@ -68,5 +69,38 @@ export function useVoteOnDraw() {
     mutationFn: ({ matchId, decision }: { matchId: string; decision: DrawVoteDecision }) =>
       api.post<DrawLobby>('/draw-lobby/vote', { matchId, decision }),
     onSuccess: (state) => queryClient.setQueryData(DRAW_KEY, state),
+  });
+}
+
+// --- Draft actions. Endpoints return 204; the fresh state arrives over SSE. -------------
+export function useDraftBan(matchId: string) {
+  return useMutation({
+    mutationFn: (championId: number) => api.post<void>(`/draft/${matchId}/ban`, { championId }),
+  });
+}
+
+export function useDraftPick(matchId: string) {
+  return useMutation({
+    mutationFn: (championId: number) => api.post<void>(`/draft/${matchId}/pick`, { championId }),
+  });
+}
+
+export function useRequestSwap(matchId: string) {
+  return useMutation({
+    mutationFn: ({ targetPlayerId, type }: { targetPlayerId: string; type: 'POSITION' | 'CHAMPION' }) =>
+      api.post<void>(`/draft/${matchId}/swap`, { targetPlayerId, type }),
+  });
+}
+
+export function useRespondSwap(matchId: string) {
+  return useMutation({
+    mutationFn: ({ swapId, accept }: { swapId: string; accept: boolean }) =>
+      api.post<void>(`/draft/${matchId}/swap/${swapId}/${accept ? 'accept' : 'cancel'}`),
+  });
+}
+
+export function useResetDraft(matchId: string) {
+  return useMutation({
+    mutationFn: () => api.post<void>(`/draft/${matchId}/reset`),
   });
 }

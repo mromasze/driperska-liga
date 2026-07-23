@@ -40,6 +40,7 @@ services:
       RIOT_USE_STUB: ${RIOT_USE_STUB:-true}
       RIOT_CALLBACK_URL: ${RIOT_CALLBACK_URL:-https://driperska.pl/api/v1/riot/tournament/callback}
       RIOT_MOCK: ${RIOT_MOCK:-false}
+      RIOT_ENABLED: ${RIOT_ENABLED:-false}
       DISCORD_BOT_TOKEN: ${DISCORD_BOT_TOKEN:-}
       DISCORD_GUILD_ID: ${DISCORD_GUILD_ID:-}
       DISCORD_RESULTS_CHANNEL_ID: ${DISCORD_RESULTS_CHANNEL_ID:-}

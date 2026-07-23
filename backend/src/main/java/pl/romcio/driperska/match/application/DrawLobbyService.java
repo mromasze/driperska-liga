@@ -5,8 +5,10 @@ import java.util.*;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.beans.factory.annotation.Value;
 import pl.romcio.driperska.common.domain.Side;
 import pl.romcio.driperska.common.error.*;
+import pl.romcio.driperska.match.api.DrawLobbyDtos.DraftView;
 import pl.romcio.driperska.match.api.DrawLobbyDtos.DrawLobbyResponse;
 import pl.romcio.driperska.match.api.DrawLobbyDtos.LobbyPlayer;
 import pl.romcio.driperska.match.domain.*;
@@ -25,16 +27,22 @@ public class DrawLobbyService {
     private final DrawVoteRepository voteRepository;
     private final PlayerRepository playerRepository;
     private final DrawRealtimeService realtime;
+    private final DraftService draftService;
+    private final int autoConfirmSeconds;
 
     public DrawLobbyService(MatchRepository matchRepository, MatchService matchService,
                             DrawService drawService, DrawVoteRepository voteRepository,
-                            PlayerRepository playerRepository, DrawRealtimeService realtime) {
+                            PlayerRepository playerRepository, DrawRealtimeService realtime,
+                            DraftService draftService,
+                            @Value("${app.draw.auto-confirm-seconds:60}") int autoConfirmSeconds) {
         this.matchRepository = matchRepository;
         this.matchService = matchService;
         this.drawService = drawService;
         this.voteRepository = voteRepository;
         this.playerRepository = playerRepository;
         this.realtime = realtime;
+        this.draftService = draftService;
+        this.autoConfirmSeconds = autoConfirmSeconds;
     }
 
     @Transactional
@@ -69,7 +77,8 @@ public class DrawLobbyService {
         // Only ongoing matches appear in the player's panel; once results are submitted the match
         // "disappears" and the post-match survey takes over.
         return matchRepository.findForPlayerAndStatuses(player.getId(),
-                        EnumSet.of(MatchStatus.TEAMS_DRAWN, MatchStatus.LOBBY_READY, MatchStatus.LIVE),
+                        EnumSet.of(MatchStatus.TEAMS_DRAWN, MatchStatus.DRAFTING, MatchStatus.DRAFTED,
+                                MatchStatus.LOBBY_READY, MatchStatus.LIVE),
                         PageRequest.of(0, 1))
                 .stream().findFirst().map(this::toResponse).orElse(null);
     }
@@ -121,20 +130,29 @@ public class DrawLobbyService {
         Map<UUID, Player> players = new HashMap<>();
         playerRepository.findByIdIn(match.getPoolPlayerIds()).forEach(p -> players.put(p.getId(), p));
         List<DrawVote> votes = voteRepository.findByMatchIdAndDrawRound(match.getId(), match.getDrawRound());
+        DraftView draft = draftService.view(match);
+        Set<UUID> captains = new HashSet<>();
+        if (draft != null) {
+            if (draft.blueCaptain() != null) captains.add(draft.blueCaptain());
+            if (draft.redCaptain() != null) captains.add(draft.redCaptain());
+        }
         List<LobbyPlayer> slots = match.getParticipants().stream().map(p -> {
             Player player = players.get(p.getPlayerId());
             return new LobbyPlayer(p.getPlayerId(), player.getNickname(), player.getAvatarUrl(),
-                    p.getRole(), p.getSide());
+                    p.getRole(), p.getSide(), p.getChampionId(), captains.contains(p.getPlayerId()));
         }).toList();
         List<UUID> accepted = votes.stream().filter(v -> v.getDecision() == DrawVoteDecision.ACCEPT)
                 .map(DrawVote::getPlayerId).toList();
         List<UUID> rejected = votes.stream().filter(v -> v.getDecision() == DrawVoteDecision.REJECT)
                 .map(DrawVote::getPlayerId).toList();
+        Instant voteDeadline = (match.getStatus() == MatchStatus.TEAMS_DRAWN
+                && match.getTeamsDrawnAt() != null && autoConfirmSeconds > 0)
+                ? match.getTeamsDrawnAt().plusSeconds(autoConfirmSeconds) : null;
         return new DrawLobbyResponse(match.getId(), match.getStatus(), match.getDrawRound(),
                 REQUIRED_ACCEPTS, accepted.size(), rejected.size(), accepted, rejected,
                 slots.stream().filter(p -> p.side() == Side.BLUE).toList(),
                 slots.stream().filter(p -> p.side() == Side.RED).toList(), Instant.now(),
-                match.getRiotTournamentCode(), match.getRiotImportError());
+                match.getRiotTournamentCode(), match.getRiotImportError(), voteDeadline, draft);
     }
 
     private void publish(Match match) { publish(match, toResponse(match)); }

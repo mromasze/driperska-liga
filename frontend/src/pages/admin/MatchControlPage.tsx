@@ -18,6 +18,7 @@ import {
   useCancelMatch,
 } from '../../api/hooks/matches';
 import { DrawBoard } from '../../components/match/DrawBoard';
+import { useResetDraft } from '../../api/hooks/drawLobby';
 import { usePlayers } from '../../api/hooks/players';
 import { ResultsForm } from '../../components/match/ResultsForm';
 import { Scoreboard } from '../../components/match/Scoreboard';
@@ -39,6 +40,7 @@ export function MatchControlPage() {
   const replacePlayer = useReplaceMatchPlayer(id);
   const players = usePlayers({ active: true });
   const confirm = useConfirmDraw(id);
+  const resetDraft = useResetDraft(id);
   const submit = useSubmitResults(id);
   const edit = useEditResults(id);
   const reopen = useReopenMatch(id);
@@ -215,7 +217,7 @@ export function MatchControlPage() {
                   🎲 Losuj ponownie
                 </Button>
                 <Button variant="gold" onClick={() => confirm.mutate()} disabled={confirm.isPending}>
-                  Zatwierdź składy i utwórz lobby Riot
+                  Zatwierdź składy
                 </Button>
                 <Button variant="ghost" onClick={() => startManual.mutate()} disabled={startManual.isPending}>
                   {startManual.isPending ? 'Uruchamianie…' : 'Rozpocznij ręcznie (bez Riot)'}
@@ -234,6 +236,33 @@ export function MatchControlPage() {
             </div>
           )}
         </>
+      )}
+
+      {(m.status === 'DRAFTING' || m.status === 'DRAFTED') && (
+        <section className="panel space-y-4 p-5">
+          <div>
+            <div className="kicker text-gold">Draft wewnętrzny</div>
+            <h2 className="font-display text-2xl">
+              {m.status === 'DRAFTING' ? 'Trwa draft (bany i wybór postaci)' : 'Draft zakończony'}
+            </h2>
+            <p className="text-sm text-text-lo">
+              Gracze draftują w swoich panelach na żywo.
+              {m.status === 'DRAFTED' ? ' Gdy stworzą lobby w grze, uruchom mecz.' : ''}
+            </p>
+          </div>
+          <div className="flex flex-wrap gap-3">
+            <Button variant="ghost" disabled={resetDraft.isPending}
+              onClick={() => { if (window.confirm('Zresetować draft? Bany i wybory zostaną wyczyszczone i draft zacznie się od nowa.')) resetDraft.mutate(); }}>
+              {resetDraft.isPending ? 'Resetowanie…' : '↻ Reset draftu'}
+            </Button>
+            <Button variant="gold" disabled={startManual.isPending} onClick={() => startManual.mutate()}>
+              {startManual.isPending ? 'Uruchamianie…' : 'Rozpocznij mecz'}
+            </Button>
+          </div>
+          {(resetDraft.isError || startManual.isError) && (
+            <p className="text-sm text-loss">{(resetDraft.error ?? startManual.error)?.message}</p>
+          )}
+        </section>
       )}
 
       {m.status === 'LOBBY_READY' && (

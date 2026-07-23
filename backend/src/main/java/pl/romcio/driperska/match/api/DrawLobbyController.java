@@ -36,6 +36,8 @@ public class DrawLobbyController {
 
     @GetMapping(value = "/stream", produces = "text/event-stream")
     public SseEmitter stream() {
-        return realtime.subscribe(CurrentAccount.require().accountId());
+        var accountId = CurrentAccount.require().accountId();
+        // Push the current lobby immediately so a refresh/login mid-vote shows the voting UI at once.
+        return realtime.subscribe(accountId, service.active(accountId));
     }
 }

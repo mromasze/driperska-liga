@@ -73,7 +73,8 @@ public class TournamentMatchService {
     @Transactional
     public Match startManual(UUID matchId, UUID actor) {
         Match match = locked(matchId);
-        if (match.getStatus() != MatchStatus.TEAMS_DRAWN && match.getStatus() != MatchStatus.LOBBY_READY) {
+        if (match.getStatus() != MatchStatus.TEAMS_DRAWN && match.getStatus() != MatchStatus.LOBBY_READY
+                && match.getStatus() != MatchStatus.DRAFTED && match.getStatus() != MatchStatus.DRAFTING) {
             throw new InvalidTransitionException("Ręczne rozpoczęcie jest możliwe po wylosowaniu składów");
         }
         match.clearRiotLobby();

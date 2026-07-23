@@ -11,6 +11,21 @@ export interface ReleaseNote {
  */
 export const RELEASES: ReleaseNote[] = [
   {
+    version: 'v0.3',
+    date: '2026-07-23',
+    title: 'Draft turniejowy',
+    changes: [
+      'Nowość: wewnętrzny draft postaci (bany i picki) w kolejności turniejowej LoL — 5 banów i 5 wyborów na drużynę. Bany robi kapitan drużyny, każdy gracz wybiera własną postać w swojej turze.',
+      'Każdy krok draftu ma 30-sekundowy licznik widoczny dla wszystkich; po jego upływie przypisywana jest losowa dostępna postać.',
+      'Po draftcie gracze mogą zamieniać się w obrębie drużyny pozycją lub postacią — klik strzałki przy graczu, druga osoba akceptuje.',
+      'Admin może zresetować draft w dowolnym momencie z panelu kontroli meczu.',
+      'Nowy przełącznik „Wsparcie Riot API” w ustawieniach panelu: wyłączony = po zaakceptowaniu składu startuje draft wewnętrzny (bez kodu Riot); włączony = tworzy lobby turniejowe Riot jak dotychczas.',
+      'Poprawka: po odświeżeniu strony lub zalogowaniu w trakcie głosowania od razu widać składy i możliwość głosowania (stan dociera natychmiast przez strumień na żywo).',
+      'Poprawka: bez wsparcia Riot API nie pokazuje się już niedziałający kod dołączenia do lobby.',
+      'Timer głosowania nad składem wydłużony do 60 sekund, z widocznym odliczaniem dla każdego uczestnika.',
+    ],
+  },
+  {
     version: 'v0.2.8',
     date: '2026-07-22',
     title: 'Zakładki w panelu gracza i poprawka zdjęcia profilowego',

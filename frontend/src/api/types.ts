@@ -4,7 +4,7 @@ export type AccountRole = 'ADMIN' | 'EDITOR' | 'PLAYER';
 export type DrawMode = 'PURE_RANDOM' | 'BALANCED' | 'MANUAL';
 export type DrawVoteDecision = 'ACCEPT' | 'REJECT';
 export type SeasonStatus = 'UPCOMING' | 'ACTIVE' | 'ARCHIVED';
-export type MatchStatus = 'DRAFT' | 'TEAMS_DRAWN' | 'LOBBY_READY' | 'LIVE' | 'RESULTS_SUBMITTED' | 'APPROVED' | 'REJECTED' | 'CANCELLED';
+export type MatchStatus = 'DRAFT' | 'TEAMS_DRAWN' | 'DRAFTING' | 'DRAFTED' | 'LOBBY_READY' | 'LIVE' | 'RESULTS_SUBMITTED' | 'APPROVED' | 'REJECTED' | 'CANCELLED';
 export type ApprovalDecision = 'PENDING' | 'APPROVED' | 'REJECTED';
 export type MatchEventType = 'CREATED' | 'TEAMS_DRAWN' | 'DRAW_CONFIRMED' | 'RIOT_LOBBY_CREATED' | 'PLAYER_REPLACED' | 'MATCH_STARTED' | 'RIOT_CALLBACK_RECEIVED' | 'RIOT_RESULTS_IMPORTED' | 'RIOT_IMPORT_FAILED' | 'RESULTS_SUBMITTED' | 'RESULTS_EDITED' | 'APPROVED' | 'REJECTED' | 'REOPENED' | 'REPLAY_UPLOADED' | 'DISCORD_SHARED' | 'CANCELLED';
 
@@ -147,12 +147,29 @@ export interface RejectRequest { reason: string; }
 
 export interface LobbyPlayer {
   playerId: string; nickname: string; avatarUrl: string | null; role: Role; side: Side;
+  championId: number | null; captain: boolean;
+}
+export type DraftStepType = 'BAN' | 'PICK';
+export type SwapType = 'POSITION' | 'CHAMPION';
+export interface DraftStepView { side: Side; type: DraftStepType; }
+export interface DraftSwapView { id: string; fromPlayerId: string; toPlayerId: string; type: SwapType; }
+export interface DraftView {
+  status: 'DRAFTING' | 'DONE';
+  currentIndex: number;
+  deadline: string | null;
+  currentSide: Side | null;
+  currentType: DraftStepType | null;
+  blueCaptain: string | null; redCaptain: string | null;
+  blueBans: number[]; redBans: number[];
+  sequence: DraftStepView[];
+  swaps: DraftSwapView[];
 }
 export interface DrawLobby {
   matchId: string; status: MatchStatus; round: number; requiredAccepts: number;
   accepts: number; rejects: number; acceptedPlayerIds: string[]; rejectedPlayerIds: string[];
   blue: LobbyPlayer[]; red: LobbyPlayer[]; updatedAt: string;
   tournamentCode: string | null; riotImportError: string | null;
+  voteDeadline: string | null; draft: DraftView | null;
 }
 export interface RiotLobbyMember {
   playerId: string; nickname: string; puuid: string; joined: boolean;

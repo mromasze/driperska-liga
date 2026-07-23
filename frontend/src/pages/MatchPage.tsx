@@ -9,6 +9,8 @@ import type { MatchStatus } from '../api/types';
 const STATUS_LABEL: Record<MatchStatus, string> = {
   DRAFT: 'Szkic',
   TEAMS_DRAWN: 'Wylosowano drużyny',
+  DRAFTING: 'Trwa draft',
+  DRAFTED: 'Po draftcie',
   LIVE: 'W trakcie',
   LOBBY_READY: 'Lobby Riot gotowe',
   RESULTS_SUBMITTED: 'Oczekuje na akceptację',

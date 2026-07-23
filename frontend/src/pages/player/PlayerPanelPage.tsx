@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
 import { useChampions } from '../../api/hooks/champions';
 import { useDrawLobby, useVoteOnDraw } from '../../api/hooks/drawLobby';
+import { DraftBoard, useCountdown } from './DraftBoard';
 import { usePlannedMatches, useRsvpPlannedMatch } from '../../api/hooks/planned';
 import { useRateableMatches, useSubmitFeedback } from '../../api/hooks/feedback';
 import { useChangePassword } from '../../api/hooks/auth';
@@ -99,7 +100,7 @@ export function PlayerPanelPage() {
       {tab === 'dashboard' && (
         <div className="space-y-10">
           <DrawVotingCard
-            lobby={lobby}
+            lobby={lobby ?? undefined}
             myPlayerId={p.id}
             myVote={myVote}
             pending={vote.isPending}
@@ -207,6 +208,7 @@ function DrawVotingCard({ lobby, myPlayerId, myVote, pending, onVote }: {
   lobby?: DrawLobby; myPlayerId: string; myVote: 'ACCEPT' | 'REJECT' | null;
   pending: boolean; onVote: (decision: 'ACCEPT' | 'REJECT') => void;
 }) {
+  const secondsLeft = useCountdown(lobby?.voteDeadline ?? null);
   if (!lobby) {
     return (
       <section className="glass grid-tex p-8 text-center">
@@ -215,6 +217,10 @@ function DrawVotingCard({ lobby, myPlayerId, myVote, pending, onVote }: {
         <p className="mt-2 text-sm text-text-lo">Gdy admin rozpocznie grę, składy pojawią się tutaj automatycznie.</p>
       </section>
     );
+  }
+
+  if (lobby.status === 'DRAFTING' || lobby.status === 'DRAFTED') {
+    return <DraftBoard lobby={lobby} myPlayerId={myPlayerId} />;
   }
 
   const voting = lobby.status === 'TEAMS_DRAWN';
@@ -233,7 +239,10 @@ function DrawVotingCard({ lobby, myPlayerId, myVote, pending, onVote }: {
           <h2 className="mt-1 font-display text-3xl">{title}</h2>
         </div>
         {voting && (
-          <div className="flex gap-2">
+          <div className="flex items-center gap-2">
+            {lobby.voteDeadline && (
+              <Badge tone={secondsLeft <= 10 ? 'loss' : 'pending'}>⏱ 0:{String(secondsLeft).padStart(2, '0')}</Badge>
+            )}
             <Badge tone="win">{lobby.accepts} za</Badge>
             <Badge tone="loss">{lobby.rejects} przeciw</Badge>
             <Badge>{lobby.requiredAccepts} wymaganych</Badge>
@@ -260,7 +269,10 @@ function DrawVotingCard({ lobby, myPlayerId, myVote, pending, onVote }: {
               <Button variant="danger" onClick={() => onVote('REJECT')} disabled={pending}>↻ Losuj ponownie</Button>
             </div>
           )}
-          <p className="mt-3 text-center text-xs text-text-lo">6 głosów „za” tworzy lobby Riot. 5 głosów „przeciw” losuje nowe drużyny i strony.</p>
+          <p className="mt-3 text-center text-xs text-text-lo">
+            6 głosów „za” zatwierdza skład i startuje draft. 5 „przeciw” losuje nowe drużyny.
+            {lobby.voteDeadline && ' Brak decyzji do końca odliczania = automatyczne zatwierdzenie.'}
+          </p>
           <VoteTally lobby={lobby} />
         </div>
       )}

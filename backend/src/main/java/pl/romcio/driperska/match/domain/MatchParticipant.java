@@ -132,6 +132,10 @@ public class MatchParticipant {
         return championId;
     }
 
+    public void setChampionId(Integer championId) {
+        this.championId = championId;
+    }
+
     public int getKills() {
         return kills;
     }

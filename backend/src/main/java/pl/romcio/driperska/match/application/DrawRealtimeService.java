@@ -19,6 +19,14 @@ public class DrawRealtimeService {
             new ConcurrentHashMap<>();
 
     public SseEmitter subscribe(UUID accountId) {
+        return subscribe(accountId, null);
+    }
+
+    /**
+     * Subscribes and, when {@code initialState} is present, immediately pushes it so a client that
+     * refreshed or logged in mid-vote sees the current lobby without waiting for the next broadcast.
+     */
+    public SseEmitter subscribe(UUID accountId, DrawLobbyResponse initialState) {
         SseEmitter emitter = new SseEmitter(TIMEOUT_MS);
         emitters.computeIfAbsent(accountId, ignored -> new CopyOnWriteArrayList<>()).add(emitter);
         Runnable cleanup = () -> remove(accountId, emitter);
@@ -29,6 +37,9 @@ public class DrawRealtimeService {
         emitter.onError(ignored -> cleanup.run());
         try {
             emitter.send(SseEmitter.event().name("connected").data("{\"ok\":true}"));
+            if (initialState != null) {
+                emitter.send(SseEmitter.event().name("draw-state").data(initialState));
+            }
         } catch (IOException | IllegalStateException ex) {
             cleanup.run();
         }

@@ -14,6 +14,7 @@ const NAV = [
   { to: '/admin/approvals', label: 'Akceptacje', end: false },
   { to: '/admin/players', label: 'Gracze', end: false },
   { to: '/admin/diagnostics', label: 'Diagnostyka', end: false },
+  { to: '/admin/settings', label: 'Ustawienia', end: false },
 ];
 
 export function AdminLayout() {

@@ -6,6 +6,7 @@ import org.springframework.transaction.annotation.Transactional;
 import pl.romcio.driperska.common.domain.Role;
 import pl.romcio.driperska.common.domain.Side;
 import pl.romcio.driperska.common.error.InvalidTransitionException;
+import pl.romcio.driperska.common.settings.AppSettingService;
 import pl.romcio.driperska.integration.riot.TournamentMatchService;
 import pl.romcio.driperska.match.domain.*;
 import pl.romcio.driperska.player.domain.Player;
@@ -19,16 +20,21 @@ public class DrawService {
     private final PlayerMmrService mmrService;
     private final MatchEventRecorder eventRecorder;
     private final TournamentMatchService tournamentMatchService;
+    private final AppSettingService settings;
+    private final DraftService draftService;
     private final Random random = new Random();
 
     public DrawService(MatchService matchService, PlayerRepository playerRepository,
                        PlayerMmrService mmrService, MatchEventRecorder eventRecorder,
-                       TournamentMatchService tournamentMatchService) {
+                       TournamentMatchService tournamentMatchService,
+                       AppSettingService settings, DraftService draftService) {
         this.matchService = matchService;
         this.playerRepository = playerRepository;
         this.mmrService = mmrService;
         this.eventRecorder = eventRecorder;
         this.tournamentMatchService = tournamentMatchService;
+        this.settings = settings;
+        this.draftService = draftService;
     }
 
     public record Slot(UUID playerId, String nickname, Role role, double mmr, Side side) {}
@@ -87,7 +93,12 @@ public class DrawService {
         if (match.getStatus() != MatchStatus.TEAMS_DRAWN) {
             throw new InvalidTransitionException("Najpierw wylosuj drużyny");
         }
-        return tournamentMatchService.createLobby(matchId, actor);
+        // Riot on → create the tournament lobby + join code. Riot off → run the internal draft.
+        if (settings.isRiotEnabled()) {
+            return tournamentMatchService.createLobby(matchId, actor);
+        }
+        draftService.start(match, actor);
+        return matchService.get(matchId);
     }
 
     private List<UUID> randomSplit(List<UUID> pool) {

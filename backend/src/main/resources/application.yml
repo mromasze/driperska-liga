@@ -62,6 +62,9 @@ app:
     team-size: 5
     # When true, all Riot calls are faked so the full flow can be tested without real accounts.
     mock: ${RIOT_MOCK:false}
+    # Default for the admin "Riot API support" toggle until overridden in the panel. OFF = accepting
+    # a squad starts the internal champion draft instead of creating a (non-working) Riot lobby.
+    enabled-default: ${RIOT_ENABLED:false}
   discord:
     bot-token: ${DISCORD_BOT_TOKEN:}
     guild-id: ${DISCORD_GUILD_ID:}
@@ -81,7 +84,12 @@ app:
     refresh-token-days: ${JWT_REFRESH_TOKEN_DAYS:30}
   draw:
     # Auto-confirm a drawn squad this many seconds after the draw if voting hasn't resolved. 0 = off.
-    auto-confirm-seconds: ${DRAW_AUTO_CONFIRM_SECONDS:30}
+    auto-confirm-seconds: ${DRAW_AUTO_CONFIRM_SECONDS:60}
+  draft:
+    # Seconds each ban/pick step waits before a random available champion is auto-assigned.
+    step-seconds: ${DRAFT_STEP_SECONDS:30}
+    # How often the timeout scheduler checks for expired draft steps.
+    poll-ms: ${DRAFT_POLL_MS:2000}
   storage:
     media-dir: ${MEDIA_DIR:./data/media}
     public-base-url: /media
