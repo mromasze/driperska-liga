@@ -49,7 +49,7 @@ public class MatchService {
             throw new BusinessRuleException(
                     "Każdy uczestnik musi mieć konto logowania przed rozpoczęciem losowania");
         }
-        Match match = new Match(seasonId, drawMode == null ? DrawMode.BALANCED : drawMode, actor);
+        Match match = new Match(seasonId, drawMode == null ? DrawMode.PURE_RANDOM : drawMode, actor);
         match.setPoolPlayerIds(List.copyOf(distinct));
         Match saved = matchRepository.save(match);
         eventRecorder.record(saved.getId(), MatchEventType.CREATED, actor,

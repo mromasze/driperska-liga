@@ -23,6 +23,7 @@ export const RELEASES: ReleaseNote[] = [
       'Na stronie meczu rozpisana punktacja LP: dla każdego gracza widać z czego składają się punkty (baza za wygraną/przegraną, występ = PR ÷ przelicznik, bonusy MVP/ACE/multikill/bez śmierci) i ile wyszło razem.',
       'Draft: rusza dopiero po kliknięciu „Rozpocznij draft” w panelu admina (czas na przejście na Discorda i ustalenie pozycji). Duży, wyraźny napis „TWOJA KOLEJ”, postać najpierw się zaznacza, a przycisk „Lock in” potwierdza wybór. Admin może wstrzymać/wznowić draft (pauza zatrzymuje licznik).',
       'Po rozpoczęciu gry ekran pokazuje pełny skład „kto kim gra” (gracz + jego postać i pozycja) po obu stronach.',
+      'Losowanie składów domyślnie w 100% losowe (a nie zbalansowane po MMR, które powtarzało podobne drużyny). Tryb zbalansowany nadal dostępny do wyboru.',
     ],
   },
   {

@@ -18,7 +18,7 @@ export function MatchCreatePage() {
   const season = useCurrentSeason();
   const create = useCreateMatch();
   const [selected, setSelected] = useState<Set<string>>(new Set());
-  const [drawMode, setDrawMode] = useState<DrawMode>('BALANCED');
+  const [drawMode, setDrawMode] = useState<DrawMode>('PURE_RANDOM');
 
   const toggle = (id: string) => {
     setSelected((prev) => {
@@ -62,8 +62,8 @@ export function MatchCreatePage() {
           onChange={(e) => setDrawMode(e.target.value as DrawMode)}
           className="h-10 rounded-md border border-line bg-bg-1 px-3 text-sm text-text-hi"
         >
+          <option value="PURE_RANDOM">Losowanie czysto losowe (domyślne)</option>
           <option value="BALANCED">Losowanie zbalansowane (MMR)</option>
-          <option value="PURE_RANDOM">Losowanie czysto losowe</option>
           <option value="MANUAL">Ręcznie</option>
         </select>
         <Button variant="gold" disabled={selected.size !== POOL_SIZE || create.isPending} onClick={start}>
