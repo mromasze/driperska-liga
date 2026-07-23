@@ -13,8 +13,13 @@ import org.springframework.util.StringUtils;
 public class OllamaProperties {
     private String baseUrl = "https://ollama.com";
     private String apiKey;
-    private String visionModel = "qwen2.5-vl";
-    private int timeoutSeconds = 120;
+    private String visionModel = "gemma4:31b-cloud";
+    private int timeoutSeconds = 240;
+    /**
+     * Attach a labelled champion-portrait atlas to help name recognition. Off by default: it adds
+     * two large images to every request, which drastically slows hosted models (and can time out).
+     */
+    private boolean atlasEnabled = false;
 
     public boolean configured() {
         return StringUtils.hasText(apiKey) && StringUtils.hasText(visionModel);
@@ -27,4 +32,6 @@ public class OllamaProperties {
     public void setVisionModel(String visionModel) { this.visionModel = visionModel; }
     public int getTimeoutSeconds() { return timeoutSeconds; }
     public void setTimeoutSeconds(int timeoutSeconds) { this.timeoutSeconds = timeoutSeconds; }
+    public boolean isAtlasEnabled() { return atlasEnabled; }
+    public void setAtlasEnabled(boolean atlasEnabled) { this.atlasEnabled = atlasEnabled; }
 }

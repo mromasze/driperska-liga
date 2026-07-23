@@ -56,6 +56,9 @@ public class OllamaVisionClient {
         Map<String, Object> requestBody = Map.of(
                 "model", properties.getVisionModel(),
                 "stream", false,
+                // Disable chain-of-thought for "thinking" models (minimax, gemma, …) — for OCR it
+                // only adds minutes of latency (and can blow the read timeout) with no accuracy gain.
+                "think", false,
                 "format", schema,
                 "options", Map.of("temperature", 0),
                 "messages", List.of(

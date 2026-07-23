@@ -11,6 +11,7 @@ import { LoadingState, EmptyState } from '../components/ui/States';
 import { ScoringInfo } from '../components/ScoringInfo';
 import { HeroVideoBackground } from '../components/highlight/HeroVideoBackground';
 import { RELEASES } from '../content/releases';
+import { APP_VERSION } from '../version';
 import type { MatchDetail } from '../api/types';
 
 export function HomePage() {
@@ -32,7 +33,7 @@ export function HomePage() {
         <div className="relative z-10 max-w-2xl animate-rise">
           <div className="mb-3 flex items-center gap-3">
             <span className="kicker text-gold">{season.data?.name ?? 'Inhouse League of Legends'}</span>
-            <span className="chip border-[color:var(--gold)]/30 text-gold">v0.2.7</span>
+            <span className="chip border-[color:var(--gold)]/30 text-gold">{APP_VERSION}</span>
           </div>
           <h1 className="font-display text-4xl font-bold leading-none sm:text-6xl">
             DRIPERSKA <span className="text-gradient-gold">LIGA</span>

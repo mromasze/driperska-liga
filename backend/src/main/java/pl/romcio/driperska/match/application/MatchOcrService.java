@@ -45,15 +45,18 @@ public class MatchOcrService {
     private final ChampionRepository championRepository;
     private final ChampionReferenceAtlasService championAtlas;
     private final OllamaVisionClient ollama;
+    private final pl.romcio.driperska.integration.ollama.OllamaProperties ollamaProperties;
 
     public MatchOcrService(MatchRepository matchRepository, PlayerRepository playerRepository,
                            ChampionRepository championRepository, ChampionReferenceAtlasService championAtlas,
-                           OllamaVisionClient ollama) {
+                           OllamaVisionClient ollama,
+                           pl.romcio.driperska.integration.ollama.OllamaProperties ollamaProperties) {
         this.matchRepository = matchRepository;
         this.playerRepository = playerRepository;
         this.championRepository = championRepository;
         this.championAtlas = championAtlas;
         this.ollama = ollama;
+        this.ollamaProperties = ollamaProperties;
     }
 
     @Transactional(readOnly = true)
@@ -96,7 +99,9 @@ public class MatchOcrService {
 
         List<Player> players = playerRepository.findByIdIn(match.getPoolPlayerIds());
         List<Champion> champions = championRepository.findAllByOrderByNameAsc();
-        ChampionReferenceAtlasService.Atlas atlas = championAtlas.atlasFor(champions);
+        ChampionReferenceAtlasService.Atlas atlas = ollamaProperties.isAtlasEnabled()
+                ? championAtlas.atlasFor(champions)
+                : ChampionReferenceAtlasService.Atlas.empty();
         List<String> modelImages = new ArrayList<>(screenshots);
         modelImages.addAll(atlas.images());
         if (atlas.images().isEmpty()) {
