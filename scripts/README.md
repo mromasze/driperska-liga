@@ -22,7 +22,18 @@ Wszystkie mają sensowne domyślne wartości — nadpisz w razie potrzeby:
 | `ADMIN_PASS` | `changeit123` | Hasło admina (ustaw jak w Twoim `.env` / `APP_ADMIN_PASSWORD`) |
 | `HUMAN_PLAYER` | — | Nick (lub UUID) Twojego gracza — konto, którym grasz w przeglądarce |
 
-> Turnstile: przy lokalnym uruchomieniu (bez `TURNSTILE_SECRET`) logowanie botów działa bez tokenu.
+### Cloudflare Turnstile a logowanie botów
+Jeśli lokalny backend ma włączony Turnstile (`turnstileEnabled:true`), curl-owe logowanie botów
+zostanie odrzucone (401) — bota nie da się „przeklikać" przez widget. Masz dwie opcje:
+
+- **Bypass (zalecane):** ustaw w lokalnym `.env` backendu `TURNSTILE_BYPASS_TOKEN=local-bot-bypass`
+  i zrestartuj backend. Skrypty domyślnie wysyłają dokładnie ten token, więc boty się zalogują,
+  a przeglądarka dalej działa normalnie (prawdziwy widget). Wybrałeś inny token? Wyeksportuj go też
+  dla skryptów: `export TURNSTILE_TOKEN=twój-token`.
+- **Albo** całkiem wyłącz Turnstile lokalnie (puste `TURNSTILE_SITE_KEY`/`TURNSTILE_SECRET`).
+
+⚠️ `TURNSTILE_BYPASS_TOKEN` zostawiaj **pusty na produkcji** (puste = bypass wyłączony). Nie jest
+przekazywany w `deploy/docker-compose.prod.yml`, więc na serwer i tak nie trafi.
 
 ---
 

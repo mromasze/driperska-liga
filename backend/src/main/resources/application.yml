@@ -73,6 +73,9 @@ app:
   turnstile:
     site-key: ${TURNSTILE_SITE_KEY:}
     secret: ${TURNSTILE_SECRET:}
+    # Local testing only — a login token equal to this skips Cloudflare verification.
+    # Leave empty in production (empty = bypass disabled).
+    bypass-token: ${TURNSTILE_BYPASS_TOKEN:}
   ollama:
     base-url: ${OLLAMA_BASE_URL:https://ollama.com}
     api-key: ${OLLAMA_API_KEY:}

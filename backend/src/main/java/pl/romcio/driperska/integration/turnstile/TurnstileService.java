@@ -36,6 +36,10 @@ public class TurnstileService {
         if (!properties.enabled()) {
             return true;
         }
+        // Local/test bypass — only active when app.turnstile.bypass-token is explicitly configured.
+        if (properties.matchesBypass(token)) {
+            return true;
+        }
         if (!StringUtils.hasText(token)) {
             return false;
         }

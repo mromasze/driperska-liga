@@ -63,10 +63,16 @@ REQ() {
   RESP="${out:0:${#out}-3}"
 }
 
+# Turnstile bypass token sent on login. Must match the backend's app.turnstile.bypass-token
+# (env TURNSTILE_BYPASS_TOKEN). Harmless when Turnstile is disabled. See README.
+TURNSTILE_TOKEN="${TURNSTILE_TOKEN:-local-bot-bypass}"
+
 # login USER PASS -> echoes access token (empty on failure).
 login() {
   local user="$1" pass="$2"
-  REQ POST /api/v1/auth/login "$(jq -n --arg u "$user" --arg p "$pass" '{username:$u,password:$p}')"
+  REQ POST /api/v1/auth/login \
+    "$(jq -n --arg u "$user" --arg p "$pass" --arg t "$TURNSTILE_TOKEN" \
+        '{username:$u,password:$p,turnstileToken:$t}')"
   [[ "$HTTP_CODE" == "200" ]] || return 1
   jq -r '.accessToken' <<<"$RESP"
 }

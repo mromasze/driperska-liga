@@ -35,11 +35,7 @@ for idx in $(seq 0 $(( ACCEPTS - 1 ))); do
   [[ "$nick" == "null" ]] && break
 
   # Log in.
-  REQ POST /api/v1/auth/login "$(jq -n --arg u "$nick" --arg p "$pass" '{username:$u,password:$p}')"
-  if [[ "$HTTP_CODE" != "200" ]]; then
-    echo "✗ $nick — logowanie nie powiodło się (HTTP $HTTP_CODE)"; continue
-  fi
-  token="$(jq -r '.accessToken' <<<"$RESP")"
+  token="$(login "$nick" "$pass")" || { echo "✗ $nick — logowanie nie powiodło się (HTTP $HTTP_CODE)"; continue; }
 
   # Find this bot's active draw.
   REQ GET /api/v1/draw-lobby/active "" "$token"

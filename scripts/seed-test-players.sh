@@ -37,9 +37,8 @@ RIOT_IDS_FILE="${RIOT_IDS_FILE:-$SCRIPT_DIR/riot-ids.txt}"
 ROLES=(TOP JUNGLE MID ADC SUPPORT)
 
 echo "→ Logowanie jako admin ($ADMIN_USER) na $BASE_URL"
-REQ POST /api/v1/auth/login "$(jq -n --arg u "$ADMIN_USER" --arg p "$ADMIN_PASS" '{username:$u,password:$p}')"
-[[ "$HTTP_CODE" == "200" ]] || { echo "✗ Logowanie admina nie powiodło się (HTTP $HTTP_CODE): $RESP" >&2; exit 1; }
-TOKEN="$(jq -r '.accessToken' <<<"$RESP")"
+TOKEN="$(login "$ADMIN_USER" "$ADMIN_PASS")" \
+  || { echo "✗ Logowanie admina nie powiodło się (HTTP $HTTP_CODE): $RESP" >&2; exit 1; }
 [[ -n "$TOKEN" && "$TOKEN" != "null" ]] || { echo "✗ Brak accessToken w odpowiedzi" >&2; exit 1; }
 
 # Optional real Riot IDs, one per line.
