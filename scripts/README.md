@@ -58,10 +58,14 @@ karcie/incognito — na konto **admina**.
 # 5 botów głosuje ZA — 6. głos oddajesz Ty w przeglądarce (panel gracza)
 ./scripts/bots-vote.sh accept 5
 
-# Gdy draft wystartuje, uruchom sterownik botów i zostaw działający:
+# Skład zatwierdzony → status DRAFT_READY. Rozpocznij draft z panelu admina
+# (Kontrola meczu → ▶ Rozpocznij draft) albo skrótem:
+./scripts/start-draft.sh
+
+# Uruchom sterownik botów i zostaw działający:
 ./scripts/draft-bots.sh
 ```
-Teraz w przeglądarce: gdy wypadnie Twoja tura (Twoja drużyna, „wybór postaci"), wybierasz sam —
+Teraz w przeglądarce: gdy wypadnie Twoja tura, zaznacz postać i kliknij **Lock in** —
 boty czekają na Ciebie i uzupełniają resztę. Jeśli jesteś kapitanem, robisz też ban swojej drużyny.
 
 ## Use case 2 — draft w pełni automatyczny (bez Ciebie)
@@ -69,7 +73,8 @@ boty czekają na Ciebie i uzupełniają resztę. Jeśli jesteś kapitanem, robis
 BOT_COUNT=10 ./scripts/seed-test-players.sh     # 10 botów
 ./scripts/toggle-riot.sh off
 HUMAN_PLAYER="" ./scripts/create-match.sh        # 10 botów (bez Ciebie)
-./scripts/bots-vote.sh accept 6                  # od razu zatwierdza i startuje draft
+./scripts/bots-vote.sh accept 6                  # zatwierdza skład (DRAFT_READY)
+./scripts/start-draft.sh                         # admin rozpoczyna draft
 ./scripts/draft-bots.sh                          # boty rozegrają cały draft
 ```
 

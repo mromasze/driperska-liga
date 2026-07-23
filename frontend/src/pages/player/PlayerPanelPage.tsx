@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from 'react';
 import { useChampions } from '../../api/hooks/champions';
 import { useDrawLobby, useVoteOnDraw } from '../../api/hooks/drawLobby';
 import { DraftBoard, useCountdown } from './DraftBoard';
+import { GameLineup } from '../../components/match/GameLineup';
 import { usePlannedMatches, useRsvpPlannedMatch } from '../../api/hooks/planned';
 import { useRateableMatches, useSubmitFeedback } from '../../api/hooks/feedback';
 import { useChangePassword } from '../../api/hooks/auth';
@@ -256,12 +257,44 @@ function DrawVotingCard({ lobby, myPlayerId, myVote, pending, onVote }: {
     );
   }
 
+  if (lobby.status === 'DRAFT_READY') {
+    return (
+      <section className="draw-stage glass grid-tex overflow-hidden p-5 sm:p-8">
+        <div className="mb-5">
+          <div className="kicker text-gold">Skład zatwierdzony</div>
+          <h2 className="mt-1 font-display text-3xl">Czekamy aż admin rozpocznie draft</h2>
+          <p className="mt-2 text-sm text-text-lo">
+            Wskoczcie na Discorda / osobne lobby i ustalcie, kto gdzie gra. Draft ruszy, gdy admin da sygnał.
+          </p>
+        </div>
+        <div className="grid gap-4 md:grid-cols-2">
+          <LobbyTeam title="Niebieska strona" players={lobby.blue} color="var(--blue)" myPlayerId={myPlayerId} />
+          <LobbyTeam title="Czerwona strona" players={lobby.red} color="var(--red)" myPlayerId={myPlayerId} />
+        </div>
+      </section>
+    );
+  }
+
+  if (lobby.status === 'LIVE') {
+    const mine = [...lobby.blue, ...lobby.red].find((p) => p.playerId === myPlayerId);
+    const sl = mine?.side === 'BLUE' ? 'NIEBIESKĄ' : 'CZERWONĄ';
+    return (
+      <section className="draw-stage glass grid-tex overflow-hidden p-5 sm:p-8">
+        <div className="mb-5">
+          <div className="kicker text-gold">Mecz trwa</div>
+          <h2 className="mt-1 font-display text-3xl">Kto kim gra</h2>
+          {mine && <p className="mt-2 text-sm font-semibold text-cyan">Grasz stroną {sl}. Powodzenia na Rifcie!</p>}
+        </div>
+        <GameLineup lobby={lobby} myPlayerId={myPlayerId} />
+      </section>
+    );
+  }
+
   const voting = lobby.status === 'TEAMS_DRAWN';
   const mySlot = [...lobby.blue, ...lobby.red].find((player) => player.playerId === myPlayerId);
   const sideLabel = mySlot?.side === 'BLUE' ? 'NIEBIESKĄ' : 'CZERWONĄ';
   const title = voting ? 'Czy gramy tym składem?'
     : lobby.status === 'LOBBY_READY' ? 'Lobby Riot jest gotowe'
-    : lobby.status === 'LIVE' ? 'Mecz trwa'
     : 'Wynik wymaga korekty';
   return (
     <section className="draw-stage glass grid-tex overflow-hidden p-5 sm:p-8">
@@ -322,11 +355,6 @@ function DrawVotingCard({ lobby, myPlayerId, myVote, pending, onVote }: {
               a wynik admin wpisze ręcznie. Prawdziwe kody wymagają produkcyjnego dostępu Tournament API.
             </p>
           )}
-        </div>
-      )}
-      {lobby.status === 'LIVE' && (
-        <div className="mt-6 rounded-lg border border-[color:var(--cyan)]/40 bg-[color:var(--cyan)]/10 p-4 text-center font-semibold text-cyan">
-          Mecz trwa — grasz stroną {sideLabel}. Powodzenia na Rifcie!
         </div>
       )}
       {lobby.status === 'REJECTED' && (

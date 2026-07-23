@@ -104,3 +104,13 @@ export function useResetDraft(matchId: string) {
     mutationFn: () => api.post<void>(`/draft/${matchId}/reset`),
   });
 }
+
+export function useStartDraft(matchId: string) {
+  return useMutation({ mutationFn: () => api.post<void>(`/draft/${matchId}/start`) });
+}
+
+export function usePauseDraft(matchId: string) {
+  return useMutation({
+    mutationFn: (paused: boolean) => api.post<void>(`/draft/${matchId}/${paused ? 'pause' : 'resume'}`),
+  });
+}

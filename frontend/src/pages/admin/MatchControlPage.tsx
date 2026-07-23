@@ -18,7 +18,7 @@ import {
   useCancelMatch,
 } from '../../api/hooks/matches';
 import { DrawBoard } from '../../components/match/DrawBoard';
-import { useResetDraft } from '../../api/hooks/drawLobby';
+import { useResetDraft, useStartDraft, usePauseDraft } from '../../api/hooks/drawLobby';
 import { usePlayers } from '../../api/hooks/players';
 import { ResultsForm } from '../../components/match/ResultsForm';
 import { Scoreboard } from '../../components/match/Scoreboard';
@@ -35,13 +35,16 @@ export function MatchControlPage() {
   const draw = useDrawTeams(id);
   const start = useStartMatch(id);
   const startManual = useStartMatchManual(id);
-  const drawState = useMatchDrawState(id, match.data?.status === 'TEAMS_DRAWN');
+  const drawState = useMatchDrawState(id, ['TEAMS_DRAWN', 'DRAFTING', 'DRAFTED'].includes(match.data?.status ?? ''));
   const riotLobby = useRiotLobbyStatus(id, match.data?.status === 'LOBBY_READY');
   const importRiot = useImportRiotResults(id);
   const replacePlayer = useReplaceMatchPlayer(id);
   const players = usePlayers({ active: true });
   const confirm = useConfirmDraw(id);
   const resetDraft = useResetDraft(id);
+  const startDraft = useStartDraft(id);
+  const pauseDraft = usePauseDraft(id);
+  const draftPaused = drawState.data?.draft?.paused ?? false;
   const submit = useSubmitResults(id);
   const edit = useEditResults(id);
   const reopen = useReopenMatch(id);
@@ -239,12 +242,35 @@ export function MatchControlPage() {
         </>
       )}
 
+      {m.status === 'DRAFT_READY' && (
+        <section className="panel space-y-4 p-5">
+          <div>
+            <div className="kicker text-gold">Skład zatwierdzony</div>
+            <h2 className="font-display text-2xl">Gotowe do draftu</h2>
+            <p className="text-sm text-text-lo">
+              Daj graczom chwilę na przejście na Discorda / osobne lobby, potem rozpocznij draft.
+            </p>
+          </div>
+          <div className="flex flex-wrap gap-3">
+            <Button variant="gold" disabled={startDraft.isPending} onClick={() => startDraft.mutate()}>
+              {startDraft.isPending ? 'Startowanie…' : '▶ Rozpocznij draft'}
+            </Button>
+            <Button variant="ghost" disabled={startManual.isPending} onClick={() => startManual.mutate()}>
+              {startManual.isPending ? 'Uruchamianie…' : 'Pomiń draft — rozpocznij mecz'}
+            </Button>
+          </div>
+          {(startDraft.isError || startManual.isError) && (
+            <p className="text-sm text-loss">{(startDraft.error ?? startManual.error)?.message}</p>
+          )}
+        </section>
+      )}
+
       {(m.status === 'DRAFTING' || m.status === 'DRAFTED') && (
         <section className="panel space-y-4 p-5">
           <div>
             <div className="kicker text-gold">Draft wewnętrzny</div>
             <h2 className="font-display text-2xl">
-              {m.status === 'DRAFTING' ? 'Trwa draft (bany i wybór postaci)' : 'Draft zakończony'}
+              {m.status === 'DRAFTING' ? (draftPaused ? 'Draft wstrzymany' : 'Trwa draft (bany i wybór postaci)') : 'Draft zakończony'}
             </h2>
             <p className="text-sm text-text-lo">
               Gracze draftują w swoich panelach na żywo.
@@ -252,6 +278,12 @@ export function MatchControlPage() {
             </p>
           </div>
           <div className="flex flex-wrap gap-3">
+            {m.status === 'DRAFTING' && (
+              <Button variant={draftPaused ? 'gold' : 'ghost'} disabled={pauseDraft.isPending}
+                onClick={() => pauseDraft.mutate(!draftPaused)}>
+                {pauseDraft.isPending ? '…' : draftPaused ? '▶ Wznów draft' : '⏸ Wstrzymaj draft'}
+              </Button>
+            )}
             <Button variant="ghost" disabled={resetDraft.isPending}
               onClick={() => { if (window.confirm('Zresetować draft? Bany i wybory zostaną wyczyszczone i draft zacznie się od nowa.')) resetDraft.mutate(); }}>
               {resetDraft.isPending ? 'Resetowanie…' : '↻ Reset draftu'}
@@ -260,8 +292,8 @@ export function MatchControlPage() {
               {startManual.isPending ? 'Uruchamianie…' : 'Rozpocznij mecz'}
             </Button>
           </div>
-          {(resetDraft.isError || startManual.isError) && (
-            <p className="text-sm text-loss">{(resetDraft.error ?? startManual.error)?.message}</p>
+          {(resetDraft.isError || startManual.isError || pauseDraft.isError) && (
+            <p className="text-sm text-loss">{(resetDraft.error ?? startManual.error ?? pauseDraft.error)?.message}</p>
           )}
         </section>
       )}

@@ -54,6 +54,9 @@ public class DraftState {
     public List<UUID> redOrder = new ArrayList<>();
     public List<Swap> swaps = new ArrayList<>();
     public boolean complete;
+    /** Admin pause: freezes the step timer; deadline is cleared and restored on resume. */
+    public boolean paused;
+    public int pausedRemainingSeconds;
 
     public List<UUID> orderFor(Side side) {
         return side == Side.BLUE ? blueOrder : redOrder;

@@ -11,6 +11,7 @@ import type { MatchStatus } from '../api/types';
 const STATUS_LABEL: Record<MatchStatus, string> = {
   DRAFT: 'Szkic',
   TEAMS_DRAWN: 'Wylosowano drużyny',
+  DRAFT_READY: 'Gotowe do draftu',
   DRAFTING: 'Trwa draft',
   DRAFTED: 'Po draftcie',
   LIVE: 'W trakcie',

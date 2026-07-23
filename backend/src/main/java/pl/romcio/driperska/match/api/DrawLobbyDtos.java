@@ -31,6 +31,7 @@ public final class DrawLobbyDtos {
             String currentType,       // BAN | PICK (null when done)
             UUID blueCaptain, UUID redCaptain,
             UUID currentPlayerId,     // whose turn it is (captain for BAN, next in order for PICK)
+            boolean paused,           // admin paused the step timer
             List<UUID> blueOrder, List<UUID> redOrder,  // top→bottom draft order (captain first)
             List<Integer> blueBans, List<Integer> redBans,
             List<DraftStepView> sequence,

@@ -8,6 +8,7 @@ import java.util.Set;
 public enum MatchStatus {
     DRAFT,
     TEAMS_DRAWN,
+    DRAFT_READY,  // squad confirmed (Riot off) — waiting for admin to start the internal draft
     DRAFTING,     // internal champion draft (bans/picks) in progress — Riot API disabled
     DRAFTED,      // draft finished, waiting for the players to make the in-game lobby + admin start
     LOBBY_READY,
@@ -19,8 +20,9 @@ public enum MatchStatus {
 
     private static final Map<MatchStatus, Set<MatchStatus>> ALLOWED = Map.ofEntries(
             Map.entry(DRAFT, EnumSet.of(TEAMS_DRAWN, CANCELLED)),
-            // self = re-roll; LOBBY_READY = Riot on; DRAFTING = Riot off (internal draft); LIVE = manual start
-            Map.entry(TEAMS_DRAWN, EnumSet.of(TEAMS_DRAWN, DRAFTING, LOBBY_READY, LIVE, CANCELLED)),
+            // self = re-roll; DRAFT_READY = Riot off (await admin); LOBBY_READY = Riot on; LIVE = manual start
+            Map.entry(TEAMS_DRAWN, EnumSet.of(TEAMS_DRAWN, DRAFT_READY, DRAFTING, LOBBY_READY, LIVE, CANCELLED)),
+            Map.entry(DRAFT_READY, EnumSet.of(DRAFTING, TEAMS_DRAWN, LIVE, CANCELLED)),
             Map.entry(DRAFTING, EnumSet.of(DRAFTED, DRAFTING, TEAMS_DRAWN, CANCELLED)),
             Map.entry(DRAFTED, EnumSet.of(DRAFTING, LIVE, LOBBY_READY, CANCELLED)), // DRAFTING = admin reset
             Map.entry(LOBBY_READY, EnumSet.of(TEAMS_DRAWN, LIVE, CANCELLED)),

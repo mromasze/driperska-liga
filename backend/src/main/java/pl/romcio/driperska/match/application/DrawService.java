@@ -21,20 +21,18 @@ public class DrawService {
     private final MatchEventRecorder eventRecorder;
     private final TournamentMatchService tournamentMatchService;
     private final AppSettingService settings;
-    private final DraftService draftService;
     private final Random random = new Random();
 
     public DrawService(MatchService matchService, PlayerRepository playerRepository,
                        PlayerMmrService mmrService, MatchEventRecorder eventRecorder,
                        TournamentMatchService tournamentMatchService,
-                       AppSettingService settings, DraftService draftService) {
+                       AppSettingService settings) {
         this.matchService = matchService;
         this.playerRepository = playerRepository;
         this.mmrService = mmrService;
         this.eventRecorder = eventRecorder;
         this.tournamentMatchService = tournamentMatchService;
         this.settings = settings;
-        this.draftService = draftService;
     }
 
     public record Slot(UUID playerId, String nickname, Role role, double mmr, Side side) {}
@@ -93,12 +91,15 @@ public class DrawService {
         if (match.getStatus() != MatchStatus.TEAMS_DRAWN) {
             throw new InvalidTransitionException("Najpierw wylosuj drużyny");
         }
-        // Riot on → create the tournament lobby + join code. Riot off → run the internal draft.
+        // Riot on → create the tournament lobby + join code. Riot off → confirm the squad and wait
+        // for the admin to start the draft (so everyone can move to a Discord lobby and talk first).
         if (settings.isRiotEnabled()) {
             return tournamentMatchService.createLobby(matchId, actor);
         }
-        draftService.start(match, actor);
-        return matchService.get(matchId);
+        match.transitionTo(MatchStatus.DRAFT_READY);
+        eventRecorder.record(matchId, MatchEventType.DRAW_CONFIRMED, actor,
+                java.util.Map.of("draftReady", true));
+        return match;
     }
 
     private List<UUID> randomSplit(List<UUID> pool) {

@@ -84,12 +84,46 @@ public class DraftService {
         state.blueCaptain = state.blueOrder.isEmpty() ? null : state.blueOrder.get(0);
         state.redCaptain = state.redOrder.isEmpty() ? null : state.redOrder.get(0);
 
-        if (match.getStatus() == MatchStatus.TEAMS_DRAWN || match.getStatus() == MatchStatus.DRAFTED) {
+        if (match.getStatus() != MatchStatus.DRAFTING) {
             match.transitionTo(MatchStatus.DRAFTING);
         }
         persist(match.getId(), state);
         eventRecorder.record(match.getId(), MatchEventType.DRAFT_STARTED, actor,
                 java.util.Map.of("blueCaptain", state.blueCaptain, "redCaptain", state.redCaptain));
+    }
+
+    /** Admin kicks off the draft once the squad is confirmed (DRAFT_READY). */
+    @Transactional
+    public void startDraft(UUID matchId, UUID actor) {
+        Match match = matchService.get(matchId);
+        if (match.getStatus() != MatchStatus.DRAFT_READY && match.getStatus() != MatchStatus.TEAMS_DRAWN) {
+            throw new InvalidTransitionException("Draft można rozpocząć dopiero po zatwierdzeniu składu");
+        }
+        start(match, actor);
+    }
+
+    /** Admin pause — freeze the step timer (e.g. to sort out a Discord lobby). */
+    @Transactional
+    public void pause(UUID matchId) {
+        requireDrafting(matchId);
+        DraftState state = load(matchId);
+        if (state.paused) return;
+        long remaining = state.deadline == null ? stepSeconds
+                : Math.max(1, java.time.Duration.between(Instant.now(), state.deadline).getSeconds());
+        state.pausedRemainingSeconds = (int) remaining;
+        state.deadline = null; // scheduler skips null deadlines → no auto-assign while paused
+        state.paused = true;
+        persist(matchId, state);
+    }
+
+    @Transactional
+    public void resume(UUID matchId) {
+        requireDrafting(matchId);
+        DraftState state = load(matchId);
+        if (!state.paused) return;
+        state.deadline = Instant.now().plusSeconds(state.pausedRemainingSeconds > 0 ? state.pausedRemainingSeconds : stepSeconds);
+        state.paused = false;
+        persist(matchId, state);
     }
 
     /** Admin re-roll of the whole draft. */
@@ -109,6 +143,7 @@ public class DraftService {
     public void ban(UUID matchId, UUID accountId, int championId) {
         Match match = requireDrafting(matchId);
         DraftState state = load(matchId);
+        requireNotPaused(state);
         DraftState.Step step = requireStep(state, StepType.BAN);
         UUID playerId = player(accountId).getId();
         if (!playerId.equals(state.captainFor(step.side))) {
@@ -124,6 +159,7 @@ public class DraftService {
     public void pick(UUID matchId, UUID accountId, int championId) {
         Match match = requireDrafting(matchId);
         DraftState state = load(matchId);
+        requireNotPaused(state);
         DraftState.Step step = requireStep(state, StepType.PICK);
         UUID playerId = player(accountId).getId();
         MatchParticipant expected = currentPicker(match, state, step.side);
@@ -238,7 +274,7 @@ public class DraftService {
                 state.currentIndex, state.deadline,
                 current != null ? current.side : null,
                 current != null ? current.type.name() : null,
-                state.blueCaptain, state.redCaptain, currentPlayerId,
+                state.blueCaptain, state.redCaptain, currentPlayerId, state.paused,
                 List.copyOf(state.blueOrder), List.copyOf(state.redOrder),
                 List.copyOf(state.blueBans), List.copyOf(state.redBans),
                 sequence, swaps);
@@ -273,6 +309,12 @@ public class DraftService {
             throw new InvalidTransitionException("Zamiany możliwe dopiero po zakończeniu draftu");
         }
         return match;
+    }
+
+    private void requireNotPaused(DraftState state) {
+        if (state.paused) {
+            throw new BusinessRuleException("Draft jest wstrzymany przez admina");
+        }
     }
 
     private DraftState.Step requireStep(DraftState state, StepType expected) {

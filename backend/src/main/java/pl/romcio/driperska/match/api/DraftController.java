@@ -63,6 +63,27 @@ public class DraftController {
         lobbyService.publishUpdate(matchId);
     }
 
+    @PostMapping("/{matchId}/start")
+    @PreAuthorize("hasAnyRole('ADMIN','EDITOR')")
+    public void start(@PathVariable UUID matchId) {
+        draftService.startDraft(matchId, CurrentAccount.require().accountId());
+        lobbyService.publishUpdate(matchId);
+    }
+
+    @PostMapping("/{matchId}/pause")
+    @PreAuthorize("hasAnyRole('ADMIN','EDITOR')")
+    public void pause(@PathVariable UUID matchId) {
+        draftService.pause(matchId);
+        lobbyService.publishUpdate(matchId);
+    }
+
+    @PostMapping("/{matchId}/resume")
+    @PreAuthorize("hasAnyRole('ADMIN','EDITOR')")
+    public void resume(@PathVariable UUID matchId) {
+        draftService.resume(matchId);
+        lobbyService.publishUpdate(matchId);
+    }
+
     @PostMapping("/{matchId}/reset")
     @PreAuthorize("hasAnyRole('ADMIN','EDITOR')")
     public void reset(@PathVariable UUID matchId) {

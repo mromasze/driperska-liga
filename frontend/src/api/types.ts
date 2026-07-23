@@ -4,7 +4,7 @@ export type AccountRole = 'ADMIN' | 'EDITOR' | 'PLAYER';
 export type DrawMode = 'PURE_RANDOM' | 'BALANCED' | 'MANUAL';
 export type DrawVoteDecision = 'ACCEPT' | 'REJECT';
 export type SeasonStatus = 'UPCOMING' | 'ACTIVE' | 'ARCHIVED';
-export type MatchStatus = 'DRAFT' | 'TEAMS_DRAWN' | 'DRAFTING' | 'DRAFTED' | 'LOBBY_READY' | 'LIVE' | 'RESULTS_SUBMITTED' | 'APPROVED' | 'REJECTED' | 'CANCELLED';
+export type MatchStatus = 'DRAFT' | 'TEAMS_DRAWN' | 'DRAFT_READY' | 'DRAFTING' | 'DRAFTED' | 'LOBBY_READY' | 'LIVE' | 'RESULTS_SUBMITTED' | 'APPROVED' | 'REJECTED' | 'CANCELLED';
 export type ApprovalDecision = 'PENDING' | 'APPROVED' | 'REJECTED';
 export type MatchEventType = 'CREATED' | 'TEAMS_DRAWN' | 'DRAW_CONFIRMED' | 'RIOT_LOBBY_CREATED' | 'PLAYER_REPLACED' | 'MATCH_STARTED' | 'RIOT_CALLBACK_RECEIVED' | 'RIOT_RESULTS_IMPORTED' | 'RIOT_IMPORT_FAILED' | 'RESULTS_SUBMITTED' | 'RESULTS_EDITED' | 'APPROVED' | 'REJECTED' | 'REOPENED' | 'REPLAY_UPLOADED' | 'DISCORD_SHARED' | 'CANCELLED';
 
@@ -172,6 +172,7 @@ export interface DraftView {
   currentType: DraftStepType | null;
   blueCaptain: string | null; redCaptain: string | null;
   currentPlayerId: string | null;
+  paused: boolean;
   blueOrder: string[]; redOrder: string[];
   blueBans: number[]; redBans: number[];
   sequence: DraftStepView[];

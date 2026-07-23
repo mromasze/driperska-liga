@@ -21,6 +21,8 @@ export const RELEASES: ReleaseNote[] = [
       'Szybszy i stabilniejszy odczyt wyników ze screenshotów (OCR): wyłączone „myślenie” modelu i dłuższy limit czasu (koniec timeoutów).',
       'Lepsze rozpoznawanie postaci w OCR: mocniejszy model wizyjny (qwen3.5:397b), włączony atlas referencyjny championów (dopasowanie portretu do nazwy), a normalne screenshoty (~0,5 MB) wysyłane są bez kompresji — kompresja rozmazywała małe ikonki i psuła rozpoznawanie.',
       'Na stronie meczu rozpisana punktacja LP: dla każdego gracza widać z czego składają się punkty (baza za wygraną/przegraną, występ = PR ÷ przelicznik, bonusy MVP/ACE/multikill/bez śmierci) i ile wyszło razem.',
+      'Draft: rusza dopiero po kliknięciu „Rozpocznij draft” w panelu admina (czas na przejście na Discorda i ustalenie pozycji). Duży, wyraźny napis „TWOJA KOLEJ”, postać najpierw się zaznacza, a przycisk „Lock in” potwierdza wybór. Admin może wstrzymać/wznowić draft (pauza zatrzymuje licznik).',
+      'Po rozpoczęciu gry ekran pokazuje pełny skład „kto kim gra” (gracz + jego postać i pozycja) po obu stronach.',
     ],
   },
   {

@@ -40,6 +40,7 @@ export function DraftBoard({ lobby, myPlayerId }: { lobby: DrawLobby; myPlayerId
   const respondSwap = useRespondSwap(lobby.matchId);
   const [search, setSearch] = useState('');
   const [swapMenu, setSwapMenu] = useState<string | null>(null);
+  const [selected, setSelected] = useState<number | null>(null);
   const remaining = useCountdown(draft?.deadline ?? null);
 
   const champById = useMemo(() => {
@@ -47,6 +48,9 @@ export function DraftBoard({ lobby, myPlayerId }: { lobby: DrawLobby; myPlayerId
     (champions.data ?? []).forEach((c) => map.set(c.id, c));
     return map;
   }, [champions.data]);
+
+  // Clear the pre-selection whenever the turn or step changes (e.g. after locking in).
+  useEffect(() => { setSelected(null); }, [draft?.currentPlayerId, draft?.currentType]);
 
   if (!draft) return null;
 
@@ -68,9 +72,12 @@ export function DraftBoard({ lobby, myPlayerId }: { lobby: DrawLobby; myPlayerId
     .filter((c) => !unavailable.has(c.id))
     .filter((c) => c.name.toLowerCase().includes(search.trim().toLowerCase()));
 
-  const onPickChampion = (id: number) => {
-    if (myTurnBan) ban.mutate(id);
-    else if (myTurnPick) pick.mutate(id);
+  const selectedChamp = selected != null ? champById.get(selected) : undefined;
+  const lockIn = () => {
+    if (selected == null || draft.paused) return;
+    if (myTurnBan) ban.mutate(selected);
+    else if (myTurnPick) pick.mutate(selected);
+    setSelected(null);
     setSearch('');
   };
 
@@ -93,17 +100,28 @@ export function DraftBoard({ lobby, myPlayerId }: { lobby: DrawLobby; myPlayerId
         </div>
         {!isDone && (
           <div className="text-right">
-            <div className={`num font-display text-4xl font-bold ${remaining <= 5 ? 'text-loss' : 'text-text-hi'}`}>
-              0:{String(remaining).padStart(2, '0')}
-            </div>
-            <div className="mt-1 h-1.5 w-28 overflow-hidden rounded-full bg-bg-2">
-              <div className="h-full rounded-full bg-gradient-to-r from-cyan to-gold transition-all duration-500"
-                style={{ width: `${Math.min(100, (remaining / STEP_SECONDS) * 100)}%` }} />
-            </div>
+            {draft.paused ? (
+              <div className="num font-display text-3xl font-bold text-pending">⏸ PAUZA</div>
+            ) : (
+              <>
+                <div className={`num font-display text-4xl font-bold ${remaining <= 5 ? 'text-loss' : 'text-text-hi'}`}>
+                  0:{String(remaining).padStart(2, '0')}
+                </div>
+                <div className="mt-1 h-1.5 w-28 overflow-hidden rounded-full bg-bg-2">
+                  <div className="h-full rounded-full bg-gradient-to-r from-cyan to-gold transition-all duration-500"
+                    style={{ width: `${Math.min(100, (remaining / STEP_SECONDS) * 100)}%` }} />
+                </div>
+              </>
+            )}
           </div>
         )}
       </div>
 
+      {draft.paused && !isDone && (
+        <div className="mb-6 rounded-lg border border-[color:var(--pending)]/50 bg-[color:var(--pending)]/10 p-3 text-center font-semibold text-pending">
+          ⏸ Draft wstrzymany przez admina — poczekaj na wznowienie.
+        </div>
+      )}
       <div className="grid gap-4 md:grid-cols-2">
         <DraftTeam title="Niebiescy" side="BLUE" color="var(--blue)" players={sortByOrder(lobby.blue, draft.blueOrder)}
           bans={draft.blueBans} champById={champById} draft={draft} myPlayerId={myPlayerId}
@@ -151,26 +169,46 @@ export function DraftBoard({ lobby, myPlayerId }: { lobby: DrawLobby; myPlayerId
           </p>
         </div>
       ) : myTurn ? (
-        <div className="mt-6 rounded-lg border border-gold/40 bg-[color:var(--bg)]/60 p-4">
-          <div className="mb-3 flex items-center justify-between gap-3">
-            <strong className="text-gold">{myTurnBan ? 'Twój ban' : 'Wybierz swoją postać'}</strong>
+        <div className="mt-6 rounded-xl border-2 border-gold bg-[color:var(--gold)]/10 p-4 sm:p-5">
+          <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
+            <div className={cn('font-display text-2xl font-bold sm:text-3xl',
+              myTurnBan ? 'text-loss' : 'text-gold', !draft.paused && 'animate-pulse')}>
+              {myTurnBan ? '🚫 TWOJA KOLEJ — BANUJ' : '⚡ TWOJA KOLEJ — WYBIERZ POSTAĆ'}
+            </div>
             <input value={search} onChange={(e) => setSearch(e.target.value)} placeholder="Szukaj postaci…"
-              className="w-48 rounded-md border border-line bg-[color:var(--bg-1)] px-3 py-1.5 text-sm" />
+              className="w-full rounded-md border border-line bg-[color:var(--bg-1)] px-3 py-2 text-sm sm:w-56" />
           </div>
-          <div className="grid max-h-72 grid-cols-6 gap-2 overflow-y-auto sm:grid-cols-10">
+          <div className="grid max-h-64 grid-cols-6 gap-2 overflow-y-auto sm:grid-cols-10">
             {filtered.map((c) => (
               <button key={c.id} type="button" title={c.name}
-                disabled={ban.isPending || pick.isPending}
-                onClick={() => onPickChampion(c.id)}
-                className="rounded-md ring-1 ring-transparent transition hover:ring-gold">
-                <ChampionIcon iconUrl={c.iconUrl} name={c.name} size={44} />
+                onClick={() => setSelected(c.id)}
+                className={cn('rounded-md ring-2 transition',
+                  selected === c.id ? 'ring-gold' : 'ring-transparent hover:ring-gold/50')}>
+                <ChampionIcon iconUrl={c.iconUrl} name={c.name} size={46} />
               </button>
             ))}
+          </div>
+          <div className="mt-4 flex flex-wrap items-center justify-between gap-3 border-t border-line pt-4">
+            <div className="flex items-center gap-2">
+              {selectedChamp ? (
+                <>
+                  <ChampionIcon iconUrl={selectedChamp.iconUrl} name={selectedChamp.name} size={40} />
+                  <span className="font-medium text-text-hi">{selectedChamp.name}</span>
+                </>
+              ) : (
+                <span className="text-sm text-text-lo">Kliknij postać, aby ją zaznaczyć…</span>
+              )}
+            </div>
+            <Button variant={myTurnBan ? 'danger' : 'gold'}
+              disabled={selected == null || ban.isPending || pick.isPending || draft.paused}
+              onClick={lockIn}>
+              {myTurnBan ? '🚫 Zbanuj' : '✅ Lock in'}
+            </Button>
           </div>
         </div>
       ) : (
         <div className="mt-6 rounded-lg border border-line bg-[color:var(--bg)]/40 p-4 text-center text-sm text-text-lo">
-          Czekaj na swoją kolej…
+          {draft.paused ? '⏸ Draft wstrzymany przez admina.' : 'Czekaj na swoją kolej…'}
         </div>
       )}
     </section>

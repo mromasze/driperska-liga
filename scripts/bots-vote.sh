@@ -41,8 +41,11 @@ for idx in $(seq 0 $(( COUNT - 1 ))); do
     voted=$(( voted + 1 ))
     new_status="$(jq -r '.status' <<<"$RESP")"; accepts="$(jq -r '.accepts' <<<"$RESP")"; rejects="$(jq -r '.rejects' <<<"$RESP")"
     echo "✓ $nick — $DECISION (za: $accepts, przeciw: $rejects, status: $new_status)"
-    if [[ "$new_status" == "DRAFTING" ]]; then
-      echo; echo "🎯 Skład zatwierdzony — DRAFT wystartował! Uruchom: ./scripts/draft-bots.sh"; exit 0
+    if [[ "$new_status" == "DRAFT_READY" ]]; then
+      echo; echo "🎯 Skład zatwierdzony. Admin rozpoczyna draft (panel: Kontrola meczu → ▶ Rozpocznij draft"
+      echo "   albo: ./scripts/start-draft.sh), a boty prowadź: ./scripts/draft-bots.sh (zostaw działające)."; exit 0
+    elif [[ "$new_status" == "DRAFTING" ]]; then
+      echo; echo "🎯 DRAFT wystartował! Uruchom: ./scripts/draft-bots.sh"; exit 0
     elif [[ "$new_status" == "LOBBY_READY" ]]; then
       echo; echo "🎉 Skład zatwierdzony — lobby Riot (kod: $(jq -r '.tournamentCode // "—"' <<<"$RESP"))."; exit 0
     fi
