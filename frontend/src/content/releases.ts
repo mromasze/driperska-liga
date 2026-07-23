@@ -11,7 +11,16 @@ export interface ReleaseNote {
  */
 export const RELEASES: ReleaseNote[] = [
   {
-    version: 'v0.3',
+    version: 'v0.3.1',
+    date: '2026-07-23',
+    title: 'Opinie graczy i płynniejsze tło',
+    changes: [
+      'Zagrywki w tle strony głównej płynnie się przenikają — każdy klip pojawia się i znika łagodnym fade in/out.',
+      'Na stronie meczu (dla zalogowanych) sekcja „Opinie graczy”: gracz z największą liczbą plusów i ten z największą liczbą minusów, a obok każdego dynamiczny slider z anonimowymi komentarzami o jego grze (pozytywnymi i negatywnymi).',
+    ],
+  },
+  {
+    version: 'v0.3.0',
     date: '2026-07-23',
     title: 'Draft turniejowy',
     changes: [
@@ -23,6 +32,13 @@ export const RELEASES: ReleaseNote[] = [
       'Poprawka: po odświeżeniu strony lub zalogowaniu w trakcie głosowania od razu widać składy i możliwość głosowania (stan dociera natychmiast przez strumień na żywo).',
       'Poprawka: bez wsparcia Riot API nie pokazuje się już niedziałający kod dołączenia do lobby.',
       'Timer głosowania nad składem wydłużony do 60 sekund, z widocznym odliczaniem dla każdego uczestnika.',
+      'W draftcie stała kolejność drużyny od góry: kapitan (TOP) → JUNGLE → MID → ADC → SUPPORT; kapitan banuje, a picki idą po kolei z góry na dół (podświetlany jest gracz, którego jest tura).',
+      'Panel admina: przycisk „Patch notes na Discord” w Ustawieniach — generuje obrazek z listą zmian i wysyła na kanał patch notes z pingiem @everyone.',
+      'Panel gracza: mecze do oceny przeniesione do zakładki „Ocena” z licznikiem oczekujących ocen (jak powiadomienie).',
+      'Po wysłaniu wyników mecz jest w panelu gracza oznaczany jako zakończony (znika draft/lobby, zostaje informacja o oczekiwaniu na zamknięcie meczu przez admina).',
+      'Panel admina: zakładki pogrupowane — sekcja „Mecze” zbiera listę meczów, nowy mecz, plan meczów i akceptacje.',
+      'Naprawione: zatwierdzone mecze od razu znikają z kolejki akceptacji.',
+      'Wyłączone cache’owanie strony — koniec z ręcznym Ctrl+F5, aby zobaczyć nową wersję/dane.',
     ],
   },
   {

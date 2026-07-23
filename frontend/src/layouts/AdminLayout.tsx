@@ -5,17 +5,30 @@ import { useAuthStore } from '../store/auth';
 import { useLogout } from '../api/hooks/auth';
 import { useMatches } from '../api/hooks/matches';
 
-const NAV = [
+interface NavLeaf { to: string; label: string; end?: boolean; badge?: 'approvals'; }
+interface NavGroup { group: string; items: NavLeaf[]; }
+type NavEntry = NavLeaf | NavGroup;
+
+const isGroup = (e: NavEntry): e is NavGroup => 'group' in e;
+
+const NAV: NavEntry[] = [
   { to: '/admin', label: 'Pulpit', end: true },
-  { to: '/admin/matches', label: 'Mecze', end: true },
-  { to: '/admin/matches/new', label: 'Nowy mecz', end: false },
-  { to: '/admin/schedule', label: 'Plan meczów', end: false },
-  { to: '/admin/highlights', label: 'Zagrywki', end: false },
-  { to: '/admin/approvals', label: 'Akceptacje', end: false },
-  { to: '/admin/players', label: 'Gracze', end: false },
-  { to: '/admin/diagnostics', label: 'Diagnostyka', end: false },
-  { to: '/admin/settings', label: 'Ustawienia', end: false },
+  {
+    group: 'Mecze',
+    items: [
+      { to: '/admin/matches', label: 'Lista meczów', end: true },
+      { to: '/admin/matches/new', label: 'Nowy mecz' },
+      { to: '/admin/schedule', label: 'Plan meczów' },
+      { to: '/admin/approvals', label: 'Akceptacje', badge: 'approvals' },
+    ],
+  },
+  { to: '/admin/highlights', label: 'Zagrywki' },
+  { to: '/admin/players', label: 'Gracze' },
+  { to: '/admin/diagnostics', label: 'Diagnostyka' },
+  { to: '/admin/settings', label: 'Ustawienia' },
 ];
+
+const LEAVES: NavLeaf[] = NAV.flatMap((e) => (isGroup(e) ? e.items : [e]));
 
 export function AdminLayout() {
   const account = useAuthStore((s) => s.account);
@@ -26,10 +39,49 @@ export function AdminLayout() {
   const pending = useMatches({ status: 'RESULTS_SUBMITTED', size: 1 });
   const pendingCount = pending.data?.totalElements ?? 0;
 
-  const activeItem = [...NAV]
+  const activeItem = [...LEAVES]
     .sort((a, b) => b.to.length - a.to.length)
-    .find((item) => item.end ? location.pathname === item.to : location.pathname.startsWith(item.to));
+    .find((item) => (item.end ? location.pathname === item.to : location.pathname.startsWith(item.to)));
   const signOut = () => logout.mutate(undefined, { onSettled: () => navigate('/admin/login') });
+
+  const leaf = (item: NavLeaf, onClick?: () => void) => (
+    <NavLink
+      key={item.to}
+      to={item.to}
+      end={item.end}
+      onClick={onClick}
+      className={({ isActive }) =>
+        cn(
+          'flex items-center justify-between rounded-md px-3 py-2 text-sm font-medium transition-colors',
+          isActive ? 'bg-[var(--glass-strong)] text-text-hi' : 'text-text-lo hover:text-text',
+        )
+      }
+    >
+      <span>{item.label}</span>
+      {item.badge === 'approvals' && pendingCount > 0 && (
+        <span className="num rounded-full bg-pending px-2 text-xs font-bold text-[#1a1205]">{pendingCount}</span>
+      )}
+    </NavLink>
+  );
+
+  const nav = (onClick?: () => void) => (
+    <>
+      {NAV.map((entry) =>
+        isGroup(entry) ? (
+          <div key={entry.group} className="mt-3 first:mt-0">
+            <div className="px-3 pb-1 text-[11px] font-semibold uppercase tracking-wider text-text-lo/70">
+              {entry.group}
+            </div>
+            <div className="flex flex-col gap-0.5 border-l border-line pl-1.5">
+              {entry.items.map((item) => leaf(item, onClick))}
+            </div>
+          </div>
+        ) : (
+          leaf(entry, onClick)
+        ),
+      )}
+    </>
+  );
 
   return (
     <div className="flex min-h-screen">
@@ -40,28 +92,7 @@ export function AdminLayout() {
           </span>
           <span className="font-display font-bold text-text-hi">Panel</span>
         </Link>
-        <nav className="flex flex-1 flex-col gap-1">
-          {NAV.map((item) => (
-            <NavLink
-              key={item.to}
-              to={item.to}
-              end={item.end}
-              className={({ isActive }) =>
-                cn(
-                  'flex items-center justify-between rounded-md px-3 py-2 text-sm font-medium transition-colors',
-                  isActive ? 'bg-[var(--glass-strong)] text-text-hi' : 'text-text-lo hover:text-text',
-                )
-              }
-            >
-              <span>{item.label}</span>
-              {item.to === '/admin/approvals' && pendingCount > 0 && (
-                <span className="num rounded-full bg-pending px-2 text-xs font-bold text-[#1a1205]">
-                  {pendingCount}
-                </span>
-              )}
-            </NavLink>
-          ))}
-        </nav>
+        <nav className="flex flex-1 flex-col gap-1">{nav()}</nav>
         <div className="mt-4 border-t border-line pt-4">
           <div className="px-2 text-sm text-text-hi">{account?.username}</div>
           <div className="px-2 text-xs text-text-lo">{account?.role}</div>
@@ -75,7 +106,6 @@ export function AdminLayout() {
       </aside>
 
       <div className="min-w-0 flex-1">
-        {/* Mobile top bar with a hamburger dropdown menu */}
         <header className="sticky top-0 z-30 flex items-center justify-between border-b border-line bg-[color:var(--bg-1)]/95 px-4 py-3 backdrop-blur md:hidden">
           <Link to="/" className="flex items-center gap-2">
             <span className="grid h-8 w-8 place-items-center rounded-md bg-gradient-to-b from-gold-soft to-gold text-[#1a1205]">
@@ -100,27 +130,7 @@ export function AdminLayout() {
         {menuOpen && (
           <div className="border-b border-line bg-[color:var(--bg-1)]/95 backdrop-blur md:hidden">
             <nav className="flex flex-col p-2">
-              {NAV.map((item) => (
-                <NavLink
-                  key={item.to}
-                  to={item.to}
-                  end={item.end}
-                  onClick={() => setMenuOpen(false)}
-                  className={({ isActive }) =>
-                    cn(
-                      'flex items-center justify-between rounded-md px-3 py-2.5 text-sm font-medium transition-colors',
-                      isActive ? 'bg-[var(--glass-strong)] text-text-hi' : 'text-text-lo',
-                    )
-                  }
-                >
-                  <span>{item.label}</span>
-                  {item.to === '/admin/approvals' && pendingCount > 0 && (
-                    <span className="num rounded-full bg-pending px-2 text-xs font-bold text-[#1a1205]">
-                      {pendingCount}
-                    </span>
-                  )}
-                </NavLink>
-              ))}
+              {nav(() => setMenuOpen(false))}
               <div className="mt-2 flex items-center justify-between border-t border-line px-3 pt-3">
                 <div className="min-w-0">
                   <div className="truncate text-sm text-text-hi">{account?.username}</div>

@@ -3,11 +3,13 @@ package pl.romcio.driperska.match.application;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import java.time.Instant;
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Random;
 import java.util.Set;
 import java.util.UUID;
+import pl.romcio.driperska.common.domain.Role;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -48,6 +50,10 @@ public class DraftService {
     private final int stepSeconds;
     private final Random random = new Random();
 
+    /** Vertical team order in the draft: captain (TOP) on top, picks flow top-to-bottom. */
+    private static final List<Role> ROLE_ORDER =
+            List.of(Role.TOP, Role.JUNGLE, Role.MID, Role.ADC, Role.SUPPORT);
+
     public DraftService(MatchService matchService, MatchDraftRepository draftRepository,
                         ChampionRepository championRepository, PlayerRepository playerRepository,
                         MatchEventRecorder eventRecorder, ObjectMapper objectMapper,
@@ -76,8 +82,9 @@ public class DraftService {
         state.sequence = DraftState.tournamentSequence();
         state.currentIndex = 0;
         state.deadline = Instant.now().plusSeconds(stepSeconds);
-        state.blueCaptain = randomCaptain(match, Side.BLUE);
-        state.redCaptain = randomCaptain(match, Side.RED);
+        // Randomly seat each team into TOP/JUNGLE/MID/ADC/SUPPORT; the TOP seat is the captain (bans).
+        state.blueCaptain = seatTeam(match, Side.BLUE);
+        state.redCaptain = seatTeam(match, Side.RED);
 
         if (match.getStatus() == MatchStatus.TEAMS_DRAWN || match.getStatus() == MatchStatus.DRAFTED) {
             match.transitionTo(MatchStatus.DRAFTING);
@@ -121,15 +128,12 @@ public class DraftService {
         DraftState state = load(matchId);
         DraftState.Step step = requireStep(state, StepType.PICK);
         UUID playerId = player(accountId).getId();
-        MatchParticipant me = participant(match, playerId);
-        if (me.getSide() != step.side) {
-            throw new BusinessRuleException("Teraz wybiera drużyna " + step.side);
-        }
-        if (me.getChampionId() != null) {
-            throw new BusinessRuleException("Masz już wybraną postać");
+        MatchParticipant expected = currentPicker(match, step.side);
+        if (expected == null || !expected.getPlayerId().equals(playerId)) {
+            throw new BusinessRuleException("Teraz nie jest Twoja kolej wyboru");
         }
         requireAvailable(match, state, championId);
-        me.setChampionId(championId);
+        expected.setChampionId(championId);
         advance(match, state);
         persist(matchId, state);
     }
@@ -206,9 +210,7 @@ public class DraftService {
         if (step.type == StepType.BAN) {
             if (champ != null) state.bansFor(step.side).add(champ);
         } else {
-            MatchParticipant slot = match.getParticipants().stream()
-                    .filter(p -> p.getSide() == step.side && p.getChampionId() == null)
-                    .findFirst().orElse(null);
+            MatchParticipant slot = currentPicker(match, step.side);
             if (slot != null && champ != null) slot.setChampionId(champ);
         }
         advance(match, state);
@@ -227,12 +229,18 @@ public class DraftService {
                 .map(s -> new DraftStepView(s.side, s.type.name())).toList();
         List<DraftSwapView> swaps = state.swaps.stream()
                 .map(s -> new DraftSwapView(s.id, s.fromPlayerId, s.toPlayerId, s.type.name())).toList();
+        UUID currentPlayerId = null;
+        if (current != null) {
+            currentPlayerId = current.type == StepType.BAN
+                    ? state.captainFor(current.side)
+                    : pickerId(match, current.side);
+        }
         return new DraftView(
                 state.complete ? "DONE" : "DRAFTING",
                 state.currentIndex, state.deadline,
                 current != null ? current.side : null,
                 current != null ? current.type.name() : null,
-                state.blueCaptain, state.redCaptain,
+                state.blueCaptain, state.redCaptain, currentPlayerId,
                 List.copyOf(state.blueBans), List.copyOf(state.redBans),
                 sequence, swaps);
     }
@@ -305,10 +313,30 @@ public class DraftService {
         return pool.get(random.nextInt(pool.size()));
     }
 
-    private UUID randomCaptain(Match match, Side side) {
-        List<UUID> sidePlayers = match.getParticipants().stream()
-                .filter(p -> p.getSide() == side).map(MatchParticipant::getPlayerId).toList();
-        return sidePlayers.get(random.nextInt(sidePlayers.size()));
+    /** Randomly seats a team into TOP..SUPPORT and returns the TOP seat's player id (the captain). */
+    private UUID seatTeam(Match match, Side side) {
+        List<MatchParticipant> team = new ArrayList<>(match.getParticipants().stream()
+                .filter(p -> p.getSide() == side).toList());
+        Collections.shuffle(team, random);
+        for (int i = 0; i < team.size() && i < ROLE_ORDER.size(); i++) {
+            team.get(i).setRole(ROLE_ORDER.get(i));
+        }
+        return team.isEmpty() ? null : team.get(0).getPlayerId();
+    }
+
+    /** The participant whose turn it is to pick: Nth pick on a side goes to ROLE_ORDER[N] (top→bottom). */
+    private MatchParticipant currentPicker(Match match, Side side) {
+        long locked = match.getParticipants().stream()
+                .filter(p -> p.getSide() == side && p.getChampionId() != null).count();
+        if (locked >= ROLE_ORDER.size()) return null;
+        Role role = ROLE_ORDER.get((int) locked);
+        return match.getParticipants().stream()
+                .filter(p -> p.getSide() == side && p.getRole() == role).findFirst().orElse(null);
+    }
+
+    private UUID pickerId(Match match, Side side) {
+        MatchParticipant p = currentPicker(match, side);
+        return p == null ? null : p.getPlayerId();
     }
 
     private static boolean involves(DraftState.Swap s, UUID a, UUID b) {

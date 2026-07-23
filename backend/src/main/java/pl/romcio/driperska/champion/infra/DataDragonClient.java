@@ -51,6 +51,14 @@ public class DataDragonClient {
         return "%s/cdn/%s/img/champion/%s.png".formatted(properties.baseUrl(), version, slug);
     }
 
+    /** Downloads the square portrait used by the game UI and scoreboard. */
+    public byte[] fetchChampionIcon(String version, String slug) {
+        return restClient.get()
+                .uri("/cdn/{ver}/img/champion/{slug}.png", version, slug)
+                .retrieve()
+                .body(byte[].class);
+    }
+
     public String splashUrl(String slug) {
         return "%s/cdn/img/champion/splash/%s_0.jpg".formatted(properties.baseUrl(), slug);
     }

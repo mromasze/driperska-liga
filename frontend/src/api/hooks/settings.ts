@@ -19,3 +19,13 @@ export function useUpdateAdminSettings() {
     onSuccess: (data) => queryClient.setQueryData(SETTINGS_KEY, data),
   });
 }
+
+export interface AnnouncePatchNotesRequest { version: string; title: string; date: string; changes: string[]; }
+export interface AnnounceResponse { sent: boolean; message: string; }
+
+export function useAnnouncePatchNotes() {
+  return useMutation({
+    mutationFn: (req: AnnouncePatchNotesRequest) =>
+      api.post<AnnounceResponse>('/admin/patch-notes/announce', req),
+  });
+}

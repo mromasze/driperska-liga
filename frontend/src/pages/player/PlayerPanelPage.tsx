@@ -16,7 +16,7 @@ import type { RsvpResponse, RateableMatch } from '../../api/types';
 
 const ROLES: Role[] = ['TOP', 'JUNGLE', 'MID', 'ADC', 'SUPPORT'];
 
-type PanelTab = 'dashboard' | 'profile';
+type PanelTab = 'dashboard' | 'ratings' | 'profile';
 
 export function PlayerPanelPage() {
   const player = useMyPlayer();
@@ -25,6 +25,8 @@ export function PlayerPanelPage() {
   const update = useUpdateMyPlayer();
   const upload = useUploadMyAvatar();
   const champions = useChampions();
+  const rateable = useRateableMatches();
+  const ratingsCount = (rateable.data ?? []).filter((m) => !m.myFeedback).length;
   const fileInput = useRef<HTMLInputElement>(null);
 
   const [tab, setTab] = useState<PanelTab>('dashboard');
@@ -92,7 +94,14 @@ export function PlayerPanelPage() {
                 : 'border-transparent text-text-lo hover:text-text'
             }`}
           >
-            {t.label}
+            <span className="inline-flex items-center gap-1.5">
+              {t.label}
+              {t.id === 'ratings' && ratingsCount > 0 && (
+                <span className="num grid h-5 min-w-5 place-items-center rounded-full bg-gold px-1.5 text-xs font-bold text-[#1a1205]">
+                  {ratingsCount}
+                </span>
+              )}
+            </span>
           </button>
         ))}
       </nav>
@@ -108,8 +117,19 @@ export function PlayerPanelPage() {
           />
 
           <UpcomingMatches />
+        </div>
+      )}
 
+      {tab === 'ratings' && (
+        <div className="space-y-10">
           <MatchRatingSurvey myPlayerId={p.id} />
+          {(rateable.data?.length ?? 0) === 0 && (
+            <section className="glass grid-tex p-8 text-center">
+              <div className="mx-auto mb-3 grid h-11 w-11 place-items-center rounded-full bg-[color:var(--bg-2)] text-2xl">⭐</div>
+              <h2 className="font-display text-2xl">Brak meczów do oceny</h2>
+              <p className="mt-2 text-sm text-text-lo">Gdy admin zakończy Twój mecz, pojawi się tutaj ankieta oceny.</p>
+            </section>
+          )}
         </div>
       )}
 
@@ -201,6 +221,7 @@ export function PlayerPanelPage() {
 
 const TABS: { id: PanelTab; label: string }[] = [
   { id: 'dashboard', label: 'Dashboard' },
+  { id: 'ratings', label: 'Ocena' },
   { id: 'profile', label: 'Profil i ustawienia' },
 ];
 
@@ -223,13 +244,24 @@ function DrawVotingCard({ lobby, myPlayerId, myVote, pending, onVote }: {
     return <DraftBoard lobby={lobby} myPlayerId={myPlayerId} />;
   }
 
+  if (lobby.status === 'RESULTS_SUBMITTED') {
+    return (
+      <section className="glass grid-tex p-8 text-center">
+        <div className="mx-auto mb-3 grid h-11 w-11 place-items-center rounded-full bg-[color:var(--pending)]/15 text-2xl">🏁</div>
+        <h2 className="font-display text-2xl">Mecz zakończony</h2>
+        <p className="mt-2 text-sm text-text-lo">
+          Wyniki zostały wysłane. Oczekiwanie na zakończenie meczu przez admina — potem pojawi się ankieta oceny.
+        </p>
+      </section>
+    );
+  }
+
   const voting = lobby.status === 'TEAMS_DRAWN';
   const mySlot = [...lobby.blue, ...lobby.red].find((player) => player.playerId === myPlayerId);
   const sideLabel = mySlot?.side === 'BLUE' ? 'NIEBIESKĄ' : 'CZERWONĄ';
   const title = voting ? 'Czy gramy tym składem?'
     : lobby.status === 'LOBBY_READY' ? 'Lobby Riot jest gotowe'
     : lobby.status === 'LIVE' ? 'Mecz trwa'
-    : lobby.status === 'RESULTS_SUBMITTED' ? 'Wynik czeka na admina'
     : 'Wynik wymaga korekty';
   return (
     <section className="draw-stage glass grid-tex overflow-hidden p-5 sm:p-8">
@@ -295,11 +327,6 @@ function DrawVotingCard({ lobby, myPlayerId, myVote, pending, onVote }: {
       {lobby.status === 'LIVE' && (
         <div className="mt-6 rounded-lg border border-[color:var(--cyan)]/40 bg-[color:var(--cyan)]/10 p-4 text-center font-semibold text-cyan">
           Mecz trwa — grasz stroną {sideLabel}. Powodzenia na Rifcie!
-        </div>
-      )}
-      {lobby.status === 'RESULTS_SUBMITTED' && (
-        <div className="mt-6 rounded-lg border border-[color:var(--pending)]/40 bg-[color:var(--pending)]/10 p-4 text-center text-text-hi">
-          Statystyki zostały pobrane. Oczekiwanie na dodanie meczu przez admina.
         </div>
       )}
       {lobby.status === 'REJECTED' && (

@@ -48,6 +48,9 @@ function ApprovalItem({ matchId }: { matchId: string }) {
   if (match.isLoading || !match.data) return <LoadingState />;
 
   const m = match.data;
+  // Once approved/rejected the match leaves the queue — hide it immediately even if the list
+  // query hasn't refetched yet, so approved matches don't linger in Approvals.
+  if (m.status !== 'RESULTS_SUBMITTED') return null;
   const submittedAt = m.approval?.submittedAt;
 
   const doShare = () => {

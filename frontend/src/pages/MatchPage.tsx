@@ -1,6 +1,7 @@
 import { useParams, Link } from 'react-router-dom';
 import { useMatch } from '../api/hooks/matches';
 import { Scoreboard } from '../components/match/Scoreboard';
+import { PlayerOpinions } from '../components/match/PlayerOpinions';
 import { Badge } from '../components/ui/Badge';
 import { LoadingState, ErrorState, EmptyState } from '../components/ui/States';
 import { formatDateTime } from '../lib/format';
@@ -44,6 +45,8 @@ export function MatchPage() {
       </div>
 
       <Scoreboard match={m} />
+
+      <PlayerOpinions matchId={m.id} />
 
       {m.approval && m.status === 'APPROVED' && (
         <div className="glass flex flex-wrap items-center gap-x-6 gap-y-1 p-4 text-sm text-text-lo">

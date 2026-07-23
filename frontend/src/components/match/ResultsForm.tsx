@@ -1,5 +1,5 @@
-import { useMemo, useRef, useState } from 'react';
-import type { MatchDetail, OcrDraft, Role, Side, SubmitResultsRequest } from '../../api/types';
+import { useEffect, useMemo, useRef, useState } from 'react';
+import type { MatchDetail, OcrDraft, OcrLogEntry, Role, Side, SubmitResultsRequest } from '../../api/types';
 import { useChampions } from '../../api/hooks/champions';
 import { useOcrResults } from '../../api/hooks/matches';
 import { roleLabel } from '../../lib/format';
@@ -92,7 +92,33 @@ export function ResultsForm({
   const ocr = useOcrResults(match.id);
   const shotInput = useRef<HTMLInputElement>(null);
   const [ocrNote, setOcrNote] = useState<string | null>(null);
+  const [ocrLogs, setOcrLogs] = useState<OcrLogEntry[]>([]);
   const [shots, setShots] = useState<File[]>([]);
+  const ocrLogTimers = useRef<number[]>([]);
+
+  const stopLogTimers = () => {
+    ocrLogTimers.current.forEach((timer) => window.clearTimeout(timer));
+    ocrLogTimers.current = [];
+  };
+
+  const startUploadLog = (fileCount: number) => {
+    stopLogTimers();
+    setOcrLogs([{ stage: 'UPLOAD', message: `Wysyłam ${fileCount} screenshot(y) do backendu…` }]);
+    const schedule = (delay: number, stage: string, message: string) => {
+      ocrLogTimers.current.push(window.setTimeout(() => {
+        setOcrLogs((current) => [...current, { stage, message }]);
+      }, delay));
+    };
+    schedule(400, 'PREPROCESS', 'Skalowanie i kompresja obrazów do formatu dla modelu…');
+    schedule(1_200, 'CONTEXT', 'Przygotowywanie atlasu portretów championów z Data Dragon…');
+    schedule(2_200, 'REQUEST', 'Budowanie kontekstu meczu i wiadomości systemowej…');
+    schedule(3_500, 'OLLAMA', 'Ollama analizuje screenshoty oraz obrazy referencyjne…');
+    schedule(12_000, 'OLLAMA', 'Model nadal pracuje — analiza kilku zakładek może potrwać chwilę.');
+  };
+
+  useEffect(() => () => {
+    ocrLogTimers.current.forEach((timer) => window.clearTimeout(timer));
+  }, []);
 
   const applyDraft = (draft: OcrDraft) => {
     if (draft.winningSide) setWinningSide(draft.winningSide);
@@ -126,12 +152,27 @@ export function ResultsForm({
     const all = [...shots, ...added];
     setShots(all);
     setOcrNote(null);
+    startUploadLog(all.length);
     ocr.mutate(all, {
-      onSuccess: applyDraft,
-      onError: (e) => setOcrNote('⚠ ' + (e as Error).message),
+      onSuccess: (draft) => {
+        stopLogTimers();
+        setOcrLogs(draft.logs ?? []);
+        applyDraft(draft);
+      },
+      onError: (e) => {
+        stopLogTimers();
+        const message = (e as Error).message;
+        setOcrLogs((current) => [...current, { stage: 'ERROR', message }]);
+        setOcrNote('⚠ ' + message);
+      },
     });
   };
-  const clearShots = () => { setShots([]); setOcrNote(null); };
+  const clearShots = () => {
+    stopLogTimers();
+    setShots([]);
+    setOcrNote(null);
+    setOcrLogs([]);
+  };
 
   const allChampionsPicked = match.participants.every((p) => rows[p.playerId]?.championId !== '');
   const canSubmit = winningSide !== '' && duration > 0 && allChampionsPicked;
@@ -184,6 +225,31 @@ export function ResultsForm({
           </div>
         </div>
         {ocrNote && <p className="mt-2 text-sm text-text">{ocrNote}</p>}
+        {ocrLogs.length > 0 && (
+          <div className="mt-3 overflow-hidden rounded-md border border-line bg-bg-0/80">
+            <div className="flex items-center justify-between border-b border-line px-3 py-2">
+              <span className="font-mono text-[11px] font-semibold uppercase tracking-wider text-text-lo">
+                Dziennik analizy OCR
+              </span>
+              {ocr.isPending && <span className="animate-pulse text-xs text-[color:var(--cyan)]">pracuję…</span>}
+            </div>
+            <div className="max-h-72 space-y-1 overflow-y-auto p-3 font-mono text-xs">
+              {ocrLogs.map((entry, index) => (
+                <div key={`${entry.stage}-${index}`} className="grid grid-cols-[5.5rem_1fr] gap-2">
+                  <span className={cn(
+                    'font-semibold',
+                    entry.stage === 'ERROR' ? 'text-[color:var(--red)]'
+                      : entry.stage === 'MODEL' ? 'text-[color:var(--gold)]'
+                        : 'text-[color:var(--cyan)]',
+                  )}>
+                    [{entry.stage}]
+                  </span>
+                  <pre className="whitespace-pre-wrap break-words font-mono text-text">{entry.message}</pre>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
       </div>
 
       <div className="panel flex flex-wrap items-end gap-4 p-4">

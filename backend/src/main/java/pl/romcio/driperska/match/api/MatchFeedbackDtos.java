@@ -17,4 +17,13 @@ public final class MatchFeedbackDtos {
 
     public record RateableMatch(UUID matchId, Instant completedAt,
                                 List<FeedbackParticipant> participants, MyFeedback myFeedback) {}
+
+    /** One anonymous comment about a player, tagged POSITIVE or NEGATIVE. */
+    public record FeedbackComment(String tone, String note) {}
+
+    public record PlayerFeedbackSummary(UUID playerId, String nickname, Side side, Role role,
+                                        int upvotes, int downvotes, List<FeedbackComment> comments) {}
+
+    /** Aggregated peer feedback for one match: per-player up/down counts + anonymous comments. */
+    public record MatchFeedbackSummary(int responses, List<PlayerFeedbackSummary> players) {}
 }

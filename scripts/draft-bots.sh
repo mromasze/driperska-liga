@@ -66,27 +66,18 @@ while :; do
     match_id="$(jq -r '.matchId' <<<"$state")"
     cs="$(jq -r '.draft.currentSide // empty' <<<"$state")"
     ct="$(jq -r '.draft.currentType // empty' <<<"$state")"
-    [[ -z "$cs" || -z "$ct" ]] && continue
+    current="$(jq -r '.draft.currentPlayerId // empty' <<<"$state")"
+    [[ -z "$ct" ]] && continue
 
-    myside="$(jq -r --arg me "$pid" '((.blue[],.red[]) | select(.playerId==$me) | .side) // empty' <<<"$state")"
-    mychamp="$(jq -r --arg me "$pid" '((.blue[],.red[]) | select(.playerId==$me) | .championId) // "null"' <<<"$state")"
-    [[ "$myside" != "$cs" ]] && continue
+    # Only the player whose turn it is acts (captain for BAN, seated picker for PICK). The human's
+    # own turns are simply skipped by the bots because currentPlayerId won't match a bot.
+    [[ "$current" != "$pid" ]] && continue
 
+    champ="$(pick_random_available "$state")" || continue
     if [[ "$ct" == "BAN" ]]; then
-      captain="$(jq -r --arg s "$cs" 'if $s=="BLUE" then .draft.blueCaptain else .draft.redCaptain end' <<<"$state")"
-      [[ "$pid" != "$captain" ]] && continue
-      champ="$(pick_random_available "$state")" || continue
       REQ POST "/api/v1/draft/$match_id/ban" "$(jq -n --argjson c "$champ" '{championId:$c}')" "$token"
       [[ "$HTTP_CODE" == "200" || "$HTTP_CODE" == "204" ]] && { echo "🚫 ${NICK[$pid]} (kapitan $cs) banuje #$champ"; progressed=1; }
-    else # PICK
-      [[ "$mychamp" != "null" ]] && continue
-      # Defer to the human: if you're on this side and haven't picked, bots wait.
-      if [[ -n "$HUMAN_ID" && "$pid" != "$HUMAN_ID" ]]; then
-        h_side="$(jq -r --arg me "$HUMAN_ID" '((.blue[],.red[]) | select(.playerId==$me) | .side) // empty' <<<"$state")"
-        h_champ="$(jq -r --arg me "$HUMAN_ID" '((.blue[],.red[]) | select(.playerId==$me) | .championId) // "null"' <<<"$state")"
-        [[ "$h_side" == "$cs" && "$h_champ" == "null" ]] && continue
-      fi
-      champ="$(pick_random_available "$state")" || continue
+    else
       REQ POST "/api/v1/draft/$match_id/pick" "$(jq -n --argjson c "$champ" '{championId:$c}')" "$token"
       [[ "$HTTP_CODE" == "200" || "$HTTP_CODE" == "204" ]] && { echo "✅ ${NICK[$pid]} ($cs) wybiera #$champ"; progressed=1; }
     fi

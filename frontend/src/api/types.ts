@@ -116,10 +116,18 @@ export interface OcrRow {
   kills: number; deaths: number; assists: number; cs: number; gold: number;
   damageToChampions: number; visionScore: number; largestMultiKill: number;
 }
+export interface OcrLogEntry { stage: string; message: string; }
 export interface OcrDraft {
   winningSide: Side | null; durationSeconds: number | null;
-  rows: OcrRow[]; unmatched: string[]; missing: string[];
+  rows: OcrRow[]; unmatched: string[]; missing: string[]; logs: OcrLogEntry[];
 }
+
+export interface FeedbackComment { tone: 'POSITIVE' | 'NEGATIVE'; note: string; }
+export interface PlayerFeedbackSummary {
+  playerId: string; nickname: string; side: Side | null; role: Role | null;
+  upvotes: number; downvotes: number; comments: FeedbackComment[];
+}
+export interface MatchFeedbackSummary { responses: number; players: PlayerFeedbackSummary[]; }
 
 export interface FeedbackParticipant { playerId: string; nickname: string; side: Side; role: Role; }
 export interface MyFeedback { upvotePlayerId: string | null; downvotePlayerId: string | null; note: string | null; }
@@ -160,6 +168,7 @@ export interface DraftView {
   currentSide: Side | null;
   currentType: DraftStepType | null;
   blueCaptain: string | null; redCaptain: string | null;
+  currentPlayerId: string | null;
   blueBans: number[]; redBans: number[];
   sequence: DraftStepView[];
   swaps: DraftSwapView[];

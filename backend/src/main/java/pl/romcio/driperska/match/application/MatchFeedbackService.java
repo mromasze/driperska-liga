@@ -95,6 +95,51 @@ public class MatchFeedbackService {
         return new MyFeedback(upvote, downvote, feedback.getNote());
     }
 
+    /** Aggregated peer feedback for a match: per-player up/down counts + anonymous comments. */
+    @Transactional(readOnly = true)
+    public pl.romcio.driperska.match.api.MatchFeedbackDtos.MatchFeedbackSummary summary(UUID matchId) {
+        Match match = matchRepository.findDetailedById(matchId)
+                .orElseThrow(() -> ResourceNotFoundException.of("Match", matchId));
+        Map<UUID, Player> byId = new HashMap<>();
+        playerRepository.findByIdIn(match.getPoolPlayerIds()).forEach(p -> byId.put(p.getId(), p));
+        Map<UUID, MatchParticipant> partById = new HashMap<>();
+        for (MatchParticipant p : match.getParticipants()) partById.put(p.getPlayerId(), p);
+
+        Map<UUID, int[]> counts = new HashMap<>(); // [upvotes, downvotes]
+        Map<UUID, List<pl.romcio.driperska.match.api.MatchFeedbackDtos.FeedbackComment>> comments = new HashMap<>();
+        List<MatchFeedback> feedbacks = feedbackRepository.findByMatchId(matchId);
+        for (MatchFeedback fb : feedbacks) {
+            String note = fb.getNote() == null ? null : fb.getNote().trim();
+            if (fb.getUpvotePlayerId() != null) {
+                counts.computeIfAbsent(fb.getUpvotePlayerId(), k -> new int[2])[0]++;
+                if (note != null && !note.isBlank()) {
+                    comments.computeIfAbsent(fb.getUpvotePlayerId(), k -> new ArrayList<>())
+                            .add(new pl.romcio.driperska.match.api.MatchFeedbackDtos.FeedbackComment("POSITIVE", note));
+                }
+            }
+            if (fb.getDownvotePlayerId() != null) {
+                counts.computeIfAbsent(fb.getDownvotePlayerId(), k -> new int[2])[1]++;
+                if (note != null && !note.isBlank()) {
+                    comments.computeIfAbsent(fb.getDownvotePlayerId(), k -> new ArrayList<>())
+                            .add(new pl.romcio.driperska.match.api.MatchFeedbackDtos.FeedbackComment("NEGATIVE", note));
+                }
+            }
+        }
+
+        List<pl.romcio.driperska.match.api.MatchFeedbackDtos.PlayerFeedbackSummary> players = new ArrayList<>();
+        for (UUID playerId : counts.keySet()) {
+            int[] c = counts.get(playerId);
+            Player player = byId.get(playerId);
+            MatchParticipant part = partById.get(playerId);
+            players.add(new pl.romcio.driperska.match.api.MatchFeedbackDtos.PlayerFeedbackSummary(
+                    playerId, player != null ? player.getNickname() : "?",
+                    part != null ? part.getSide() : null, part != null ? part.getRole() : null,
+                    c[0], c[1], comments.getOrDefault(playerId, List.of())));
+        }
+        players.sort((a, b) -> Integer.compare(b.upvotes() + b.downvotes(), a.upvotes() + a.downvotes()));
+        return new pl.romcio.driperska.match.api.MatchFeedbackDtos.MatchFeedbackSummary(feedbacks.size(), players);
+    }
+
     private List<FeedbackParticipant> participants(Match match) {
         Map<UUID, Player> byId = new HashMap<>();
         playerRepository.findByIdIn(match.getPoolPlayerIds()).forEach(p -> byId.put(p.getId(), p));

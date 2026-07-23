@@ -70,6 +70,7 @@ app:
     guild-id: ${DISCORD_GUILD_ID:}
     results-channel-id: ${DISCORD_RESULTS_CHANNEL_ID:}
     announce-channel-id: ${DISCORD_ANNOUNCE_CHANNEL_ID:}
+    patch-notes-channel-id: ${DISCORD_PATCH_CHANNEL_ID:}
   turnstile:
     site-key: ${TURNSTILE_SITE_KEY:}
     secret: ${TURNSTILE_SECRET:}

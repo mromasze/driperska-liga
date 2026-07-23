@@ -82,6 +82,43 @@ public class DiscordClient {
         }
     }
 
+    /** Posts a patch-notes image (with caption + @everyone) to the patch-notes/announce channel. */
+    public Delivery sendPatchNotesImage(String caption, byte[] png, String filename) {
+        if (!properties.patchNotesChannelConfigured()) {
+            return Delivery.failed("Kanał patch notes Discord nie jest skonfigurowany (DISCORD_PATCH_CHANNEL_ID / DISCORD_ANNOUNCE_CHANNEL_ID)");
+        }
+        try {
+            String payloadJson = objectMapper.writeValueAsString(
+                    new MessageRequest(caption, new AllowedMentions(List.of("everyone"), List.of())));
+            HttpHeaders jsonHeaders = new HttpHeaders();
+            jsonHeaders.setContentType(MediaType.APPLICATION_JSON);
+            ByteArrayResource fileResource = new ByteArrayResource(png) {
+                @Override public String getFilename() { return filename; }
+            };
+            HttpHeaders fileHeaders = new HttpHeaders();
+            fileHeaders.setContentType(MediaType.IMAGE_PNG);
+            MultiValueMap<String, Object> body = new LinkedMultiValueMap<>();
+            body.add("payload_json", new HttpEntity<>(payloadJson, jsonHeaders));
+            body.add("files[0]", new HttpEntity<>(fileResource, fileHeaders));
+
+            client.post().uri(BASE + "/channels/" + properties.patchNotesChannel() + "/messages")
+                    .header("Authorization", "Bot " + properties.getBotToken())
+                    .contentType(MediaType.MULTIPART_FORM_DATA)
+                    .body(body)
+                    .retrieve().toBodilessEntity();
+            return Delivery.resultSent(properties.patchNotesChannel());
+        } catch (JsonProcessingException ex) {
+            return Delivery.failed("Nie udało się przygotować wiadomości Discord");
+        } catch (RestClientResponseException ex) {
+            log.warn("Discord patch-notes upload failed with HTTP {}: {}", ex.getStatusCode().value(),
+                    responseExcerpt(ex));
+            return Delivery.failed(explainResultError(ex));
+        } catch (RestClientException ex) {
+            log.warn("Discord patch-notes upload failed before a response was received", ex);
+            return Delivery.failed("Nie udało się połączyć z Discordem (timeout/sieć)");
+        }
+    }
+
     /** Posts a plain announcement (with @everyone) to the announcements channel. */
     public Delivery sendAnnouncement(String content) {
         if (!properties.announceChannelConfigured()) {

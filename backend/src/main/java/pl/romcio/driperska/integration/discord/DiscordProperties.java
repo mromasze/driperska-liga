@@ -11,6 +11,7 @@ public class DiscordProperties {
     private String guildId;
     private String resultsChannelId;
     private String announceChannelId;
+    private String patchNotesChannelId;
 
     public boolean configured() {
         return StringUtils.hasText(botToken) && StringUtils.hasText(guildId);
@@ -25,6 +26,13 @@ public class DiscordProperties {
     public boolean announceChannelConfigured() {
         return StringUtils.hasText(botToken) && StringUtils.hasText(announceChannel());
     }
+    /** Channel for patch notes — falls back to the announcements channel when not set separately. */
+    public String patchNotesChannel() {
+        return StringUtils.hasText(patchNotesChannelId) ? patchNotesChannelId : announceChannel();
+    }
+    public boolean patchNotesChannelConfigured() {
+        return StringUtils.hasText(botToken) && StringUtils.hasText(patchNotesChannel());
+    }
     public String getBotToken() { return botToken; }
     public void setBotToken(String botToken) { this.botToken = botToken; }
     public String getGuildId() { return guildId; }
@@ -33,5 +41,7 @@ public class DiscordProperties {
     public void setResultsChannelId(String resultsChannelId) { this.resultsChannelId = resultsChannelId; }
     public String getAnnounceChannelId() { return announceChannelId; }
     public void setAnnounceChannelId(String announceChannelId) { this.announceChannelId = announceChannelId; }
+    public String getPatchNotesChannelId() { return patchNotesChannelId; }
+    public void setPatchNotesChannelId(String patchNotesChannelId) { this.patchNotesChannelId = patchNotesChannelId; }
 }
 

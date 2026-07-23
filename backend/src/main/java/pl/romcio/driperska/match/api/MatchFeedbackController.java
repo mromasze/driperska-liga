@@ -26,6 +26,13 @@ public class MatchFeedbackController {
         return service.rateable(CurrentAccount.require().accountId());
     }
 
+    /** Aggregated peer feedback for a match — visible to any signed-in user (players + admins). */
+    @GetMapping("/{id}/feedback-summary")
+    @PreAuthorize("isAuthenticated()")
+    public pl.romcio.driperska.match.api.MatchFeedbackDtos.MatchFeedbackSummary summary(@PathVariable UUID id) {
+        return service.summary(id);
+    }
+
     @PostMapping("/{id}/feedback")
     public MyFeedback submit(@PathVariable UUID id, @Valid @RequestBody SubmitFeedbackRequest req) {
         return service.submit(id, CurrentAccount.require().accountId(),

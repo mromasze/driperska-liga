@@ -25,6 +25,7 @@ import pl.romcio.driperska.common.domain.Side;
 import pl.romcio.driperska.common.error.BusinessRuleException;
 import pl.romcio.driperska.common.error.ResourceNotFoundException;
 import pl.romcio.driperska.integration.ollama.OllamaVisionClient;
+import pl.romcio.driperska.integration.ollama.OllamaVisionClient.ChatResult;
 import pl.romcio.driperska.match.domain.Match;
 import pl.romcio.driperska.match.domain.MatchParticipant;
 import pl.romcio.driperska.match.infra.MatchRepository;
@@ -42,13 +43,16 @@ public class MatchOcrService {
     private final MatchRepository matchRepository;
     private final PlayerRepository playerRepository;
     private final ChampionRepository championRepository;
+    private final ChampionReferenceAtlasService championAtlas;
     private final OllamaVisionClient ollama;
 
     public MatchOcrService(MatchRepository matchRepository, PlayerRepository playerRepository,
-                           ChampionRepository championRepository, OllamaVisionClient ollama) {
+                           ChampionRepository championRepository, ChampionReferenceAtlasService championAtlas,
+                           OllamaVisionClient ollama) {
         this.matchRepository = matchRepository;
         this.playerRepository = playerRepository;
         this.championRepository = championRepository;
+        this.championAtlas = championAtlas;
         this.ollama = ollama;
     }
 
@@ -59,7 +63,10 @@ public class MatchOcrService {
         if (images == null || images.isEmpty()) {
             throw new BusinessRuleException("Dodaj przynajmniej jeden screenshot podsumowania");
         }
-        List<String> b64 = new ArrayList<>();
+
+        List<OcrLogEntry> trace = new ArrayList<>();
+        List<String> screenshots = new ArrayList<>();
+        long originalBytes = 0;
         for (MultipartFile file : images) {
             if (file.isEmpty()) continue;
             if (file.getSize() > MAX_IMAGE_BYTES) {
@@ -70,23 +77,49 @@ public class MatchOcrService {
                 throw new BusinessRuleException("Dozwolone są tylko obrazy (PNG/JPG)");
             }
             try {
+                originalBytes += file.getSize();
                 // Downscale + re-encode so multiple/large screenshots stay well under Ollama's
                 // request-body limit (a raw 12 MB PNG base64s to ~16 MB; several would 400).
-                b64.add(downscaleToBase64(file.getBytes()));
+                screenshots.add(downscaleToBase64(file.getBytes()));
             } catch (IOException ex) {
                 throw new BusinessRuleException("Nie udało się odczytać pliku: " + file.getOriginalFilename());
             }
         }
-        if (b64.isEmpty()) {
+        if (screenshots.isEmpty()) {
             throw new BusinessRuleException("Puste pliki obrazów");
         }
 
-        JsonNode result = ollama.chatJson(prompt(), b64, schema());
-        return toDraft(match, result);
+        long preparedBytes = screenshots.stream().mapToLong(s -> s.length() * 3L / 4L).sum();
+        trace.add(new OcrLogEntry("INPUT", "Załadowano " + screenshots.size() + " screenshot(y)."));
+        trace.add(new OcrLogEntry("PREPROCESS", "Obrazy przygotowane dla modelu: "
+                + megabytes(originalBytes) + " -> " + megabytes(preparedBytes) + "."));
+
+        List<Player> players = playerRepository.findByIdIn(match.getPoolPlayerIds());
+        List<Champion> champions = championRepository.findAllByOrderByNameAsc();
+        ChampionReferenceAtlasService.Atlas atlas = championAtlas.atlasFor(champions);
+        List<String> modelImages = new ArrayList<>(screenshots);
+        modelImages.addAll(atlas.images());
+        if (atlas.images().isEmpty()) {
+            trace.add(new OcrLogEntry("CONTEXT", "Atlas portretów niedostępny; używam listy nazw championów."));
+        } else {
+            trace.add(new OcrLogEntry("CONTEXT", "Dołączono " + atlas.images().size()
+                    + " atlas(y) z " + atlas.portraitCount() + " portretami championów ("
+                    + atlas.version() + ")."));
+        }
+
+        trace.add(new OcrLogEntry("REQUEST", "Wysyłam " + modelImages.size() + " obraz(y) do modelu "
+                + "(screenshoty: " + screenshots.size() + ", referencje: " + atlas.images().size() + ")."));
+        ChatResult chat = ollama.chatJson(systemPrompt(),
+                prompt(match, players, champions, screenshots.size(), atlas.images().size()),
+                modelImages, schema());
+        trace.add(new OcrLogEntry("RESPONSE", "Model " + chat.model() + " odpowiedział po "
+                + String.format(Locale.ROOT, "%.2f s", chat.elapsedMillis() / 1000.0) + "."));
+        trace.add(new OcrLogEntry("MODEL", traceContent(chat.rawContent())));
+        return toDraft(match, chat.data(), players, champions, trace);
     }
 
-    private OcrDraft toDraft(Match match, JsonNode result) {
-        List<Player> players = playerRepository.findByIdIn(match.getPoolPlayerIds());
+    private OcrDraft toDraft(Match match, JsonNode result, List<Player> players,
+                             List<Champion> champions, List<OcrLogEntry> trace) {
         // name -> playerId (by riot game name and by nickname)
         Map<String, UUID> byName = new HashMap<>();
         for (Player p : players) {
@@ -100,7 +133,7 @@ public class MatchOcrService {
         for (Player p : players) nickById.put(p.getId(), p.getNickname());
 
         Map<String, Integer> champByName = new HashMap<>();
-        for (Champion c : championRepository.findAll()) champByName.putIfAbsent(norm(c.getName()), c.getId());
+        for (Champion c : champions) champByName.putIfAbsent(norm(c.getName()), c.getId());
 
         List<OcrRow> rows = new ArrayList<>();
         List<String> unmatched = new ArrayList<>();
@@ -139,7 +172,9 @@ public class MatchOcrService {
         for (Player p : players) {
             if (rows.stream().noneMatch(r -> r.playerId().equals(p.getId()))) missing.add(p.getNickname());
         }
-        return new OcrDraft(winningSide, duration, rows, unmatched, missing);
+        trace.add(new OcrLogEntry("RESULT", "Rozpoznano i dopasowano " + rows.size() + "/"
+                + players.size() + " graczy."));
+        return new OcrDraft(winningSide, duration, rows, unmatched, missing, List.copyOf(trace));
     }
 
     private static UUID resolve(Map<String, UUID> byName, String rawName, java.util.Set<UUID> used) {
@@ -208,27 +243,81 @@ public class MatchOcrService {
         return true;
     }
 
-    private static String prompt() {
+    static String systemPrompt() {
         return """
-                Jesteś ekspertem od czytania ekranów podsumowania meczu League of Legends.
-                Na obrazkach jest tablica wyników po meczu (może być kilka zrzutów: różne zakładki
-                jak obrażenia, złoto, wizja — połącz dane tego samego gracza po nazwie przywoływacza).
-                Wyodrębnij WSZYSTKICH graczy (zwykle 10). Dla każdego podaj:
-                - name: nazwa przywoływacza / Riot ID pokazana przy graczu (bez #TAG jeśli jest),
-                - champion: nazwa bohatera,
-                - role: pozycja na jakiej grał (TOP/JUNGLE/MID/BOT/SUPPORT) — jeśli widać po ikonie
-                  pozycji lub można wywnioskować z bohatera/lane; jeśli nie wiadomo, pomiń,
-                - team: BLUE (niebiescy) lub RED (czerwoni),
-                - win: true jeśli jego drużyna wygrała,
-                - kills, deaths, assists: z kolumny KDA (K/D/A),
-                - cs: creep score (liczba zabitych stworów/minionów),
-                - gold: zdobyte złoto (jeśli widoczne, inaczej 0),
-                - damage: obrażenia zadane bohaterom (jeśli widoczne, inaczej 0),
-                - vision: vision score (jeśli widoczny, inaczej 0),
-                - largestMultiKill: największy multikill (1 jeśli nieznany).
-                Podaj też winningSide (BLUE/RED) i durationSeconds jeśli widać czas gry.
-                Zwróć wyłącznie dane zgodne ze schematem. Nie zgaduj wartości, których nie ma — daj 0.
+                You are a deterministic OCR engine for League of Legends post-game scoreboards.
+                Your only task is to convert the supplied match screenshots into the requested JSON schema.
+
+                IMAGE RULES:
+                - The user message states exactly which first images are MATCH SCREENSHOTS and which final
+                  images are CHAMPION REFERENCE ATLASES.
+                - Reference atlases contain labelled Data Dragon portraits. Use them only to identify the
+                  small champion portrait in a player row. Never treat atlas labels, portraits, or rows as
+                  match participants or match statistics.
+                - Read every match screenshot. Multiple screenshots can show different statistic tabs for
+                  the same ten players. Merge rows using summoner name, team, and stable row order.
+
+                EXTRACTION RULES:
+                - Return exactly one player object for each player visible in the match screenshots.
+                - Copy summoner names from the screenshot; remove a trailing #TAG only when clearly visible.
+                - For champion, compare the row portrait with the reference atlas and return the exact
+                  canonical champion name printed below the matching portrait.
+                - K/D/A, CS, gold, champion damage, vision score, and largest multikill are different fields.
+                  Use labels and tab context; never shift a value into the neighbouring column.
+                - Determine team and winning side from BLUE/RED layout plus Victory/Defeat indicators.
+                - Use the supplied expected roster only to correct OCR spelling and map sides. Do not invent
+                  a participant who is absent from the screenshots.
+                - Never guess a numeric value that is not visible. Use 0. Use largestMultiKill=1 if unknown.
+                - If role is uncertain, omit it. Do not infer role only from the champion.
+                - Output raw JSON only: no markdown fences, explanations, comments, or extra keys.
                 """;
+    }
+
+    private static String prompt(Match match, List<Player> players, List<Champion> champions,
+                                 int screenshotCount, int atlasCount) {
+        Map<UUID, Player> playerById = new HashMap<>();
+        for (Player player : players) playerById.put(player.getId(), player);
+        StringBuilder roster = new StringBuilder();
+        for (MatchParticipant participant : match.getParticipants()) {
+            Player player = playerById.get(participant.getPlayerId());
+            if (player == null) continue;
+            roster.append("- ").append(participant.getSide()).append(": ")
+                    .append(player.getNickname());
+            String gameName = riotGameName(player.getRiotId());
+            if (gameName != null && !gameName.equalsIgnoreCase(player.getNickname())) {
+                roster.append(" (Riot game name: ").append(gameName).append(')');
+            }
+            roster.append('\n');
+        }
+        String championNames = String.join(", ", champions.stream().map(Champion::getName).toList());
+        String references = atlasCount == 0
+                ? "No visual atlas is attached; use the canonical name list below."
+                : "Images " + (screenshotCount + 1) + "-" + (screenshotCount + atlasCount)
+                        + " are labelled CHAMPION REFERENCE ATLASES, not match screenshots.";
+
+        return """
+                ATTACHMENT ORDER:
+                Images 1-%d are the only MATCH SCREENSHOTS from which match data may be extracted.
+                %s
+
+                EXPECTED ROSTER AND SIDE (spelling aid, not a substitute for visible evidence):
+                %s
+                CANONICAL CHAMPION NAMES:
+                %s
+
+                Extract all visible player rows and combine matching rows across tabs. Return winningSide,
+                durationSeconds when visible, and players with name, champion, role, team, win, kills,
+                deaths, assists, cs, gold, damage, vision, and largestMultiKill. Follow the JSON schema exactly.
+                """.formatted(screenshotCount, references, roster, championNames);
+    }
+
+    private static String megabytes(long bytes) {
+        return String.format(Locale.ROOT, "%.2f MB", bytes / 1_048_576.0);
+    }
+
+    private static String traceContent(String content) {
+        String trace = content == null ? "" : content.strip();
+        return trace.length() > 6000 ? trace.substring(0, 6000) + "…" : trace;
     }
 
     private static Map<String, Object> schema() {
@@ -276,6 +365,8 @@ public class MatchOcrService {
                          int kills, int deaths, int assists, int cs, int gold,
                          int damageToChampions, int visionScore, int largestMultiKill) {}
 
+    public record OcrLogEntry(String stage, String message) {}
+
     public record OcrDraft(String winningSide, Integer durationSeconds, List<OcrRow> rows,
-                           List<String> unmatched, List<String> missing) {}
+                           List<String> unmatched, List<String> missing, List<OcrLogEntry> logs) {}
 }

@@ -14,6 +14,13 @@ import org.junit.jupiter.api.Test;
 class MatchOcrServiceTest {
 
     @Test
+    void systemPromptSeparatesReferenceAtlasFromMatchEvidence() {
+        assertThat(MatchOcrService.systemPrompt())
+                .contains("CHAMPION REFERENCE ATLASES")
+                .contains("Never treat atlas labels")
+                .contains("Output raw JSON only");
+    }
+    @Test
     void downscalesLargeScreenshotBeforeSendingItToOllama() throws Exception {
         BufferedImage screenshot = new BufferedImage(3200, 1800, BufferedImage.TYPE_INT_RGB);
         Graphics2D graphics = screenshot.createGraphics();

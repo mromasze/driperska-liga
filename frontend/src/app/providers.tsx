@@ -9,8 +9,10 @@ export function AppProviders({ children }: { children: ReactNode }) {
       new QueryClient({
         defaultOptions: {
           queries: {
-            staleTime: 30_000,
-            refetchOnWindowFocus: false,
+            // No client-side staleness: always refetch on mount/focus so players never need Ctrl+F5.
+            staleTime: 0,
+            refetchOnMount: 'always',
+            refetchOnWindowFocus: true,
             retry: (failureCount, error) => {
               // Don't retry auth/permission/not-found errors.
               if (error instanceof ApiError && [401, 403, 404].includes(error.status)) {

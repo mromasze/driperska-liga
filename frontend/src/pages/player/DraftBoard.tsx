@@ -7,9 +7,13 @@ import type { Champion, DrawLobby, LobbyPlayer, Side } from '../../api/types';
 import { Badge } from '../../components/ui/Badge';
 import { Button } from '../../components/ui/Button';
 import { ChampionIcon } from '../../components/champion/ChampionIcon';
+import { cn } from '../../lib/cn';
 import { roleLabel } from '../../lib/format';
 
 const STEP_SECONDS = 30;
+const ROLE_ORDER: Record<string, number> = { TOP: 0, JUNGLE: 1, MID: 2, ADC: 3, SUPPORT: 4 };
+const sortByRole = (players: LobbyPlayer[]) =>
+  [...players].sort((a, b) => (ROLE_ORDER[a.role] ?? 9) - (ROLE_ORDER[b.role] ?? 9));
 
 /** Seconds remaining until an ISO deadline, ticking every second (0 when past/absent). */
 export function useCountdown(deadline: string | null): number {
@@ -52,12 +56,9 @@ export function DraftBoard({ lobby, myPlayerId }: { lobby: DrawLobby; myPlayerId
     ...all.map((p) => p.championId).filter((id): id is number => id != null),
   ]);
 
-  const captainId = draft.currentSide === 'BLUE' ? draft.blueCaptain : draft.redCaptain;
-  const myTurnBan = !isDone && draft.currentType === 'BAN'
-    && draft.currentSide === mySide && myPlayerId === captainId;
-  const myTurnPick = !isDone && draft.currentType === 'PICK'
-    && draft.currentSide === mySide && me != null && me.championId == null;
-  const myTurn = myTurnBan || myTurnPick;
+  const myTurn = !isDone && draft.currentPlayerId != null && draft.currentPlayerId === myPlayerId;
+  const myTurnBan = myTurn && draft.currentType === 'BAN';
+  const myTurnPick = myTurn && draft.currentType === 'PICK';
 
   const filtered = (champions.data ?? [])
     .filter((c) => !unavailable.has(c.id))
@@ -100,11 +101,11 @@ export function DraftBoard({ lobby, myPlayerId }: { lobby: DrawLobby; myPlayerId
       </div>
 
       <div className="grid gap-4 md:grid-cols-2">
-        <DraftTeam title="Niebiescy" side="BLUE" color="var(--blue)" players={lobby.blue}
+        <DraftTeam title="Niebiescy" side="BLUE" color="var(--blue)" players={sortByRole(lobby.blue)}
           bans={draft.blueBans} champById={champById} draft={draft} myPlayerId={myPlayerId}
           isDone={isDone} mySide={mySide} swapMenu={swapMenu} setSwapMenu={setSwapMenu}
           onSwap={(target, type) => { requestSwap.mutate({ targetPlayerId: target, type }); setSwapMenu(null); }} />
-        <DraftTeam title="Czerwoni" side="RED" color="var(--red)" players={lobby.red}
+        <DraftTeam title="Czerwoni" side="RED" color="var(--red)" players={sortByRole(lobby.red)}
           bans={draft.redBans} champById={champById} draft={draft} myPlayerId={myPlayerId}
           isDone={isDone} mySide={mySide} swapMenu={swapMenu} setSwapMenu={setSwapMenu}
           onSwap={(target, type) => { requestSwap.mutate({ targetPlayerId: target, type }); setSwapMenu(null); }} />
@@ -203,8 +204,11 @@ function DraftTeam({ title, side, color, players, bans, champById, draft, myPlay
         {players.map((player) => {
           const champ = player.championId != null ? champById.get(player.championId) : undefined;
           const canSwap = isDone && mySide === side && player.playerId !== myPlayerId;
+          const onClock = !isDone && draft.currentPlayerId === player.playerId;
           return (
-            <div key={player.playerId} className="relative flex items-center gap-3 px-4 py-3">
+            <div key={player.playerId}
+              className={cn('relative flex items-center gap-3 px-4 py-3',
+                onClock && 'bg-[color:var(--gold)]/10 ring-1 ring-inset ring-gold')}>
               <ChampionIcon iconUrl={champ?.iconUrl} name={champ?.name} size={40} />
               <div className="min-w-0 flex-1">
                 <div className="flex items-center gap-1.5 font-medium text-text-hi">

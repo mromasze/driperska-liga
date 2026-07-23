@@ -30,6 +30,7 @@ public final class DrawLobbyDtos {
             Side currentSide,         // side to act now (null when done)
             String currentType,       // BAN | PICK (null when done)
             UUID blueCaptain, UUID redCaptain,
+            UUID currentPlayerId,     // whose turn it is (captain for BAN, seated picker for PICK)
             List<Integer> blueBans, List<Integer> redBans,
             List<DraftStepView> sequence,
             List<DraftSwapView> swaps) {}

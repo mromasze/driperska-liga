@@ -78,7 +78,7 @@ public class DrawLobbyService {
         // "disappears" and the post-match survey takes over.
         return matchRepository.findForPlayerAndStatuses(player.getId(),
                         EnumSet.of(MatchStatus.TEAMS_DRAWN, MatchStatus.DRAFTING, MatchStatus.DRAFTED,
-                                MatchStatus.LOBBY_READY, MatchStatus.LIVE),
+                                MatchStatus.LOBBY_READY, MatchStatus.LIVE, MatchStatus.RESULTS_SUBMITTED),
                         PageRequest.of(0, 1))
                 .stream().findFirst().map(this::toResponse).orElse(null);
     }

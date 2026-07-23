@@ -43,10 +43,12 @@ public class OllamaVisionClient {
      * Sends a prompt plus one or more base64-encoded images and a JSON schema; returns the parsed
      * JSON object the model produced.
      *
+     * @param systemPrompt instructions that define the model's role and parsing rules
      * @param base64Images raw base64 (no {@code data:} prefix)
      * @param schema       JSON schema object the response must conform to
      */
-    public JsonNode chatJson(String prompt, List<String> base64Images, Map<String, Object> schema) {
+    public ChatResult chatJson(String systemPrompt, String prompt, List<String> base64Images,
+                               Map<String, Object> schema) {
         if (!properties.configured()) {
             throw new ExternalServiceException("Ollama",
                     "brak konfiguracji (OLLAMA_API_KEY / OLLAMA_VISION_MODEL)");
@@ -56,10 +58,14 @@ public class OllamaVisionClient {
                 "stream", false,
                 "format", schema,
                 "options", Map.of("temperature", 0),
-                "messages", List.of(Map.of(
-                        "role", "user",
-                        "content", prompt,
-                        "images", base64Images)));
+                "messages", List.of(
+                        Map.of(
+                                "role", "system",
+                                "content", systemPrompt),
+                        Map.of("role", "user",
+                                "content", prompt,
+                                "images", base64Images)));
+        long startedAt = System.nanoTime();
         try {
             String raw = client.post()
                     .uri(nativeBase(properties.getBaseUrl()) + "/api/chat")
@@ -73,7 +79,10 @@ public class OllamaVisionClient {
             if (content.isBlank()) {
                 throw new ExternalServiceException("Ollama", "model nie zwrócił treści");
             }
-            return objectMapper.readTree(extractJson(content));
+            JsonNode data = objectMapper.readTree(extractJson(content));
+            long elapsedMillis = (System.nanoTime() - startedAt) / 1_000_000;
+            return new ChatResult(data, content, properties.getVisionModel(), elapsedMillis,
+                    base64Images.size());
         } catch (RestClientResponseException ex) {
             String body = ex.getResponseBodyAsString();
             log.warn("Ollama {} — {}", ex.getStatusCode().value(), body);
@@ -115,4 +124,7 @@ public class OllamaVisionClient {
         s = s.replaceAll("\\s+", " ").trim();
         return s.length() > 200 ? s.substring(0, 200) + "…" : s;
     }
+
+    public record ChatResult(JsonNode data, String rawContent, String model,
+                             long elapsedMillis, int imageCount) {}
 }
