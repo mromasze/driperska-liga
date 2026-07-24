@@ -17,6 +17,7 @@ import pl.romcio.driperska.integration.riot.TournamentMatchService;
 import pl.romcio.driperska.match.api.MatchDtos.*;
 import pl.romcio.driperska.match.application.*;
 import pl.romcio.driperska.match.application.DrawService.DrawResult;
+import pl.romcio.driperska.match.domain.DrawMode;
 import pl.romcio.driperska.match.domain.Match;
 import pl.romcio.driperska.match.domain.MatchStatus;
 
@@ -83,7 +84,11 @@ public class MatchController {
     public MatchResponse create(@Valid @RequestBody CreateMatchRequest req) {
         UUID actor = CurrentAccount.require().accountId();
         Match match = matchService.create(req.seasonId(), req.drawMode(), req.playerIds(), actor);
-        drawLobbyService.adminDraw(match.getId(), actor);
+        if (req.drawMode() == DrawMode.MANUAL) {
+            drawLobbyService.adminManualDraw(match.getId(), actor, toManualSlots(req.teams()));
+        } else {
+            drawLobbyService.adminDraw(match.getId(), actor);
+        }
         return assembler.toResponse(matchService.get(match.getId()));
     }
 
@@ -92,6 +97,24 @@ public class MatchController {
     public DrawResponse draw(@PathVariable UUID id) {
         UUID actor = CurrentAccount.require().accountId();
         return toDrawResponse(id, drawLobbyService.adminDraw(id, actor));
+    }
+
+    /** Re-assign teams by hand on an existing match (side + role per player). */
+    @PostMapping("/{id}/draw/manual")
+    @PreAuthorize("hasAnyRole('ADMIN','EDITOR')")
+    public DrawResponse drawManual(@PathVariable UUID id, @Valid @RequestBody ManualDrawRequest req) {
+        UUID actor = CurrentAccount.require().accountId();
+        return toDrawResponse(id, drawLobbyService.adminManualDraw(id, actor, toManualSlots(req.teams())));
+    }
+
+    private java.util.List<DrawService.ManualSlot> toManualSlots(java.util.List<ManualSlotRequest> teams) {
+        if (teams == null) {
+            throw new pl.romcio.driperska.common.error.BusinessRuleException(
+                    "Tryb ręczny wymaga przypisania graczy do drużyn");
+        }
+        return teams.stream()
+                .map(s -> new DrawService.ManualSlot(s.playerId(), s.side(), s.role()))
+                .toList();
     }
 
     @PostMapping("/{id}/draw/confirm")

@@ -38,7 +38,7 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
             String token = header.substring(PREFIX.length());
             try {
                 Claims claims = jwtService.parse(token);
-                if (jwtService.isAccessToken(claims)) {
+                if (jwtService.isAccessToken(claims) && jwtService.isCurrentBoot(claims)) {
                     UUID accountId = UUID.fromString(claims.getSubject());
                     String username = claims.get("username", String.class);
                     String role = claims.get("role", String.class);

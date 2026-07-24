@@ -217,9 +217,11 @@ export function MatchControlPage() {
                 </div>
               )}
               <div className="flex flex-wrap gap-3">
-                <Button variant="ghost" onClick={runDraw} disabled={draw.isPending}>
-                  🎲 Losuj ponownie
-                </Button>
+                {m.drawMode !== 'MANUAL' && (
+                  <Button variant="ghost" onClick={runDraw} disabled={draw.isPending}>
+                    🎲 Losuj ponownie
+                  </Button>
+                )}
                 <Button variant="gold" onClick={() => confirm.mutate()} disabled={confirm.isPending}>
                   Zatwierdź składy
                 </Button>

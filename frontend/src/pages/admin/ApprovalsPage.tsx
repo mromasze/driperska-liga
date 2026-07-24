@@ -4,7 +4,7 @@ import { useAuthStore } from '../../store/auth';
 import { Scoreboard } from '../../components/match/Scoreboard';
 import { SignOffPanel } from '../../components/admin/SignOffPanel';
 import { Button } from '../../components/ui/Button';
-import { LoadingState, EmptyState } from '../../components/ui/States';
+import { LoadingState, EmptyState, ErrorState } from '../../components/ui/States';
 import { Badge } from '../../components/ui/Badge';
 import { formatDateTime } from '../../lib/format';
 
@@ -22,7 +22,9 @@ export function ApprovalsPage() {
         </p>
       </div>
 
-      {pending.isLoading ? (
+      {pending.isError ? (
+        <ErrorState error={pending.error} />
+      ) : pending.isLoading ? (
         <LoadingState />
       ) : list.length === 0 ? (
         <EmptyState title="Brak wyników do akceptacji" description="Wszystko zatwierdzone. 🎉" />
@@ -45,6 +47,7 @@ function ApprovalItem({ matchId }: { matchId: string }) {
   const account = useAuthStore((s) => s.account);
   const [shareMsg, setShareMsg] = useState<string | null>(null);
 
+  if (match.isError) return <ErrorState error={match.error} />;
   if (match.isLoading || !match.data) return <LoadingState />;
 
   const m = match.data;

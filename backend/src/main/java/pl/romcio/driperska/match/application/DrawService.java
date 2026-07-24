@@ -1,10 +1,12 @@
 package pl.romcio.driperska.match.application;
 
 import java.util.*;
+import java.util.stream.Collectors;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import pl.romcio.driperska.common.domain.Role;
 import pl.romcio.driperska.common.domain.Side;
+import pl.romcio.driperska.common.error.BusinessRuleException;
 import pl.romcio.driperska.common.error.InvalidTransitionException;
 import pl.romcio.driperska.common.settings.AppSettingService;
 import pl.romcio.driperska.integration.riot.TournamentMatchService;
@@ -39,6 +41,9 @@ public class DrawService {
     public record DrawResult(List<Slot> slots, double blueMmrAvg, double redMmrAvg,
                              double predictedBlueWinPct) {}
 
+    /** An admin-supplied placement of one player onto a side and role (manual team building). */
+    public record ManualSlot(UUID playerId, Side side, Role role) {}
+
     @Transactional
     public DrawResult draw(UUID matchId, UUID actor) {
         Match match = matchService.get(matchId);
@@ -71,6 +76,67 @@ public class DrawService {
             participants.add(new MatchParticipant(playerId, side, role));
             slots.add(new Slot(playerId, player.getNickname(), role, mmr.getOrDefault(playerId, 0.0), side));
         }
+        return finalizeDraw(match, matchId, participants, slots, actor);
+    }
+
+    /**
+     * Applies an admin-built roster (exactly 5 per side, one of each role per side) without any
+     * randomness. Used by the MANUAL draw mode / the manual team builder.
+     */
+    @Transactional
+    public DrawResult manualDraw(UUID matchId, UUID actor, List<ManualSlot> assignment) {
+        Match match = matchService.get(matchId);
+        if (match.getStatus() != MatchStatus.DRAFT && match.getStatus() != MatchStatus.TEAMS_DRAWN) {
+            throw new InvalidTransitionException("Ręczne ułożenie drużyn możliwe tylko przed startem gry");
+        }
+        List<UUID> pool = match.getPoolPlayerIds();
+        validateManual(assignment, pool);
+        Map<UUID, Player> players = new HashMap<>();
+        playerRepository.findByIdIn(pool).forEach(p -> players.put(p.getId(), p));
+        Map<UUID, Double> mmr = mmrService.currentMmr(match.getSeasonId(), pool);
+
+        List<MatchParticipant> participants = new ArrayList<>();
+        List<Slot> slots = new ArrayList<>();
+        for (ManualSlot s : assignment) {
+            Player player = players.get(s.playerId());
+            participants.add(new MatchParticipant(s.playerId(), s.side(), s.role()));
+            slots.add(new Slot(s.playerId(), player.getNickname(), s.role(),
+                    mmr.getOrDefault(s.playerId(), 0.0), s.side()));
+        }
+        return finalizeDraw(match, matchId, participants, slots, actor);
+    }
+
+    private void validateManual(List<ManualSlot> assignment, List<UUID> pool) {
+        if (assignment == null || assignment.size() != pool.size()) {
+            throw new BusinessRuleException(
+                    "Ręczny skład musi obejmować dokładnie %d graczy".formatted(pool.size()));
+        }
+        Set<UUID> assignedIds = assignment.stream().map(ManualSlot::playerId)
+                .collect(Collectors.toSet());
+        if (assignedIds.size() != assignment.size()) {
+            throw new BusinessRuleException("Gracz nie może być przypisany dwukrotnie");
+        }
+        if (!assignedIds.equals(new HashSet<>(pool))) {
+            throw new BusinessRuleException("Ręczny skład musi zawierać dokładnie graczy z puli meczu");
+        }
+        for (Side side : Side.values()) {
+            List<ManualSlot> onSide = assignment.stream().filter(s -> s.side() == side).toList();
+            if (onSide.size() != pool.size() / 2) {
+                throw new BusinessRuleException(
+                        "Każda drużyna musi mieć dokładnie %d graczy".formatted(pool.size() / 2));
+            }
+            long distinctRoles = onSide.stream().map(ManualSlot::role).distinct().count();
+            if (distinctRoles != onSide.size()) {
+                throw new BusinessRuleException("Każda rola w drużynie może wystąpić tylko raz");
+            }
+        }
+    }
+
+    /** Persists a computed roster, advances to TEAMS_DRAWN and records the audit event + balance. */
+    private DrawResult finalizeDraw(Match match, UUID matchId, List<MatchParticipant> participants,
+                                    List<Slot> slots, UUID actor) {
+        Set<UUID> blueIds = slots.stream().filter(s -> s.side() == Side.BLUE)
+                .map(Slot::playerId).collect(Collectors.toCollection(HashSet::new));
         match.replaceParticipants(participants);
         match.advanceDrawRound();
         match.transitionTo(MatchStatus.TEAMS_DRAWN);

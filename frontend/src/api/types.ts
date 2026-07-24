@@ -18,7 +18,7 @@ export interface Account {
   createdAt: string; lastLoginAt: string | null;
 }
 export interface LoginRequest { username: string; password: string; turnstileToken?: string | null; }
-export interface PublicConfig { turnstileEnabled: boolean; turnstileSiteKey: string | null; }
+export interface PublicConfig { turnstileEnabled: boolean; turnstileSiteKey: string | null; bootId: string; }
 export interface ChangePasswordRequest { currentPassword: string; newPassword: string; }
 export interface AuthTokens { accessToken: string; refreshToken: string; tokenType: string; expiresIn: number; account: Account; }
 export type RefreshResponse = AuthTokens;
@@ -110,7 +110,8 @@ export interface MatchDetail {
 export interface MatchEvent { type: MatchEventType; actorAccountId: string | null; payloadJson: string | null; createdAt: string; }
 export interface MatchesQuery { status?: MatchStatus; seasonId?: string; page?: number; size?: number; }
 
-export interface CreateMatchRequest { seasonId: string; drawMode: DrawMode; playerIds: string[]; }
+export interface ManualSlot { playerId: string; side: Side; role: Role; }
+export interface CreateMatchRequest { seasonId: string; drawMode: DrawMode; playerIds: string[]; teams?: ManualSlot[]; }
 export interface DrawSlot { playerId: string; nickname: string; role: Role; mmr: number; }
 export interface ReplacePlayerRequest { removedPlayerId: string; addedPlayerId: string; }
 

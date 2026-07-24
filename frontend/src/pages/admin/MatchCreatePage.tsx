@@ -6,9 +6,10 @@ import { useCreateMatch } from '../../api/hooks/matches';
 import { Avatar } from '../../components/ui/Avatar';
 import { Button } from '../../components/ui/Button';
 import { LoadingState, ErrorState } from '../../components/ui/States';
+import { ManualTeamBuilder } from '../../components/match/ManualTeamBuilder';
 import { cn } from '../../lib/cn';
 import { roleLabel } from '../../lib/format';
-import type { DrawMode } from '../../api/types';
+import type { DrawMode, ManualSlot } from '../../api/types';
 
 const POOL_SIZE = 10;
 
@@ -18,7 +19,11 @@ export function MatchCreatePage() {
   const season = useCurrentSeason();
   const create = useCreateMatch();
   const [selected, setSelected] = useState<Set<string>>(new Set());
+  const [teams, setTeams] = useState<ManualSlot[]>([]);
   const [drawMode, setDrawMode] = useState<DrawMode>('PURE_RANDOM');
+
+  const isManual = drawMode === 'MANUAL';
+  const ready = isManual ? teams.length === POOL_SIZE : selected.size === POOL_SIZE;
 
   const toggle = (id: string) => {
     setSelected((prev) => {
@@ -30,11 +35,11 @@ export function MatchCreatePage() {
   };
 
   const start = () => {
-    if (!season.data || selected.size !== POOL_SIZE) return;
-    create.mutate(
-      { seasonId: season.data.id, drawMode, playerIds: [...selected] },
-      { onSuccess: (m) => navigate(`/admin/matches/${m.id}/control`) },
-    );
+    if (!season.data || !ready) return;
+    const body = isManual
+      ? { seasonId: season.data.id, drawMode, playerIds: teams.map((s) => s.playerId), teams }
+      : { seasonId: season.data.id, drawMode, playerIds: [...selected] };
+    create.mutate(body, { onSuccess: (m) => navigate(`/admin/matches/${m.id}/control`) });
   };
 
   if (players.isLoading) return <LoadingState />;
@@ -47,13 +52,17 @@ export function MatchCreatePage() {
       <div>
         <div className="kicker text-gold">{season.data?.name ?? 'Sezon'}</div>
         <h1 className="font-display text-3xl">Nowy mecz</h1>
-        <p className="mt-1 text-sm text-text-lo">Wybierz dokładnie 10 graczy do puli losowania.</p>
+        <p className="mt-1 text-sm text-text-lo">
+          {isManual
+            ? 'Przeciągnij dokładnie 10 graczy do slotów ról w obu drużynach.'
+            : 'Wybierz dokładnie 10 graczy do puli losowania.'}
+        </p>
       </div>
 
       <div className="sticky top-0 z-10 flex flex-wrap items-center justify-between gap-3 rounded-lg border border-line bg-[color:var(--bg-1)]/80 p-3 backdrop-blur">
         <div className="num text-lg">
-          <span className={cn(selected.size === POOL_SIZE ? 'text-win' : 'text-text-hi')}>
-            {selected.size}
+          <span className={cn(ready ? 'text-win' : 'text-text-hi')}>
+            {isManual ? teams.length : selected.size}
           </span>
           <span className="text-text-lo"> / {POOL_SIZE}</span>
         </div>
@@ -66,35 +75,39 @@ export function MatchCreatePage() {
           <option value="BALANCED">Losowanie zbalansowane (MMR)</option>
           <option value="MANUAL">Ręcznie</option>
         </select>
-        <Button variant="gold" disabled={selected.size !== POOL_SIZE || create.isPending} onClick={start}>
-          {create.isPending ? 'Tworzenie…' : 'Rozpocznij i losuj'}
+        <Button variant="gold" disabled={!ready || create.isPending} onClick={start}>
+          {create.isPending ? 'Tworzenie…' : isManual ? 'Utwórz mecz' : 'Rozpocznij i losuj'}
         </Button>
       </div>
 
-      <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-3">
-        {list.map((p) => {
-          const active = selected.has(p.id);
-          return (
-            <button
-              key={p.id}
-              onClick={() => toggle(p.id)}
-              className={cn(
-                'flex items-center gap-3 rounded-lg border p-3 text-left transition-all',
-                active
-                  ? 'border-[color:var(--gold)]/60 bg-[color:var(--gold)]/10'
-                  : 'border-line bg-[var(--glass)] hover:border-line-strong',
-              )}
-            >
-              <Avatar src={p.avatarUrl} name={p.nickname} size={40} ring={active} />
-              <div className="min-w-0 flex-1">
-                <div className="truncate font-medium text-text-hi">{p.nickname}</div>
-                <div className="kicker">{roleLabel(p.mainRole)}</div>
-              </div>
-              {active && <span className="text-gold">✓</span>}
-            </button>
-          );
-        })}
-      </div>
+      {isManual ? (
+        <ManualTeamBuilder players={list} value={teams} onChange={setTeams} />
+      ) : (
+        <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-3">
+          {list.map((p) => {
+            const active = selected.has(p.id);
+            return (
+              <button
+                key={p.id}
+                onClick={() => toggle(p.id)}
+                className={cn(
+                  'flex items-center gap-3 rounded-lg border p-3 text-left transition-all',
+                  active
+                    ? 'border-[color:var(--gold)]/60 bg-[color:var(--gold)]/10'
+                    : 'border-line bg-[var(--glass)] hover:border-line-strong',
+                )}
+              >
+                <Avatar src={p.avatarUrl} name={p.nickname} size={40} ring={active} />
+                <div className="min-w-0 flex-1">
+                  <div className="truncate font-medium text-text-hi">{p.nickname}</div>
+                  <div className="kicker">{roleLabel(p.mainRole)}</div>
+                </div>
+                {active && <span className="text-gold">✓</span>}
+              </button>
+            );
+          })}
+        </div>
+      )}
     </div>
   );
 }

@@ -24,6 +24,10 @@ export const RELEASES: ReleaseNote[] = [
       'Draft: rusza dopiero po kliknięciu „Rozpocznij draft” w panelu admina (czas na przejście na Discorda i ustalenie pozycji). Duży, wyraźny napis „TWOJA KOLEJ”, postać najpierw się zaznacza, a przycisk „Lock in” potwierdza wybór. Admin może wstrzymać/wznowić draft (pauza zatrzymuje licznik).',
       'Po rozpoczęciu gry ekran pokazuje pełny skład „kto kim gra” (gracz + jego postać i pozycja) po obu stronach.',
       'Losowanie składów domyślnie w 100% losowe (a nie zbalansowane po MMR, które powtarzało podobne drużyny). Tryb zbalansowany nadal dostępny do wyboru.',
+      'Ręczne układanie drużyn: w trybie „Ręcznie” przy tworzeniu meczu można przeciągnąć graczy do slotów ról (TOP/JUNGLE/MID/ADC/SUPPORT) w obu drużynach i ułożyć skład samodzielnie, bez losowania.',
+      'Po restarcie serwera wszyscy są automatycznie wylogowywani (koniec ze „starymi” sesjami wiszącymi po aktualizacji).',
+      'Gdy nie ma połączenia z serwerem, pojawia się ekran „Przerwa techniczna” i aplikacja sama łączy się ponownie, gdy serwer wróci.',
+      'Wyraźniejsze wskaźniki ładowania i komunikaty o błędach na kolejnych ekranach.',
     ],
   },
   {

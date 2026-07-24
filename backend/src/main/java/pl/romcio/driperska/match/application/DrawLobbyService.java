@@ -53,6 +53,14 @@ public class DrawLobbyService {
     }
 
     @Transactional
+    public DrawService.DrawResult adminManualDraw(UUID matchId, UUID actor,
+                                                  List<DrawService.ManualSlot> assignment) {
+        DrawService.DrawResult result = drawService.manualDraw(matchId, actor, assignment);
+        publish(matchService.get(matchId));
+        return result;
+    }
+
+    @Transactional
     public Match adminConfirm(UUID matchId, UUID actor) {
         Match match = drawService.confirm(matchId, actor);
         publish(match);

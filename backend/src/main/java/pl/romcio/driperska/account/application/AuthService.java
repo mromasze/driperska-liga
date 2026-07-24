@@ -58,6 +58,9 @@ public class AuthService {
         if (!jwtService.isRefreshToken(claims)) {
             throw new BadCredentialsException("Oczekiwano tokena odświeżania");
         }
+        if (!jwtService.isCurrentBoot(claims)) {
+            throw new BadCredentialsException("Sesja wygasła po przerwie technicznej — zaloguj się ponownie");
+        }
         UUID accountId = UUID.fromString(claims.getSubject());
         Account account = accountRepository.findById(accountId)
                 .filter(Account::isEnabled)

@@ -7,7 +7,7 @@ import type { CreatedPlayerResponse, LoginCredentials, Player, Role } from '../.
 import { Avatar } from '../../components/ui/Avatar';
 import { Badge } from '../../components/ui/Badge';
 import { Button } from '../../components/ui/Button';
-import { LoadingState, EmptyState } from '../../components/ui/States';
+import { LoadingState, EmptyState, ErrorState } from '../../components/ui/States';
 import { roleLabel } from '../../lib/format';
 
 const ROLES: Role[] = ['TOP', 'JUNGLE', 'MID', 'ADC', 'SUPPORT'];
@@ -133,7 +133,7 @@ export function AdminPlayersPage() {
         </section>
       )}
 
-      {players.isLoading ? <LoadingState /> : list.length === 0 ? <EmptyState title="Brak graczy" /> : (
+      {players.isError ? <ErrorState error={players.error} /> : players.isLoading ? <LoadingState /> : list.length === 0 ? <EmptyState title="Brak graczy" /> : (
         <div className="space-y-2">
           {list.map((p: Player) => (
             <div key={p.id} className="glass p-3">

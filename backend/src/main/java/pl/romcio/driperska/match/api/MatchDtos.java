@@ -28,7 +28,21 @@ public final class MatchDtos {
             @NotNull UUID seasonId,
             DrawMode drawMode,
             @NotNull @Size(min = 10, max = 10, message = "Pula musi mieć dokładnie 10 graczy")
-            List<UUID> playerIds) {
+            List<UUID> playerIds,
+            /** Required when drawMode == MANUAL: explicit side + role for each of the 10 players. */
+            @Valid List<ManualSlotRequest> teams) {
+    }
+
+    /** One admin-placed player in the manual team builder (side + role chosen by hand). */
+    public record ManualSlotRequest(
+            @NotNull UUID playerId,
+            @NotNull Side side,
+            @NotNull Role role) {
+    }
+
+    /** Body for re-assigning teams by hand on an existing match. */
+    public record ManualDrawRequest(
+            @NotNull @Size(min = 10, max = 10) @Valid List<ManualSlotRequest> teams) {
     }
 
     public record ParticipantResultInput(

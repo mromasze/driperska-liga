@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { usePlannedMatches, useCreatePlannedMatch, useCancelPlannedMatch } from '../../api/hooks/planned';
 import { Button } from '../../components/ui/Button';
 import { Badge } from '../../components/ui/Badge';
-import { LoadingState, EmptyState } from '../../components/ui/States';
+import { LoadingState, EmptyState, ErrorState } from '../../components/ui/States';
 import { formatDateTime } from '../../lib/format';
 
 export function AdminSchedulePage() {
@@ -59,7 +59,7 @@ export function AdminSchedulePage() {
 
       <section>
         <h2 className="mb-3 font-display text-xl">Zaplanowane mecze</h2>
-        {planned.isLoading ? <LoadingState /> : list.length === 0 ? (
+        {planned.isError ? <ErrorState error={planned.error} /> : planned.isLoading ? <LoadingState /> : list.length === 0 ? (
           <EmptyState title="Brak zaplanowanych meczów" />
         ) : (
           <div className="space-y-3">

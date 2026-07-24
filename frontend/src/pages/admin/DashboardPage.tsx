@@ -5,6 +5,7 @@ import { usePlayers } from '../../api/hooks/players';
 import { StatTile } from '../../components/ui/StatTile';
 import { Button } from '../../components/ui/Button';
 import { Badge } from '../../components/ui/Badge';
+import { LoadingState, ErrorState } from '../../components/ui/States';
 import { formatDateTime } from '../../lib/format';
 
 export function DashboardPage() {
@@ -14,6 +15,11 @@ export function DashboardPage() {
   const drawn = useMatches({ status: 'TEAMS_DRAWN', size: 20 });
   const lobby = useMatches({ status: 'LOBBY_READY', size: 20 });
   const players = usePlayers({ active: true, size: 1 });
+
+  const sections = [pending, live, drawn, lobby, players];
+  if (sections.some((q) => q.isLoading)) return <LoadingState />;
+  const errored = sections.find((q) => q.isError);
+  if (errored) return <ErrorState error={errored.error} />;
 
   const pendingList = pending.data?.content ?? [];
   const liveList = live.data?.content ?? [];
