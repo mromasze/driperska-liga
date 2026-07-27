@@ -14,9 +14,12 @@ import pl.romcio.driperska.match.api.MatchDtos.MatchSummaryResponse;
 import pl.romcio.driperska.match.api.MatchDtos.LpBreakdown;
 import pl.romcio.driperska.match.api.MatchDtos.LpComponent;
 import pl.romcio.driperska.match.api.MatchDtos.ParticipantResponse;
+import pl.romcio.driperska.match.api.MatchDtos.PrMetric;
 import pl.romcio.driperska.match.api.MatchDtos.RiotInfoResponse;
 import pl.romcio.driperska.common.domain.Side;
 import pl.romcio.driperska.ranking.application.ScoringConfigProvider;
+import pl.romcio.driperska.ranking.domain.MatchStatsContext;
+import pl.romcio.driperska.ranking.domain.RatingCalculator;
 import pl.romcio.driperska.ranking.domain.ScoringConfig;
 import java.util.ArrayList;
 import pl.romcio.driperska.match.domain.Match;
@@ -37,17 +40,20 @@ public class MatchAssembler {
     private final ChampionRepository championRepository;
     private final MatchApprovalRepository approvalRepository;
     private final ScoringConfigProvider scoringConfigProvider;
+    private final RatingCalculator ratingCalculator;
 
     public MatchAssembler(MatchRepository matchRepository,
                           PlayerRepository playerRepository,
                           ChampionRepository championRepository,
                           MatchApprovalRepository approvalRepository,
-                          ScoringConfigProvider scoringConfigProvider) {
+                          ScoringConfigProvider scoringConfigProvider,
+                          RatingCalculator ratingCalculator) {
         this.matchRepository = matchRepository;
         this.playerRepository = playerRepository;
         this.championRepository = championRepository;
         this.approvalRepository = approvalRepository;
         this.scoringConfigProvider = scoringConfigProvider;
+        this.ratingCalculator = ratingCalculator;
     }
 
     /** Reloads the match inside this read-only transaction so lazy collections resolve safely. */
@@ -79,8 +85,8 @@ public class MatchAssembler {
     public MatchSummaryResponse toSummary(Match match) {
         return new MatchSummaryResponse(
                 match.getId(), match.getSeasonId(), match.getStatus(), match.getWinningSide(),
-                match.getDurationSeconds(), match.getCreatedAt(), match.getCompletedAt(),
-                match.getParticipants().size());
+                match.getDurationSeconds(), match.getCreatedAt(), match.getStartedAt(),
+                match.getCompletedAt(), match.getParticipants().size());
     }
 
     private ParticipantResponse toParticipant(MatchParticipant p, Map<UUID, Player> players,
@@ -108,6 +114,8 @@ public class MatchAssembler {
         Side winning = match.getWinningSide();
         if (winning == null) return Map.of();
         ScoringConfig cfg = scoringConfigProvider.forSeason(match.getSeasonId());
+        Map<UUID, RatingCalculator.PrDetail> prDetails =
+                ratingCalculator.computeDetailed(toContext(match), cfg);
         // ACE = highest performance rating on the losing side.
         UUID aceId = null;
         double bestLoserPr = -1;
@@ -119,12 +127,27 @@ public class MatchAssembler {
         Map<UUID, LpBreakdown> out = new HashMap<>();
         for (MatchParticipant p : match.getParticipants()) {
             if (p.getPerformanceRating() == null && p.getLpAwarded() == null) continue;
-            out.put(p.getPlayerId(), lpBreakdownFor(p, winning, cfg, p.getPlayerId().equals(aceId)));
+            out.put(p.getPlayerId(), lpBreakdownFor(p, winning, cfg, p.getPlayerId().equals(aceId),
+                    prDetails.get(p.getId())));
         }
         return out;
     }
 
-    private static LpBreakdown lpBreakdownFor(MatchParticipant p, Side winning, ScoringConfig cfg, boolean isAce) {
+    /** Same input the ranking engine scores with — keeps the shown PR math identical to the stored one. */
+    private static MatchStatsContext toContext(Match match) {
+        List<MatchStatsContext.ParticipantInput> inputs = new ArrayList<>();
+        for (MatchParticipant p : match.getParticipants()) {
+            inputs.add(new MatchStatsContext.ParticipantInput(
+                    p.getId(), p.getPlayerId(), p.getSide(), p.getRole(),
+                    p.getKills(), p.getDeaths(), p.getAssists(), p.getCs(), p.getGold(),
+                    p.getDamageToChampions(), p.getVisionScore(), p.getLargestMultiKill()));
+        }
+        int duration = match.getDurationSeconds() != null ? match.getDurationSeconds() : 1800;
+        return new MatchStatsContext(match.getWinningSide(), duration, inputs);
+    }
+
+    private static LpBreakdown lpBreakdownFor(MatchParticipant p, Side winning, ScoringConfig cfg,
+                                              boolean isAce, RatingCalculator.PrDetail prDetail) {
         boolean won = p.getSide() == winning;
         double pr = p.getPerformanceRating() == null ? 0.0 : p.getPerformanceRating();
         List<LpComponent> c = new ArrayList<>();
@@ -144,7 +167,12 @@ public class MatchAssembler {
                 + ". Bonusy: MVP +" + cfg.lpMvpBonus() + ", ACE +" + cfg.lpAceBonus()
                 + ", penta +" + cfg.lpPentaBonus() + ", quadra +" + cfg.lpQuadraBonus()
                 + ", bez śmierci +" + cfg.lpFlawlessBonus() + ". Minimum 0 LP.";
-        return new LpBreakdown(c, total, formula);
+        List<PrMetric> prMetrics = prDetail == null ? List.of()
+                : prDetail.metrics().stream()
+                .map(m -> new PrMetric(m.key(), m.value(), m.average(), m.normalized(),
+                        m.weight(), m.points()))
+                .toList();
+        return new LpBreakdown(c, total, formula, prMetrics);
     }
 
     private Map<UUID, Player> playersFor(Match match) {

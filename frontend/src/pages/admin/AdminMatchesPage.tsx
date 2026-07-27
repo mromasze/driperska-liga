@@ -44,7 +44,8 @@ function MatchRow({ match }: { match: MatchSummary }) {
         <div className="min-w-0 flex-1">
           <div className="truncate text-sm text-text-hi">
             {match.participantCount} graczy
-            {match.completedAt ? ` · ${formatDateTime(match.completedAt)}` : ''}
+            {(match.startedAt ?? match.completedAt)
+              ? ` · ${formatDateTime(match.startedAt ?? match.completedAt)}` : ''}
           </div>
           <div className="truncate font-mono text-xs text-text-lo">{match.id.slice(0, 8)}</div>
         </div>
@@ -53,7 +54,8 @@ function MatchRow({ match }: { match: MatchSummary }) {
       <div className="border-t border-line p-4">
         <div className="text-sm text-text-hi">
           {match.participantCount} graczy
-          {match.completedAt ? ` · rozegrany ${formatDateTime(match.completedAt)}` : ''}
+          {(match.startedAt ?? match.completedAt)
+            ? ` · rozegrany ${formatDateTime(match.startedAt ?? match.completedAt)}` : ''}
         </div>
         <div className="mt-1 text-xs text-text-lo">Utworzony {formatDateTime(match.createdAt)}</div>
         <div className="mt-3 flex flex-wrap gap-2">

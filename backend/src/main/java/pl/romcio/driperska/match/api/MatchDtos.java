@@ -121,8 +121,19 @@ public final class MatchDtos {
     /** One line of a player's LP math (e.g. "Zwycięstwo" → +10, "Występ (PR 68 ÷ 10)" → +7). */
     public record LpComponent(String label, int points) {}
 
-    /** Full explanation of how a player's LP for a match adds up, with the formula/przelicznik. */
-    public record LpBreakdown(List<LpComponent> components, int total, String formula) {}
+    /**
+     * One metric of the Performance Rating math: raw value vs the comparison average,
+     * normalised 0–1, multiplied by the role weight → PR points (weight × normalized × 100).
+     */
+    public record PrMetric(String key, double value, double average, double normalized,
+                           double weight, double points) {}
+
+    /**
+     * Full explanation of how a player's LP for a match adds up: LP components with the
+     * formula/przelicznik, plus the per-metric PR breakdown behind the "Występ" component.
+     */
+    public record LpBreakdown(List<LpComponent> components, int total, String formula,
+                              List<PrMetric> prMetrics) {}
 
     public record ApprovalResponse(
             ApprovalDecision decision,
@@ -164,6 +175,7 @@ public final class MatchDtos {
             Side winningSide,
             Integer durationSeconds,
             Instant createdAt,
+            Instant startedAt,
             Instant completedAt,
             int participantCount) {
     }

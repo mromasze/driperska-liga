@@ -507,7 +507,8 @@ function RatingRow({ match, myPlayerId }: { match: RateableMatch; myPlayerId: st
     <div className="rounded-lg border border-line bg-[color:var(--bg-1)]/70 p-4">
       <div className="mb-3">
         <div className="text-sm font-medium text-text-hi">
-          Mecz {match.completedAt ? `z ${formatDateTime(match.completedAt)}` : ''}
+          Mecz {(match.startedAt ?? match.completedAt)
+            ? `z ${formatDateTime(match.startedAt ?? match.completedAt)}` : ''}
         </div>
         <div className="mt-0.5 text-xs text-text-lo">
           <span style={{ color: 'var(--blue)' }}>Niebiescy:</span>{' '}

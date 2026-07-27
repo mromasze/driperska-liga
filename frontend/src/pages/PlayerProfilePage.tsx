@@ -141,7 +141,7 @@ export function PlayerProfilePage() {
                       <span className="kicker">{roleLabel(m.role)}</span>
                     </div>
                     <div className="num text-xs text-text-lo">
-                      {m.kills}/{m.deaths}/{m.assists} · KDA {m.kda.toFixed(2)} · {formatDate(m.completedAt)}
+                      {m.kills}/{m.deaths}/{m.assists} · KDA {m.kda.toFixed(2)} · {formatDate(m.startedAt ?? m.completedAt)}
                     </div>
                   </div>
                   {m.lpAwarded != null && (

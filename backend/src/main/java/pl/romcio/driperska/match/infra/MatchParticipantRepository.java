@@ -11,7 +11,7 @@ import pl.romcio.driperska.match.domain.MatchStatus;
 public interface MatchParticipantRepository extends JpaRepository<MatchParticipant, UUID> {
 
     @Query("select p from MatchParticipant p where p.playerId = :playerId and p.match.status = :status "
-            + "order by p.match.completedAt desc")
+            + "order by coalesce(p.match.startedAt, p.match.completedAt) desc")
     List<MatchParticipant> findByPlayerAndMatchStatus(@Param("playerId") UUID playerId,
                                                       @Param("status") MatchStatus status);
 }

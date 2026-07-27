@@ -41,7 +41,7 @@ management:
 info:
   app:
     name: Driperska Liga
-    version: 0.3.1
+    version: 0.3.2
 
 app:
   public-url: ${APP_PUBLIC_URL:https://driperska.pl}
@@ -71,6 +71,7 @@ app:
     results-channel-id: ${DISCORD_RESULTS_CHANNEL_ID:}
     announce-channel-id: ${DISCORD_ANNOUNCE_CHANNEL_ID:}
     patch-notes-channel-id: ${DISCORD_PATCH_CHANNEL_ID:}
+    vote-channel-id: ${DISCORD_VOTE_CHANNEL_ID:}
   turnstile:
     site-key: ${TURNSTILE_SITE_KEY:}
     secret: ${TURNSTILE_SECRET:}

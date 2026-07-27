@@ -1,4 +1,4 @@
-# Driperska Liga v0.2.3
+# Driperska Liga v0.3.2
 
 Aplikacja do prowadzenia amatorskiej ligi League of Legends: ranking i wyniki,
 profile graczy, panel administracyjny oraz głosowane losowanie drużyn w czasie rzeczywistym.
@@ -51,6 +51,15 @@ npm run dev
   wolumenów PostgreSQL ani mediów.
 - Strona główna pokazuje patch notes oraz przygaszone klipy najlepszych zagrań z trwałego magazynu mediów.
 - Panel admina udostępnia listę wszystkich meczów, ich edycję i ponowne wysyłanie kart wyników na Discord.
+- Zaplanowanie meczu wysyła na Discord ogłoszenie z @everyone (kanał `DISCORD_ANNOUNCE_CHANNEL_ID`)
+  oraz kartę głosowania z przyciskami „Będę / Nie będę / Może” (kanał `DISCORD_VOTE_CHANNEL_ID`).
+  Kliknięcia kont Discord połączonych z graczem liczą się jako RSVP w systemie (gateway JDA,
+  tylko odbiór interakcji — wysyłka wiadomości pozostaje po REST).
+- Punktacja LP na stronie meczu jest zwijana: widać sumę LP gracza, a „Szczegóły” rozwijają
+  składniki LP z przelicznikiem oraz tabelę „jak powstało PR” (metryka, wartość, średnia meczu,
+  norma, waga roli, punkty PR).
+- Listy meczów pokazują i sortują po dacie faktycznego startu gry (`startedAt`) — edycja
+  lub ponowna akceptacja wyniku nie przesuwa meczu w listach.
 
 Tournament API wymaga produkcyjnego klucza z przyznanym dostępem do produktu Tournament.
 Callback `RIOT_CALLBACK_URL` musi być publicznym adresem HTTPS. Sekretów nie zapisuj

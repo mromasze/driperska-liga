@@ -45,8 +45,12 @@ public class PlannedMatchService {
         if (scheduledAt == null) throw new BusinessRuleException("Podaj termin meczu");
         PlannedMatch planned = repository.save(new PlannedMatch(scheduledAt, note, actor));
         Delivery delivery = discordClient.sendAnnouncement(announcement(planned));
-        return new CreatePlannedMatchResult(toResponse(planned, null),
-                delivery.sent(), delivery.message());
+        Delivery vote = discordClient.sendRsvpMessage(voteMessage(planned), planned.getId());
+        String message = delivery.message();
+        if (!vote.sent()) {
+            message += " | Głosowanie Discord: " + vote.message();
+        }
+        return new CreatePlannedMatchResult(toResponse(planned, null), delivery.sent(), message);
     }
 
     @Transactional
@@ -62,6 +66,26 @@ public class PlannedMatchService {
                 .orElseThrow(() -> new BusinessRuleException("Konto nie jest połączone z graczem"));
         planned.setResponse(player.getId(), r);
         return toResponse(planned, accountId);
+    }
+
+    /**
+     * RSVP cast from Discord (vote-channel button). Only votes from Discord accounts linked to
+     * a player count. Returns the player's nickname for the ephemeral confirmation.
+     */
+    @Transactional
+    public String rsvpByDiscord(UUID id, String discordUserId, String response) {
+        String r = response == null ? "" : response.trim().toUpperCase(java.util.Locale.ROOT);
+        if (!RESPONSES.contains(r)) throw new BusinessRuleException("Nieprawidłowa odpowiedź");
+        PlannedMatch planned = repository.findById(id)
+                .orElseThrow(() -> ResourceNotFoundException.of("PlannedMatch", id));
+        if (!PlannedMatch.PLANNED.equals(planned.getStatus())) {
+            throw new BusinessRuleException("Ten mecz nie jest już planowany");
+        }
+        Player player = playerRepository.findByDiscordUserId(discordUserId)
+                .orElseThrow(() -> new BusinessRuleException(
+                        "Twoje konto Discord nie jest połączone z graczem — zagłosuj przez stronę"));
+        planned.setResponse(player.getId(), r);
+        return player.getNickname();
     }
 
     @Transactional(readOnly = true)
@@ -111,6 +135,18 @@ public class PlannedMatchService {
         }
         sb.append("✅ Potwierdź obecność po zalogowaniu: ").append(publicUrl).append("/panel\n");
         sb.append("@everyone");
+        return sb.toString();
+    }
+
+    private String voteMessage(PlannedMatch planned) {
+        long epoch = planned.getScheduledAt().getEpochSecond();
+        StringBuilder sb = new StringBuilder();
+        sb.append("🗳️ **Kto gra? — mecz <t:").append(epoch).append(":F> (<t:").append(epoch).append(":R>)**\n");
+        if (planned.getNote() != null && !planned.getNote().isBlank()) {
+            sb.append("📝 ").append(planned.getNote()).append('\n');
+        }
+        sb.append("Kliknij przycisk poniżej — liczą się tylko głosy kont Discord połączonych z graczem.\n");
+        sb.append("Głos możesz zmienić klikając ponownie. Wyniki: ").append(publicUrl).append("/panel");
         return sb.toString();
     }
 }

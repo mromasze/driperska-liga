@@ -19,7 +19,7 @@ export function MatchCard({ match }: { match: MatchDetail }) {
         <SideBar won={blueWon} color="var(--blue)" />
         <div className="flex-1 p-4">
           <div className="flex items-center justify-between text-xs text-text-lo">
-            <span className="num">{formatDate(match.completedAt ?? match.createdAt)}</span>
+            <span className="num">{formatDate(match.startedAt ?? match.completedAt ?? match.createdAt)}</span>
             <span className="num">{formatDuration(match.durationSeconds)}</span>
           </div>
 

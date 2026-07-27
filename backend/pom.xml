@@ -10,13 +10,14 @@
 	</parent>
 	<groupId>pl.romcio</groupId>
 	<artifactId>driperska-liga</artifactId>
-	<version>0.3.1</version>
+	<version>0.3.2</version>
 	<name>driperska-liga</name>
 	<description>Driperska Liga — inhouse LoL league management (backend)</description>
 
 	<properties>
 		<java.version>21</java.version>
 		<jjwt.version>0.12.6</jjwt.version>
+		<jda.version>5.6.1</jda.version>
 		<springdoc.version>2.7.0</springdoc.version>
 		<thumbnailator.version>0.4.20</thumbnailator.version>
 	</properties>
@@ -88,6 +89,13 @@
 			<groupId>org.springdoc</groupId>
 			<artifactId>springdoc-openapi-starter-webmvc-ui</artifactId>
 			<version>${springdoc.version}</version>
+		</dependency>
+
+		<!-- Discord gateway (websocket) — receives RSVP vote button clicks; sending stays on plain REST -->
+		<dependency>
+			<groupId>net.dv8tion</groupId>
+			<artifactId>JDA</artifactId>
+			<version>${jda.version}</version>
 		</dependency>
 
 		<!-- Avatar image processing -->

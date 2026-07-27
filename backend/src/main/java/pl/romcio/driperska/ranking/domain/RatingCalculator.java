@@ -17,7 +17,26 @@ import pl.romcio.driperska.ranking.domain.ScoringConfig.RoleWeights;
 @Component
 public class RatingCalculator {
 
+    /**
+     * One metric of a participant's PR math: raw value vs the comparison average, normalised
+     * 0–1, weighted, and the resulting PR points (weight × norm × 100).
+     */
+    public record PrMetricDetail(String key, double value, double average, double normalized,
+                                 double weight, double points) {
+    }
+
+    /** A participant's PR together with the per-metric breakdown that produced it. */
+    public record PrDetail(double pr, List<PrMetricDetail> metrics) {
+    }
+
     public Map<UUID, Double> computePerformance(MatchStatsContext ctx, ScoringConfig cfg) {
+        Map<UUID, Double> out = new HashMap<>();
+        computeDetailed(ctx, cfg).forEach((id, detail) -> out.put(id, detail.pr()));
+        return out;
+    }
+
+    /** Same computation as {@link #computePerformance}, additionally exposing each metric's math. */
+    public Map<UUID, PrDetail> computeDetailed(MatchStatsContext ctx, ScoringConfig cfg) {
         double minutes = ctx.minutes();
 
         // Per-participant raw metric values.
@@ -40,24 +59,42 @@ public class RatingCalculator {
         Map<Role, Metrics> roleAvg = averagesByRole(ctx, raw);
         Metrics overallAvg = average(raw.values());
 
-        Map<UUID, Double> result = new HashMap<>();
+        Map<UUID, PrDetail> result = new HashMap<>();
         for (ParticipantInput p : ctx.participants()) {
             Metrics m = raw.get(p.participantId());
             long sameRole = ctx.participants().stream().filter(o -> o.role() == p.role()).count();
             Metrics avg = (sameRole >= 2) ? roleAvg.getOrDefault(p.role(), overallAvg) : overallAvg;
             RoleWeights w = cfg.weightsFor(p.role());
 
+            double kdaNorm = norm(m.kda(), avg.kda());
+            double kpNorm = norm(m.kp(), avg.kp());
+            double csNorm = norm(m.csPerMin(), avg.csPerMin());
             double damageNorm = (norm(m.dmgPerMin(), avg.dmgPerMin()) + norm(m.dmgShare(), avg.dmgShare())) / 2.0;
+            double goldNorm = norm(m.goldShare(), avg.goldShare());
+            double visionNorm = norm(m.visionPerMin(), avg.visionPerMin());
             double score =
-                    w.kda() * norm(m.kda(), avg.kda())
-                    + w.kp() * norm(m.kp(), avg.kp())
-                    + w.cs() * norm(m.csPerMin(), avg.csPerMin())
+                    w.kda() * kdaNorm
+                    + w.kp() * kpNorm
+                    + w.cs() * csNorm
                     + w.damage() * damageNorm
-                    + w.gold() * norm(m.goldShare(), avg.goldShare())
-                    + w.vision() * norm(m.visionPerMin(), avg.visionPerMin());
-            result.put(p.participantId(), round2(clamp(score, 0, 1) * 100.0));
+                    + w.gold() * goldNorm
+                    + w.vision() * visionNorm;
+            List<PrMetricDetail> metrics = List.of(
+                    metric("KDA", m.kda(), avg.kda(), kdaNorm, w.kda()),
+                    metric("KP", m.kp(), avg.kp(), kpNorm, w.kp()),
+                    metric("CS", m.csPerMin(), avg.csPerMin(), csNorm, w.cs()),
+                    metric("DMG", m.dmgPerMin(), avg.dmgPerMin(), damageNorm, w.damage()),
+                    metric("GOLD", m.goldShare(), avg.goldShare(), goldNorm, w.gold()),
+                    metric("VISION", m.visionPerMin(), avg.visionPerMin(), visionNorm, w.vision()));
+            result.put(p.participantId(), new PrDetail(round2(clamp(score, 0, 1) * 100.0), metrics));
         }
         return result;
+    }
+
+    private static PrMetricDetail metric(String key, double value, double average,
+                                         double normalized, double weight) {
+        return new PrMetricDetail(key, round2(value), round2(average), round2(normalized),
+                weight, round2(weight * normalized * 100.0));
     }
 
     /** Normalise a value: exactly average → 0.5, twice the average or more → 1.0. */

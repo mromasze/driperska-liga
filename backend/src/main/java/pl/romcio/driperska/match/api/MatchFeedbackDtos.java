@@ -15,7 +15,7 @@ public final class MatchFeedbackDtos {
 
     public record MyFeedback(UUID upvotePlayerId, UUID downvotePlayerId, String note) {}
 
-    public record RateableMatch(UUID matchId, Instant completedAt,
+    public record RateableMatch(UUID matchId, Instant startedAt, Instant completedAt,
                                 List<FeedbackParticipant> participants, MyFeedback myFeedback) {}
 
     /** One anonymous comment about a player, tagged POSITIVE or NEGATIVE. */

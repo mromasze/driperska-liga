@@ -76,7 +76,7 @@ public class PlayerStatsController {
                     p.getKills(), p.getDeaths(), p.getAssists(),
                     Math.round(p.kda() * 100.0) / 100.0,
                     p.getPerformanceRating(), p.getLpAwarded(), p.isMvp(),
-                    p.getMatch().getCompletedAt()));
+                    p.getMatch().getStartedAt(), p.getMatch().getCompletedAt()));
         }
         return entries;
     }
@@ -137,6 +137,6 @@ public class PlayerStatsController {
                                    Integer championId, String championName, String championIconUrl,
                                    int kills, int deaths, int assists, double kda,
                                    Double performanceRating, Integer lpAwarded, boolean mvp,
-                                   Instant completedAt) {
+                                   Instant startedAt, Instant completedAt) {
     }
 }

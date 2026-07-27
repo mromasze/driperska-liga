@@ -11,6 +11,18 @@ export interface ReleaseNote {
  */
 export const RELEASES: ReleaseNote[] = [
   {
+    version: 'v0.3.2',
+    date: '2026-07-27',
+    title: 'Głosowanie na Discordzie i dokładniejsza punktacja',
+    changes: [
+      'Głosowanie o obecność prosto z Discorda: zaplanowany mecz dostaje kartę z przyciskami „Będę / Nie będę / Może” na osobnym kanale głosowań, a ogłoszenie z @everyone zostaje na kanale ogłoszeń.',
+      'Głosy z Discorda liczą się w systemie tak samo jak głosy ze strony — liczą się tylko kliknięcia kont Discord połączonych z graczem, a głos można zmienić klikając ponownie.',
+      'Punktacja LP na stronie meczu jest zwijana: od razu widać tylko sumę punktów każdego gracza, a „Szczegóły” rozwijają pełne rozliczenie — ile za co i według jakiego przelicznika.',
+      'Rozpis „jak powstało PR”: każda metryka (KDA, udział w killach, CS/min, obrażenia, złoto, wizja) z Twoją wartością, średnią meczu, normą, wagą pozycji i punktami.',
+      'Naprawione daty meczów: wszędzie pokazuje się i sortuje po dacie faktycznego startu gry — edycja czy ponowna akceptacja wyniku nie przesuwa już meczu w listach.',
+    ],
+  },
+  {
     version: 'v0.3.1',
     date: '2026-07-23',
     title: 'Opinie graczy i płynniejsze tło',

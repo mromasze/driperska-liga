@@ -18,4 +18,5 @@ public interface PlayerRepository extends JpaRepository<Player, UUID> {
     List<Player> findByActiveTrue();
     List<Player> findByIdIn(List<UUID> ids);
     Optional<Player> findByAccountId(UUID accountId);
+    Optional<Player> findByDiscordUserId(String discordUserId);
 }

@@ -3,6 +3,12 @@
 Wszystkie istotne zmiany Driperskiej Ligi są opisywane tutaj oraz w
 `frontend/src/content/releases.ts`, który zasila patch notes na stronie głównej.
 
+## v0.3.2 — 2026-07-27
+
+- Głosowanie RSVP przez Discord. Zaplanowanie meczu wysyła teraz dwie wiadomości: ogłoszenie z pingiem @everyone na kanał ogłoszeń oraz kartę głosowania z przyciskami „Będę / Nie będę / Może” na nowy kanał głosowań (`DISCORD_VOTE_CHANNEL_ID`, fallback do kanału ogłoszeń). Kliknięcia liczą się jako RSVP w systemie — tylko dla kont Discord połączonych z graczem (`discord_user_id`); pozostałe osoby dostają prywatną odpowiedź z odmową. Głos można zmienić klikając ponownie, potwierdzenia są efemeryczne (widzi je tylko głosujący). Backend łączy się z Discordem przez gateway (JDA, tylko odbiór interakcji — wysyłka nadal po REST); bez uprzywilejowanych intentów.
+- Szczegóły punktacji LP na stronie meczu są teraz zwijane: widać tylko sumę LP każdego gracza, a kliknięcie „Szczegóły” rozwija pełną matematykę — składniki LP (baza za wygraną/przegraną, występ = PR ÷ przelicznik, bonusy MVP/ACE/penta/quadra/bez śmierci) oraz tabelę „jak powstało PR”: każda metryka (KDA, udział w zabójstwach, CS/min, obrażenia/min, udział w złocie, wizja/min) z wartością gracza, średnią meczu, normą (średnia → 0,5, 2× średnia → 1,0), wagą roli i punktami PR (norma × waga × 100).
+- Naprawione daty meczów: listy (strona główna, historia gracza, panel admina, domyślne sortowanie `GET /api/v1/matches`) pokazują i sortują po dacie faktycznego startu meczu (`startedAt`), a nie po dacie utworzenia/akceptacji — edycja czy ponowna akceptacja wyniku nie przesuwa już meczu w listach. `startedAt` dodane do `MatchSummaryResponse`, `PlayerMatchEntry` i `RateableMatch`.
+
 ## v0.3.1 — 2026-07-23
 
 - Zagrywki w tle strony głównej przenikają się płynnie (fade in/out ~0,9 s): klip zaczyna się od zera, a ~1 s przed końcem wygasza się przed przełączeniem na kolejny. Respektuje „prefers-reduced-motion”.

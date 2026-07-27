@@ -49,7 +49,7 @@ public class MatchFeedbackService {
         for (Match match : matches) {
             MatchFeedback existing = feedbackRepository
                     .findByMatchIdAndVoterPlayerId(match.getId(), voter.getId()).orElse(null);
-            out.add(new RateableMatch(match.getId(), match.getCompletedAt(),
+            out.add(new RateableMatch(match.getId(), match.getStartedAt(), match.getCompletedAt(),
                     participants(match),
                     existing == null ? null : new MyFeedback(existing.getUpvotePlayerId(),
                             existing.getDownvotePlayerId(), existing.getNote())));

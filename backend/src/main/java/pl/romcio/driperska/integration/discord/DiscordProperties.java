@@ -12,6 +12,7 @@ public class DiscordProperties {
     private String resultsChannelId;
     private String announceChannelId;
     private String patchNotesChannelId;
+    private String voteChannelId;
 
     public boolean configured() {
         return StringUtils.hasText(botToken) && StringUtils.hasText(guildId);
@@ -33,6 +34,13 @@ public class DiscordProperties {
     public boolean patchNotesChannelConfigured() {
         return StringUtils.hasText(botToken) && StringUtils.hasText(patchNotesChannel());
     }
+    /** Channel for RSVP vote messages — falls back to the announcements channel when not set separately. */
+    public String voteChannel() {
+        return StringUtils.hasText(voteChannelId) ? voteChannelId : announceChannel();
+    }
+    public boolean voteChannelConfigured() {
+        return StringUtils.hasText(botToken) && StringUtils.hasText(voteChannel());
+    }
     public String getBotToken() { return botToken; }
     public void setBotToken(String botToken) { this.botToken = botToken; }
     public String getGuildId() { return guildId; }
@@ -43,5 +51,7 @@ public class DiscordProperties {
     public void setAnnounceChannelId(String announceChannelId) { this.announceChannelId = announceChannelId; }
     public String getPatchNotesChannelId() { return patchNotesChannelId; }
     public void setPatchNotesChannelId(String patchNotesChannelId) { this.patchNotesChannelId = patchNotesChannelId; }
+    public String getVoteChannelId() { return voteChannelId; }
+    public void setVoteChannelId(String voteChannelId) { this.voteChannelId = voteChannelId; }
 }
 

@@ -4,7 +4,6 @@ import jakarta.validation.Valid;
 import java.util.UUID;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Sort;
-import org.springframework.data.web.PageableDefault;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 import pl.romcio.driperska.common.domain.Side;
@@ -53,13 +52,25 @@ public class MatchController {
         this.ocrService = ocrService;
     }
 
+    /**
+     * Lists ordered by the actual game start (startedAt), never by creation/update time — edits
+     * and approvals must not reshuffle the list. Matches not started yet fall back to createdAt.
+     */
+    private static final Sort DEFAULT_LIST_SORT = Sort.by(
+            Sort.Order.desc("startedAt").with(Sort.NullHandling.NULLS_LAST),
+            Sort.Order.desc("createdAt"));
+
     @GetMapping
     public PageResponse<MatchSummaryResponse> list(
             @RequestParam(required = false) MatchStatus status,
             @RequestParam(required = false) UUID seasonId,
-            @PageableDefault(sort = "createdAt", direction = Sort.Direction.DESC) Pageable pageable) {
+            Pageable pageable) {
+        Pageable effectivePageable = pageable.getSort().isSorted() ? pageable
+                : org.springframework.data.domain.PageRequest.of(
+                        pageable.getPageNumber(), pageable.getPageSize(), DEFAULT_LIST_SORT);
         MatchStatus effective = CurrentAccount.optional().isPresent() ? status : MatchStatus.APPROVED;
-        return PageResponse.of(matchService.list(effective, seasonId, pageable).map(assembler::toSummary));
+        return PageResponse.of(matchService.list(effective, seasonId, effectivePageable)
+                .map(assembler::toSummary));
     }
 
     @GetMapping("/{id}")

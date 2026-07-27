@@ -141,6 +141,43 @@ public class DiscordClient {
         }
     }
 
+    /**
+     * Posts an RSVP vote message (Tak/Nie/Może buttons) for a planned match to the vote channel.
+     * The button custom_id carries the planned-match id — the gateway listener
+     * ({@link DiscordRsvpGateway}) turns clicks into RSVP votes of linked players.
+     */
+    public Delivery sendRsvpMessage(String content, java.util.UUID plannedMatchId) {
+        if (!properties.voteChannelConfigured()) {
+            return Delivery.failed("Kanał głosowań Discord nie jest skonfigurowany (DISCORD_VOTE_CHANNEL_ID)");
+        }
+        try {
+            ComponentRow row = new ComponentRow(1, List.of(
+                    new ButtonComponent(2, 3, "Będę", rsvpId(plannedMatchId, "YES"), new Emoji("✅")),
+                    new ButtonComponent(2, 4, "Nie będę", rsvpId(plannedMatchId, "NO"), new Emoji("❌")),
+                    new ButtonComponent(2, 2, "Może", rsvpId(plannedMatchId, "MAYBE"), new Emoji("❓"))));
+            client.post().uri(BASE + "/channels/" + properties.voteChannel() + "/messages")
+                    .header("Authorization", "Bot " + properties.getBotToken())
+                    .body(new VoteMessageRequest(content,
+                            new AllowedMentions(List.of(), List.of()), List.of(row)))
+                    .retrieve().toBodilessEntity();
+            return Delivery.resultSent(properties.voteChannel());
+        } catch (RestClientResponseException ex) {
+            int s = ex.getStatusCode().value();
+            String msg = (s == 401) ? "Nieprawidłowy token bota"
+                    : (s == 403) ? "Bot nie ma uprawnień do pisania na kanale głosowań"
+                    : (s == 404) ? "Kanał głosowań nie istnieje — sprawdź DISCORD_VOTE_CHANNEL_ID"
+                    : "Discord odrzucił wiadomość głosowania (HTTP " + s + ")";
+            return Delivery.failed(msg);
+        } catch (RestClientException ex) {
+            return Delivery.failed("Brak połączenia z Discordem");
+        }
+    }
+
+    /** custom_id of an RSVP vote button: "rsvp:{plannedMatchId}:{YES|NO|MAYBE}". */
+    public static String rsvpId(java.util.UUID plannedMatchId, String response) {
+        return "rsvp:" + plannedMatchId + ":" + response;
+    }
+
     public Delivery sendLoginMessage(String discordName, String knownUserId, String message) {
         if (!properties.configured()) {
             return Delivery.failed("Bot Discord nie jest skonfigurowany (DISCORD_BOT_TOKEN/DISCORD_GUILD_ID)");
@@ -273,6 +310,13 @@ public class DiscordClient {
     public record AllowedMentions(List<String> parse, List<String> users) {}
     public record MessageRequest(String content,
                                  @JsonProperty("allowed_mentions") AllowedMentions allowedMentions) {}
+    public record VoteMessageRequest(String content,
+                                     @JsonProperty("allowed_mentions") AllowedMentions allowedMentions,
+                                     List<ComponentRow> components) {}
+    public record ComponentRow(int type, List<ButtonComponent> components) {}
+    public record ButtonComponent(int type, int style, String label,
+                                  @JsonProperty("custom_id") String customId, Emoji emoji) {}
+    public record Emoji(String name) {}
 
     private static class DiscordLookupException extends RuntimeException {
         DiscordLookupException(String message) { super(message); }

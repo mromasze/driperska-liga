@@ -67,7 +67,7 @@ export interface PlayerMatchEntry {
   matchId: string; side: Side; role: Role; won: boolean; championId: number | null;
   championName: string | null; championIconUrl: string | null; kills: number; deaths: number;
   assists: number; kda: number; performanceRating: number | null; lpAwarded: number | null;
-  mvp: boolean; completedAt: string | null;
+  mvp: boolean; startedAt: string | null; completedAt: string | null;
 }
 
 export interface Season { id: string; name: string; startDate: string | null; endDate: string | null; status: SeasonStatus; }
@@ -78,7 +78,12 @@ export interface RankingRow {
 }
 
 export interface LpComponent { label: string; points: number; }
-export interface LpBreakdown { components: LpComponent[]; total: number; formula: string; }
+export interface PrMetric {
+  key: string; value: number; average: number; normalized: number; weight: number; points: number;
+}
+export interface LpBreakdown {
+  components: LpComponent[]; total: number; formula: string; prMetrics: PrMetric[];
+}
 export interface MatchParticipant {
   playerId: string; nickname: string; avatarUrl: string | null; side: Side; role: Role;
   championId: number | null; championName: string | null; championIconUrl: string | null;
@@ -94,7 +99,8 @@ export interface Approval {
 }
 export interface MatchSummary {
   id: string; seasonId: string; status: MatchStatus; winningSide: Side | null;
-  durationSeconds: number | null; createdAt: string; completedAt: string | null; participantCount: number;
+  durationSeconds: number | null; createdAt: string; startedAt: string | null;
+  completedAt: string | null; participantCount: number;
 }
 export interface RiotMatchInfo {
   tournamentCode: string | null; gameId: string | null; matchId: string | null;
@@ -136,7 +142,8 @@ export interface MatchFeedbackSummary { responses: number; players: PlayerFeedba
 export interface FeedbackParticipant { playerId: string; nickname: string; side: Side; role: Role; }
 export interface MyFeedback { upvotePlayerId: string | null; downvotePlayerId: string | null; note: string | null; }
 export interface RateableMatch {
-  matchId: string; completedAt: string | null; participants: FeedbackParticipant[]; myFeedback: MyFeedback | null;
+  matchId: string; startedAt: string | null; completedAt: string | null;
+  participants: FeedbackParticipant[]; myFeedback: MyFeedback | null;
 }
 
 export type RsvpResponse = 'YES' | 'NO' | 'MAYBE';

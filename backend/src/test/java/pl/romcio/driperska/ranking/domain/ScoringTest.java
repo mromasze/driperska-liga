@@ -63,6 +63,26 @@ class ScoringTest {
     }
 
     @Test
+    void detailedPrExposesMetricsThatAddUpToPr() {
+        MatchStatsContext ctx = sampleMatch();
+        Map<UUID, RatingCalculator.PrDetail> detailed = rating.computeDetailed(ctx, cfg);
+        Map<UUID, Double> plain = rating.computePerformance(ctx, cfg);
+
+        assertThat(detailed).hasSameSizeAs(ctx.participants());
+        for (ParticipantInput p : ctx.participants()) {
+            RatingCalculator.PrDetail d = detailed.get(p.participantId());
+            // Same PR as the plain computation and six explained metrics per participant.
+            assertThat(d.pr()).isEqualTo(plain.get(p.participantId()));
+            assertThat(d.metrics()).hasSize(6);
+            double sum = d.metrics().stream().mapToDouble(RatingCalculator.PrMetricDetail::points).sum();
+            assertThat(sum).isCloseTo(d.pr(), org.assertj.core.data.Offset.offset(0.1));
+            for (RatingCalculator.PrMetricDetail m : d.metrics()) {
+                assertThat(m.normalized()).isBetween(0.0, 1.0);
+            }
+        }
+    }
+
+    @Test
     void mmrIsZeroSumWithoutPrModulation() {
         MatchStatsContext ctx = sampleMatch();
         ScoringConfig noMod = new ScoringConfig(cfg.lpWin(), cfg.lpLoss(), cfg.lpPerformanceDivisor(),

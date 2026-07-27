@@ -20,7 +20,7 @@ export function HomePage() {
   const matches = useMatches({ status: 'APPROVED', size: 12 });
   const ranking = useRanking(season.data?.id);
   const recentIds = (matches.data?.content ?? []).slice()
-    .sort((a, b) => (b.completedAt ?? '').localeCompare(a.completedAt ?? ''))
+    .sort((a, b) => (b.startedAt ?? b.completedAt ?? '').localeCompare(a.startedAt ?? a.completedAt ?? ''))
     .slice(0, 6).map((match) => match.id);
   const details = useMatchDetails(recentIds);
   const recent = details.map((detail) => detail.data).filter((detail): detail is MatchDetail => Boolean(detail));
