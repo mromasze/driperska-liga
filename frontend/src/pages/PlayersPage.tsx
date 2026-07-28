@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { usePlayers } from '../api/hooks/players';
 import { PlayerCard } from '../components/player/PlayerCard';
-import { LoadingState, EmptyState, ErrorState } from '../components/ui/States';
+import { CardGridSkeleton, EmptyState, ErrorState } from '../components/ui/States';
 import { cn } from '../lib/cn';
 import type { Role } from '../api/types';
 
@@ -57,7 +57,7 @@ export function PlayersPage() {
       </div>
 
       {players.isLoading ? (
-        <LoadingState />
+        <CardGridSkeleton count={6} />
       ) : players.isError ? (
         <ErrorState error={players.error} />
       ) : list.length === 0 ? (

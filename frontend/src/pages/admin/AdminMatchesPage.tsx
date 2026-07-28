@@ -4,7 +4,7 @@ import { useMatches, useShareMatchToDiscord } from '../../api/hooks/matches';
 import type { MatchStatus, MatchSummary } from '../../api/types';
 import { Badge } from '../../components/ui/Badge';
 import { Button } from '../../components/ui/Button';
-import { EmptyState, ErrorState, LoadingState } from '../../components/ui/States';
+import { EmptyState, ErrorState, SectionSkeleton } from '../../components/ui/States';
 import { formatDateTime } from '../../lib/format';
 
 const STATUSES: Array<{ value: MatchStatus | ''; label: string }> = [
@@ -93,7 +93,7 @@ export function AdminMatchesPage() {
   const [page, setPage] = useState(0);
   const matches = useMatches({ status: status || undefined, page, size: 25 });
 
-  if (matches.isLoading) return <LoadingState />;
+  if (matches.isLoading) return <SectionSkeleton title="Mecze" rows={6} />;
   if (matches.isError) return <ErrorState error={matches.error} />;
 
   const data = matches.data;

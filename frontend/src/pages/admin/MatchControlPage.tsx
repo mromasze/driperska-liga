@@ -18,16 +18,19 @@ import {
   useCancelMatch,
 } from '../../api/hooks/matches';
 import { DrawBoard } from '../../components/match/DrawBoard';
-import { useResetDraft, useStartDraft, usePauseDraft } from '../../api/hooks/drawLobby';
+import {
+  useAdminSetChampion, useResetDraft, useStartDraft, usePauseDraft,
+} from '../../api/hooks/drawLobby';
+import { useChampions } from '../../api/hooks/champions';
 import { usePlayers } from '../../api/hooks/players';
 import { ResultsForm } from '../../components/match/ResultsForm';
 import { Scoreboard } from '../../components/match/Scoreboard';
 import { PlayerOpinions } from '../../components/match/PlayerOpinions';
 import { Button } from '../../components/ui/Button';
 import { Badge } from '../../components/ui/Badge';
-import { LoadingState, ErrorState, EmptyState } from '../../components/ui/States';
+import { CardSkeleton, ErrorState, EmptyState } from '../../components/ui/States';
 import { roleLabel } from '../../lib/format';
-import type { DrawResult } from '../../api/types';
+import type { DrawLobby, DrawResult } from '../../api/types';
 
 export function MatchControlPage() {
   const { id = '' } = useParams<{ id: string }>();
@@ -58,7 +61,7 @@ export function MatchControlPage() {
   const [editingResults, setEditingResults] = useState(false);
   const [shareMsg, setShareMsg] = useState<string | null>(null);
 
-  if (match.isLoading) return <LoadingState />;
+  if (match.isLoading) return <CardSkeleton lines={6} />;
   if (match.isError) return <ErrorState error={match.error} />;
   if (!match.data) return <EmptyState title="Nie znaleziono meczu" />;
 
@@ -297,6 +300,7 @@ export function MatchControlPage() {
           {(resetDraft.isError || startManual.isError || pauseDraft.isError) && (
             <p className="text-sm text-loss">{(resetDraft.error ?? startManual.error ?? pauseDraft.error)?.message}</p>
           )}
+          {drawState.data && <DraftChampionFixer matchId={id} lobby={drawState.data} />}
         </section>
       )}
 
@@ -433,6 +437,81 @@ export function MatchControlPage() {
 
       {/* Peer feedback (shows once players have rated) — same view as the public match page. */}
       <PlayerOpinions matchId={id} />
+    </div>
+  );
+}
+
+/**
+ * Lets an admin correct a champion a player locked in by mistake, during or after the draft. The
+ * pick order comes from the draft's step pointer, so overwriting a slot here never moves whose turn
+ * it is; the new champion still has to be one nobody else banned or picked.
+ */
+function DraftChampionFixer({ matchId, lobby }: { matchId: string; lobby: DrawLobby }) {
+  const setChampion = useAdminSetChampion(matchId);
+  const champions = useChampions();
+  const [playerId, setPlayerId] = useState('');
+  const [championId, setChampionId] = useState('');
+
+  const slots = [...lobby.blue, ...lobby.red];
+  const taken = new Set<number>([
+    ...(lobby.draft?.blueBans ?? []),
+    ...(lobby.draft?.redBans ?? []),
+    ...slots.map((s) => s.championId).filter((c): c is number => c != null),
+  ]);
+  const current = slots.find((s) => s.playerId === playerId);
+  const available = (champions.data ?? []).filter(
+    (c) => !taken.has(c.id) || c.id === current?.championId,
+  );
+  const byId = new Map((champions.data ?? []).map((c) => [c.id, c]));
+
+  return (
+    <div className="rounded-lg border border-line bg-[color:var(--bg)]/60 p-4">
+      <div className="mb-3">
+        <div className="kicker">Podmiana postaci</div>
+        <p className="text-xs text-text-lo">
+          Gdy ktoś zablokował złą postać. Kolejność draftu pozostaje bez zmian.
+        </p>
+      </div>
+      <div className="mb-3 flex flex-wrap gap-2 text-xs">
+        {slots.map((s) => {
+          const champ = s.championId != null ? byId.get(s.championId) : undefined;
+          return (
+            <span key={s.playerId}
+              className="rounded bg-bg-2 px-2 py-1 text-text-lo"
+              style={{ borderLeft: `3px solid ${s.side === 'BLUE' ? 'var(--blue)' : 'var(--red)'}` }}>
+              {s.nickname}: <strong className="text-text-hi">{champ?.name ?? '—'}</strong>
+            </span>
+          );
+        })}
+      </div>
+      <div className="flex flex-wrap items-end gap-3">
+        <label className="min-w-48 flex-1"><span className="kicker">Gracz</span>
+          <select className="form-control mt-1" value={playerId}
+            onChange={(e) => { setPlayerId(e.target.value); setChampionId(''); }}>
+            <option value="">Wybierz…</option>
+            {slots.map((s) => (
+              <option key={s.playerId} value={s.playerId}>
+                {s.nickname} ({s.side === 'BLUE' ? 'niebiescy' : 'czerwoni'})
+              </option>
+            ))}
+          </select>
+        </label>
+        <label className="min-w-48 flex-1"><span className="kicker">Nowa postać</span>
+          <select className="form-control mt-1" value={championId} disabled={!playerId}
+            onChange={(e) => setChampionId(e.target.value)}>
+            <option value="">— wyczyść slot —</option>
+            {available.map((c) => <option key={c.id} value={c.id}>{c.name}</option>)}
+          </select>
+        </label>
+        <Button variant="ghost" disabled={!playerId || setChampion.isPending}
+          onClick={() => setChampion.mutate(
+            { playerId, championId: championId ? Number(championId) : null },
+            { onSuccess: () => { setPlayerId(''); setChampionId(''); } },
+          )}>
+          {setChampion.isPending ? 'Zapisywanie…' : 'Podmień'}
+        </Button>
+      </div>
+      {setChampion.isError && <p className="mt-2 text-sm text-loss">{setChampion.error.message}</p>}
     </div>
   );
 }

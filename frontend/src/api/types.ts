@@ -185,6 +185,13 @@ export interface DraftView {
   blueBans: number[]; redBans: number[];
   sequence: DraftStepView[];
   swaps: DraftSwapView[];
+  /** Live pre-selection of the player on the clock, visible to both teams. */
+  hoverChampionId: number | null;
+  hoverPlayerId: string | null;
+  /** Step indexes filled in by the timeout rather than by a player. */
+  autoResolvedSteps: number[];
+  /** Length of one ban/pick step in seconds, for the timer bar. */
+  stepSeconds: number;
 }
 export interface DrawLobby {
   matchId: string; status: MatchStatus; round: number; requiredAccepts: number;

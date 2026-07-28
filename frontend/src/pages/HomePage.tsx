@@ -7,7 +7,7 @@ import { MatchCard } from '../components/match/MatchCard';
 import { RankingTable } from '../components/ranking/RankingTable';
 import { StatTile } from '../components/ui/StatTile';
 import { Button } from '../components/ui/Button';
-import { LoadingState, EmptyState, ErrorState } from '../components/ui/States';
+import { CardGridSkeleton, EmptyState, ErrorState, TableSkeleton } from '../components/ui/States';
 import { ScoringInfo } from '../components/ScoringInfo';
 import { HeroVideoBackground } from '../components/highlight/HeroVideoBackground';
 import { RELEASES } from '../content/releases';
@@ -61,7 +61,7 @@ export function HomePage() {
           <div className="kicker">Świeżo z Riftu</div>
         </div>
         {matches.isError ? <ErrorState error={matches.error} />
-          : matches.isLoading ? <LoadingState /> : recent.length === 0
+          : matches.isLoading ? <CardGridSkeleton count={3} /> : recent.length === 0
           ? <EmptyState title="Brak rozegranych meczów" description="Gdy pierwszy mecz zostanie zatwierdzony, pojawi się tutaj." />
           : <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">{recent.map((match) => <MatchCard key={match.id} match={match} />)}</div>}
       </section>
@@ -72,7 +72,7 @@ export function HomePage() {
           <Link to="/ranking" className="text-sm text-gold hover:underline">Pełny ranking →</Link>
         </div>
         {ranking.isError ? <ErrorState error={ranking.error} />
-          : ranking.isLoading ? <LoadingState /> : (ranking.data?.length ?? 0) === 0
+          : ranking.isLoading ? <TableSkeleton rows={5} columns={6} /> : (ranking.data?.length ?? 0) === 0
           ? <EmptyState title="Ranking jest pusty" />
           : <RankingTable rows={(ranking.data ?? []).slice(0, 5)} />}
       </section>

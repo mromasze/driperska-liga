@@ -172,6 +172,62 @@ public class DraftService {
         persist(matchId, state);
     }
 
+    /**
+     * Live pre-selection of the player on the clock. Broadcast to both teams so the whole lobby sees
+     * what is about to be locked; a null champion clears it. Only the player whose turn it is may set
+     * a hover, and it never changes the draft itself.
+     */
+    @Transactional
+    public void hover(UUID matchId, UUID accountId, Integer championId) {
+        Match match = requireDrafting(matchId);
+        DraftState state = load(matchId);
+        DraftState.Step step = state.current();
+        if (step == null) return;
+        UUID playerId = player(accountId).getId();
+        UUID onClock = step.type == StepType.BAN
+                ? state.captainFor(step.side)
+                : pickerId(match, state, step.side);
+        if (onClock == null || !onClock.equals(playerId)) {
+            throw new BusinessRuleException("Podświetlać postać może tylko gracz, do którego należy tura");
+        }
+        if (championId != null && !available(match, state).contains(championId)) {
+            throw new BusinessRuleException("Ta postać jest już zbanowana lub wybrana");
+        }
+        state.hoverChampionId = championId;
+        state.hoverPlayerId = championId == null ? null : playerId;
+        persist(matchId, state);
+    }
+
+    /**
+     * Admin correction of a single player's champion, for the common case of somebody locking in the
+     * wrong one. Allowed while the draft is running and after it finished; the pick order is derived
+     * from the step pointer, so this never moves whose turn it is. The champion must still be free
+     * (its previous owner's slot is what gets overwritten).
+     */
+    @Transactional
+    public void adminSetChampion(UUID matchId, UUID playerId, Integer championId, UUID actor) {
+        Match match = matchService.get(matchId);
+        if (match.getStatus() != MatchStatus.DRAFTING && match.getStatus() != MatchStatus.DRAFTED) {
+            throw new InvalidTransitionException(
+                    "Postać można podmienić tylko w trakcie draftu lub po jego zakończeniu");
+        }
+        MatchParticipant target = participant(match, playerId);
+        DraftState state = load(matchId);
+        if (championId != null && !championId.equals(target.getChampionId())) {
+            if (championRepository.findById(championId).isEmpty()) {
+                throw new BusinessRuleException("Nie ma takiej postaci");
+            }
+            if (unavailable(match, state).contains(championId)) {
+                throw new BusinessRuleException("Ta postać jest już zbanowana lub wybrana");
+            }
+        }
+        target.setChampionId(championId);
+        persist(matchId, state);
+        eventRecorder.record(matchId, MatchEventType.DRAFT_SWAP, actor,
+                java.util.Map.of("adminOverride", true, "playerId", playerId,
+                        "championId", championId == null ? "" : championId));
+    }
+
     // --- swaps (post-draft) -----------------------------------------------
 
     @Transactional
@@ -231,7 +287,12 @@ public class DraftService {
 
     // --- timeout -----------------------------------------------------------
 
-    /** Auto-resolve the current step with a random available champion (called by the scheduler). */
+    /**
+     * Auto-resolve the current step when the clock runs out (called by the scheduler). The player's
+     * own pre-selection wins if they had one highlighted but never pressed lock-in; otherwise a random
+     * available champion is used. Either way the slot ends up filled and therefore visible to everyone
+     * the moment the timer expires — a step must never be left uncovered.
+     */
     @Transactional
     public void resolveExpired(UUID matchId) {
         Match match = matchService.get(matchId);
@@ -240,13 +301,17 @@ public class DraftService {
         DraftState.Step step = state.current();
         if (step == null || state.deadline == null || state.deadline.isAfter(Instant.now())) return;
 
-        Integer champ = randomAvailable(match, state);
+        Set<Integer> free = available(match, state);
+        Integer champ = state.hoverChampionId != null && free.contains(state.hoverChampionId)
+                ? state.hoverChampionId
+                : randomAvailable(match, state);
         if (step.type == StepType.BAN) {
             if (champ != null) state.bansFor(step.side).add(champ);
         } else {
             MatchParticipant slot = currentPicker(match, state, step.side);
             if (slot != null && champ != null) slot.setChampionId(champ);
         }
+        if (champ != null) state.autoResolvedSteps.add(state.currentIndex);
         advance(match, state);
         persist(matchId, state);
     }
@@ -277,12 +342,15 @@ public class DraftService {
                 state.blueCaptain, state.redCaptain, currentPlayerId, state.paused,
                 List.copyOf(state.blueOrder), List.copyOf(state.redOrder),
                 List.copyOf(state.blueBans), List.copyOf(state.redBans),
-                sequence, swaps);
+                sequence, swaps,
+                state.hoverChampionId, state.hoverPlayerId,
+                List.copyOf(state.autoResolvedSteps), stepSeconds);
     }
 
     // --- helpers -----------------------------------------------------------
 
     private void advance(Match match, DraftState state) {
+        state.clearHover();
         state.currentIndex++;
         if (state.currentIndex >= state.sequence.size()) {
             state.complete = true;
@@ -362,13 +430,17 @@ public class DraftService {
         return ids;
     }
 
-    /** The participant whose turn it is to pick: the Nth pick on a side goes to order[N] (top→bottom). */
+    /**
+     * The participant whose turn it is to pick: the Nth pick on a side goes to order[N] (top→bottom).
+     * N comes from the step pointer, not from how many champions are currently assigned — otherwise
+     * an admin fixing somebody's champion, or a step that timed out with no champion available, would
+     * silently shift whose turn it is.
+     */
     private MatchParticipant currentPicker(Match match, DraftState state, Side side) {
         List<UUID> order = state.orderFor(side);
-        long locked = match.getParticipants().stream()
-                .filter(p -> p.getSide() == side && p.getChampionId() != null).count();
-        if (locked >= order.size()) return null;
-        UUID pid = order.get((int) locked);
+        int consumed = state.picksConsumed(side);
+        if (consumed >= order.size()) return null;
+        UUID pid = order.get(consumed);
         return match.getParticipants().stream()
                 .filter(p -> p.getPlayerId().equals(pid)).findFirst().orElse(null);
     }

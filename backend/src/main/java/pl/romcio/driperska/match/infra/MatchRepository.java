@@ -11,16 +11,34 @@ import pl.romcio.driperska.match.domain.Match;
 import pl.romcio.driperska.match.domain.MatchStatus;
 
 public interface MatchRepository extends JpaRepository<Match, UUID> {
-    @Override
-    @EntityGraph(attributePaths = "participants")
-    Page<Match> findAll(Pageable pageable);
+
+    /**
+     * List ordering for every paginated match listing: by the actual game start, falling back to
+     * creation time for matches that have not started. Expressed as JPQL (not a {@link Sort} with
+     * {@code NULLS LAST}) on purpose — Spring Data runs derived queries through the Criteria API,
+     * and Hibernate 6 rejects null precedence there with
+     * {@code UnsupportedOperationException: Applying Null Precedence using Criteria Queries is not
+     * yet supported}, which turned every GET /matches into a 500.
+     */
+    String LIST_ORDER = " order by coalesce(m.startedAt, m.createdAt) desc, m.createdAt desc";
 
     @EntityGraph(attributePaths = "participants")
-    Page<Match> findByStatus(MatchStatus status, Pageable pageable);
+    @Query("select m from Match m" + LIST_ORDER)
+    Page<Match> findAllForListing(Pageable pageable);
+
     @EntityGraph(attributePaths = "participants")
-    Page<Match> findByStatusAndSeasonId(MatchStatus status, UUID seasonId, Pageable pageable);
+    @Query("select m from Match m where m.status = :status" + LIST_ORDER)
+    Page<Match> findByStatus(@Param("status") MatchStatus status, Pageable pageable);
+
     @EntityGraph(attributePaths = "participants")
-    Page<Match> findBySeasonId(UUID seasonId, Pageable pageable);
+    @Query("select m from Match m where m.status = :status and m.seasonId = :seasonId" + LIST_ORDER)
+    Page<Match> findByStatusAndSeasonId(@Param("status") MatchStatus status,
+                                        @Param("seasonId") UUID seasonId, Pageable pageable);
+
+    @EntityGraph(attributePaths = "participants")
+    @Query("select m from Match m where m.seasonId = :seasonId" + LIST_ORDER)
+    Page<Match> findBySeasonId(@Param("seasonId") UUID seasonId, Pageable pageable);
+
     @EntityGraph(attributePaths = "participants")
     List<Match> findByStatusOrderByCompletedAtDesc(MatchStatus status);
 

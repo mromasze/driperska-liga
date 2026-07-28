@@ -5,7 +5,7 @@ import { useCurrentSeason } from '../../api/hooks/seasons';
 import { useCreateMatch } from '../../api/hooks/matches';
 import { Avatar } from '../../components/ui/Avatar';
 import { Button } from '../../components/ui/Button';
-import { LoadingState, ErrorState } from '../../components/ui/States';
+import { CardSkeleton, ErrorState } from '../../components/ui/States';
 import { ManualTeamBuilder } from '../../components/match/ManualTeamBuilder';
 import { cn } from '../../lib/cn';
 import { roleLabel } from '../../lib/format';
@@ -42,7 +42,7 @@ export function MatchCreatePage() {
     create.mutate(body, { onSuccess: (m) => navigate(`/admin/matches/${m.id}/control`) });
   };
 
-  if (players.isLoading) return <LoadingState />;
+  if (players.isLoading) return <CardSkeleton lines={6} />;
   if (players.isError) return <ErrorState error={players.error} />;
 
   const list = players.data?.content ?? [];

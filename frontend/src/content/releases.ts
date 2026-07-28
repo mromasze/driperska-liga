@@ -11,6 +11,24 @@ export interface ReleaseNote {
  */
 export const RELEASES: ReleaseNote[] = [
   {
+    version: 'v0.4.0',
+    date: '2026-07-28',
+    title: 'Draft na pełny ekran, dźwięki i naprawione listy meczów',
+    changes: [
+      'Naprawiony błąd, który wywalał wszystkie listy meczów (Pulpit, Akceptacje, lista meczów, licznik w menu zwracały 500).',
+      'Draft na cały ekran: obie drużyny, bany, zegar i pula postaci widoczne naraz, bez przewijania. Draft ma teraz własną zakładkę w panelu gracza i włącza się automatycznie, gdy admin go wystartuje.',
+      'Zaznaczoną postać widzą wszyscy w lobby — obie drużyny na żywo widzą, co gracz na zegarze zamierza wybrać albo zbanować.',
+      'Po upływie czasu postać zawsze się odsłania: jeśli zdążyłeś ją zaznaczyć, licznik zablokuje właśnie ją, a nie losową. Slot nigdy nie zostaje pusty.',
+      'Dźwięki w drafcie z suwakiem głośności: „twoja kolej”, lock-in, ban, ostatnie 5 sekund, koniec draftu i muzyka w tle.',
+      'Admin może podmienić komuś postać w trakcie draftu (gdy ktoś zablokował złą) — bez przestawiania kolejności picków.',
+      'Draft przestał zamierać po odświeżeniu strony: gdy połączenie na żywo padnie, plansza dalej się odświeża, a w nagłówku widać „tryb odświeżania”.',
+      'Nowe „Zapamiętaj mnie” przy logowaniu — sesja trwa do wylogowania i wraca sama po restarcie serwera.',
+      'Przy utracie połączenia z serwerem pojawia się jasny komunikat i wylogowanie, a po chwili ekran przerwy technicznej.',
+      'Loadingi na całej stronie: zamiast pustego ekranu ze spinnerem widać zarys treści, która się właśnie wczytuje.',
+      'Przy głosowaniu na obecność widać imiennie listę osób — kto będzie, kto może, a kto nie.',
+    ],
+  },
+  {
     version: 'v0.3.2',
     date: '2026-07-27',
     title: 'Głosowanie na Discordzie i dokładniejsza punktacja',

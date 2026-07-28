@@ -7,17 +7,21 @@ import { usePlannedMatches, useRsvpPlannedMatch } from '../../api/hooks/planned'
 import { useRateableMatches, useSubmitFeedback } from '../../api/hooks/feedback';
 import { useChangePassword } from '../../api/hooks/auth';
 import { useMyPlayer, useUpdateMyPlayer, useUploadMyAvatar } from '../../api/hooks/players';
-import type { DrawLobby, LobbyPlayer, Role } from '../../api/types';
+import type { DrawLobby, LobbyPlayer, PlannedMatch, Role } from '../../api/types';
+import type { StreamState } from '../../api/hooks/drawLobby';
 import { Avatar } from '../../components/ui/Avatar';
 import { Badge } from '../../components/ui/Badge';
 import { Button } from '../../components/ui/Button';
-import { ErrorState, LoadingState } from '../../components/ui/States';
+import { CardSkeleton, ErrorState, SectionSkeleton } from '../../components/ui/States';
 import { roleLabel, formatDateTime } from '../../lib/format';
 import type { RsvpResponse, RateableMatch } from '../../api/types';
 
 const ROLES: Role[] = ['TOP', 'JUNGLE', 'MID', 'ADC', 'SUPPORT'];
 
-type PanelTab = 'dashboard' | 'ratings' | 'profile';
+type PanelTab = 'dashboard' | 'draft' | 'ratings' | 'profile';
+
+/** Lobby phases that belong on the dedicated draft tab rather than the dashboard. */
+const DRAFT_STATUSES = ['DRAFT_READY', 'DRAFTING', 'DRAFTED'];
 
 export function PlayerPanelPage() {
   const player = useMyPlayer();
@@ -31,6 +35,7 @@ export function PlayerPanelPage() {
   const fileInput = useRef<HTMLInputElement>(null);
 
   const [tab, setTab] = useState<PanelTab>('dashboard');
+  const [draftFullscreen, setDraftFullscreen] = useState(true);
   const [mainRole, setMainRole] = useState<Role>('MID');
   const [secondaryRole, setSecondaryRole] = useState<Role | ''>('');
   const [riotId, setRiotId] = useState('');
@@ -49,14 +54,42 @@ export function PlayerPanelPage() {
     setFavorites(player.data.favoriteChampionIds ?? []);
   }, [player.data]);
 
-  if (player.isLoading) return <LoadingState />;
+  const lobby = draw.data;
+  const draftActive = DRAFT_STATUSES.includes(lobby?.status ?? '');
+
+  // Jump straight to the board when the admin starts the draft, and back out when it is over, so a
+  // player who was on another tab does not miss their turn.
+  useEffect(() => {
+    if (draftActive) setTab('draft');
+    else setTab((current) => (current === 'draft' ? 'dashboard' : current));
+  }, [draftActive]);
+
+  if (player.isLoading) return <PanelSkeleton />;
   if (player.isError || !player.data) return <ErrorState error={player.error} />;
 
   const p = player.data;
-  const lobby = draw.data;
   const myVote = lobby?.acceptedPlayerIds.includes(p.id)
     ? 'ACCEPT'
     : lobby?.rejectedPlayerIds.includes(p.id) ? 'REJECT' : null;
+  const tabs: { id: PanelTab; label: string }[] = [
+    { id: 'dashboard', label: 'Dashboard' },
+    ...(draftActive ? [{ id: 'draft' as PanelTab, label: 'Draft' }] : []),
+    { id: 'ratings', label: 'Ocena' },
+    { id: 'profile', label: 'Profil i ustawienia' },
+  ];
+
+  // The draft board owns the whole viewport, so the panel chrome steps aside while it is open.
+  if (tab === 'draft' && lobby && draftFullscreen) {
+    return (
+      <DraftOrWaiting
+        lobby={lobby}
+        myPlayerId={p.id}
+        streamState={draw.streamState}
+        fullscreen
+        onCollapse={() => setDraftFullscreen(false)}
+      />
+    );
+  }
 
   const toggleChampion = (id: number) => {
     setFavorites((current) => current.includes(id)
@@ -84,7 +117,7 @@ export function PlayerPanelPage() {
       </header>
 
       <nav className="flex flex-wrap gap-2 border-b border-line">
-        {TABS.map((t) => (
+        {tabs.map((t) => (
           <button
             key={t.id}
             type="button"
@@ -102,20 +135,38 @@ export function PlayerPanelPage() {
                   {ratingsCount}
                 </span>
               )}
+              {t.id === 'draft' && (
+                <span className="h-2 w-2 animate-pulse rounded-full bg-gold" aria-label="w toku" />
+              )}
             </span>
           </button>
         ))}
       </nav>
 
+      {tab === 'draft' && lobby && (
+        <DraftOrWaiting
+          lobby={lobby}
+          myPlayerId={p.id}
+          streamState={draw.streamState}
+          fullscreen={false}
+          onCollapse={() => setDraftFullscreen(true)}
+        />
+      )}
+
       {tab === 'dashboard' && (
         <div className="space-y-10">
-          <DrawVotingCard
-            lobby={lobby ?? undefined}
-            myPlayerId={p.id}
-            myVote={myVote}
-            pending={vote.isPending}
-            onVote={(decision) => lobby && vote.mutate({ matchId: lobby.matchId, decision })}
-          />
+          {draw.isLoading ? (
+            <CardSkeleton lines={4} />
+          ) : (
+            <DrawVotingCard
+              lobby={lobby ?? undefined}
+              myPlayerId={p.id}
+              myVote={myVote}
+              pending={vote.isPending}
+              onVote={(decision) => lobby && vote.mutate({ matchId: lobby.matchId, decision })}
+              onOpenDraft={() => { setDraftFullscreen(true); setTab('draft'); }}
+            />
+          )}
 
           <UpcomingMatches />
         </div>
@@ -123,8 +174,9 @@ export function PlayerPanelPage() {
 
       {tab === 'ratings' && (
         <div className="space-y-10">
+          {rateable.isLoading && <CardSkeleton lines={5} />}
           <MatchRatingSurvey myPlayerId={p.id} />
-          {(rateable.data?.length ?? 0) === 0 && (
+          {!rateable.isLoading && (rateable.data?.length ?? 0) === 0 && (
             <section className="glass grid-tex p-8 text-center">
               <div className="mx-auto mb-3 grid h-11 w-11 place-items-center rounded-full bg-[color:var(--bg-2)] text-2xl">⭐</div>
               <h2 className="font-display text-2xl">Brak meczów do oceny</h2>
@@ -220,17 +272,43 @@ export function PlayerPanelPage() {
   );
 }
 
-const TABS: { id: PanelTab; label: string }[] = [
-  { id: 'dashboard', label: 'Dashboard' },
-  { id: 'ratings', label: 'Ocena' },
-  { id: 'profile', label: 'Profil i ustawienia' },
-];
-
-function DrawVotingCard({ lobby, myPlayerId, myVote, pending, onVote }: {
-  lobby?: DrawLobby; myPlayerId: string; myVote: 'ACCEPT' | 'REJECT' | null;
-  pending: boolean; onVote: (decision: 'ACCEPT' | 'REJECT') => void;
+/**
+ * The draft tab. Once the squad is locked the board itself takes over; before the draft is actually
+ * running (DRAFT_READY) there is nothing to draft yet, so the lineup and a short explanation stand in.
+ */
+function DraftOrWaiting({ lobby, myPlayerId, streamState, fullscreen, onCollapse }: {
+  lobby: DrawLobby; myPlayerId: string; streamState?: StreamState;
+  fullscreen: boolean; onCollapse: () => void;
 }) {
-  const secondsLeft = useCountdown(lobby?.voteDeadline ?? null);
+  if (lobby.draft) {
+    return (
+      <DraftBoard lobby={lobby} myPlayerId={myPlayerId} streamState={streamState}
+        fullscreen={fullscreen} onCollapse={onCollapse} />
+    );
+  }
+  return (
+    <section className="draw-stage glass grid-tex overflow-hidden p-5 sm:p-8">
+      <div className="mb-5">
+        <div className="kicker text-gold">Skład zatwierdzony</div>
+        <h2 className="mt-1 font-display text-3xl">Czekamy aż admin rozpocznie draft</h2>
+        <p className="mt-2 text-sm text-text-lo">
+          Wskoczcie na Discorda / osobne lobby i ustalcie, kto gdzie gra. Draft ruszy, gdy admin da sygnał —
+          ta zakładka przełączy się automatycznie.
+        </p>
+      </div>
+      <div className="grid gap-4 md:grid-cols-2">
+        <LobbyTeam title="Niebieska strona" players={lobby.blue} color="var(--blue)" myPlayerId={myPlayerId} />
+        <LobbyTeam title="Czerwona strona" players={lobby.red} color="var(--red)" myPlayerId={myPlayerId} />
+      </div>
+    </section>
+  );
+}
+
+function DrawVotingCard({ lobby, myPlayerId, myVote, pending, onVote, onOpenDraft }: {
+  lobby?: DrawLobby; myPlayerId: string; myVote: 'ACCEPT' | 'REJECT' | null;
+  pending: boolean; onVote: (decision: 'ACCEPT' | 'REJECT') => void; onOpenDraft: () => void;
+}) {
+  const secondsLeft = useCountdown(lobby?.voteDeadline ?? null, lobby?.updatedAt);
   if (!lobby) {
     return (
       <section className="glass grid-tex p-8 text-center">
@@ -241,8 +319,39 @@ function DrawVotingCard({ lobby, myPlayerId, myVote, pending, onVote }: {
     );
   }
 
-  if (lobby.status === 'DRAFTING' || lobby.status === 'DRAFTED') {
-    return <DraftBoard lobby={lobby} myPlayerId={myPlayerId} />;
+  // The draft has its own tab; the dashboard only announces it and links across.
+  if (DRAFT_STATUSES.includes(lobby.status)) {
+    const drafting = lobby.status === 'DRAFTING';
+    return (
+      <section className="glass grid-tex p-6 text-center sm:p-8">
+        <div className="mx-auto mb-3 grid h-11 w-11 place-items-center rounded-full bg-[color:var(--gold)]/15 text-2xl">
+          {drafting ? '⚔' : '🛡'}
+        </div>
+        <h2 className="font-display text-2xl">
+          {drafting ? 'Trwa draft — bany i wybór postaci' : lobby.status === 'DRAFTED'
+            ? 'Draft zakończony — tworzymy lobby' : 'Skład zatwierdzony — draft zaraz ruszy'}
+        </h2>
+        <p className="mx-auto mt-2 max-w-md text-sm text-text-lo">
+          Cała plansza draftu jest w zakładce <strong className="text-text-hi">Draft</strong>.
+        </p>
+        <Button variant="gold" className="mt-4" onClick={onOpenDraft}>Otwórz draft →</Button>
+      </section>
+    );
+  }
+
+  if (lobby.status === 'LIVE') {
+    const mine = [...lobby.blue, ...lobby.red].find((pl) => pl.playerId === myPlayerId);
+    const sl = mine?.side === 'BLUE' ? 'NIEBIESKĄ' : 'CZERWONĄ';
+    return (
+      <section className="draw-stage glass grid-tex overflow-hidden p-5 sm:p-8">
+        <div className="mb-5">
+          <div className="kicker text-gold">Mecz trwa</div>
+          <h2 className="mt-1 font-display text-3xl">Kto kim gra</h2>
+          {mine && <p className="mt-2 text-sm font-semibold text-cyan">Grasz stroną {sl}. Powodzenia na Rifcie!</p>}
+        </div>
+        <GameLineup lobby={lobby} myPlayerId={myPlayerId} />
+      </section>
+    );
   }
 
   if (lobby.status === 'RESULTS_SUBMITTED') {
@@ -253,39 +362,6 @@ function DrawVotingCard({ lobby, myPlayerId, myVote, pending, onVote }: {
         <p className="mt-2 text-sm text-text-lo">
           Wyniki zostały wysłane. Oczekiwanie na zakończenie meczu przez admina — potem pojawi się ankieta oceny.
         </p>
-      </section>
-    );
-  }
-
-  if (lobby.status === 'DRAFT_READY') {
-    return (
-      <section className="draw-stage glass grid-tex overflow-hidden p-5 sm:p-8">
-        <div className="mb-5">
-          <div className="kicker text-gold">Skład zatwierdzony</div>
-          <h2 className="mt-1 font-display text-3xl">Czekamy aż admin rozpocznie draft</h2>
-          <p className="mt-2 text-sm text-text-lo">
-            Wskoczcie na Discorda / osobne lobby i ustalcie, kto gdzie gra. Draft ruszy, gdy admin da sygnał.
-          </p>
-        </div>
-        <div className="grid gap-4 md:grid-cols-2">
-          <LobbyTeam title="Niebieska strona" players={lobby.blue} color="var(--blue)" myPlayerId={myPlayerId} />
-          <LobbyTeam title="Czerwona strona" players={lobby.red} color="var(--red)" myPlayerId={myPlayerId} />
-        </div>
-      </section>
-    );
-  }
-
-  if (lobby.status === 'LIVE') {
-    const mine = [...lobby.blue, ...lobby.red].find((p) => p.playerId === myPlayerId);
-    const sl = mine?.side === 'BLUE' ? 'NIEBIESKĄ' : 'CZERWONĄ';
-    return (
-      <section className="draw-stage glass grid-tex overflow-hidden p-5 sm:p-8">
-        <div className="mb-5">
-          <div className="kicker text-gold">Mecz trwa</div>
-          <h2 className="mt-1 font-display text-3xl">Kto kim gra</h2>
-          {mine && <p className="mt-2 text-sm font-semibold text-cyan">Grasz stroną {sl}. Powodzenia na Rifcie!</p>}
-        </div>
-        <GameLineup lobby={lobby} myPlayerId={myPlayerId} />
       </section>
     );
   }
@@ -421,17 +497,18 @@ function VoteTally({ lobby }: { lobby: DrawLobby }) {
 function Field({ label, children }: { label: string; children: React.ReactNode }) {
   return <label className="block"><span className="kicker">{label}</span><div className="mt-1">{children}</div></label>;
 }
+const RSVP_OPTIONS: { value: RsvpResponse; label: string; variant: 'gold' | 'ghost' | 'danger' }[] = [
+  { value: 'YES', label: '✓ Będę', variant: 'gold' },
+  { value: 'MAYBE', label: '? Może', variant: 'ghost' },
+  { value: 'NO', label: '✗ Nie', variant: 'danger' },
+];
+
 function UpcomingMatches() {
   const planned = usePlannedMatches();
   const rsvp = useRsvpPlannedMatch();
   const list = planned.data ?? [];
+  if (planned.isLoading) return <SectionSkeleton title="Nadchodzące mecze" rows={2} />;
   if (list.length === 0) return null;
-
-  const OPTIONS: { value: RsvpResponse; label: string; variant: 'gold' | 'ghost' | 'danger' }[] = [
-    { value: 'YES', label: '✓ Będę', variant: 'gold' },
-    { value: 'MAYBE', label: '? Może', variant: 'ghost' },
-    { value: 'NO', label: '✗ Nie', variant: 'danger' },
-  ];
 
   return (
     <section className="glass grid-tex p-5 sm:p-7">
@@ -449,7 +526,7 @@ function UpcomingMatches() {
                 <div className="mt-1 text-xs text-text-lo">Będzie: {m.yes} · Może: {m.maybe} · Nie: {m.no}</div>
               </div>
               <div className="flex gap-2">
-                {OPTIONS.map((o) => (
+                {RSVP_OPTIONS.map((o) => (
                   <Button key={o.value}
                     variant={m.myResponse === o.value ? o.variant : 'ghost'}
                     size="sm"
@@ -460,10 +537,65 @@ function UpcomingMatches() {
                 ))}
               </div>
             </div>
+            <AttendanceList entries={m.responses} />
           </div>
         ))}
       </div>
     </section>
+  );
+}
+
+/**
+ * Who has actually declared what, next to the vote itself — a tally alone does not tell you whether
+ * the two people you need are in.
+ */
+function AttendanceList({ entries }: { entries: PlannedMatch['responses'] }) {
+  const groups: { value: RsvpResponse; label: string; tone: string }[] = [
+    { value: 'YES', label: 'Będą', tone: 'text-win' },
+    { value: 'MAYBE', label: 'Może', tone: 'text-pending' },
+    { value: 'NO', label: 'Nie będą', tone: 'text-loss' },
+  ];
+  if (entries.length === 0) {
+    return (
+      <p className="mt-3 border-t border-line pt-3 text-xs text-text-lo">
+        Nikt jeszcze nie zagłosował.
+      </p>
+    );
+  }
+  return (
+    <div className="mt-3 grid gap-3 border-t border-line pt-3 sm:grid-cols-3">
+      {groups.map((g) => {
+        const names = entries.filter((e) => e.response === g.value);
+        return (
+          <div key={g.value}>
+            <div className={`kicker ${g.tone}`}>{g.label} · {names.length}</div>
+            {names.length === 0 ? (
+              <p className="mt-1 text-xs text-text-lo">—</p>
+            ) : (
+              <ul className="mt-1 space-y-0.5">
+                {names.map((e) => (
+                  <li key={e.playerId} className="truncate text-sm text-text-hi">{e.nickname}</li>
+                ))}
+              </ul>
+            )}
+          </div>
+        );
+      })}
+    </div>
+  );
+}
+
+function PanelSkeleton() {
+  return (
+    <div className="space-y-8">
+      <div className="space-y-2">
+        <div className="skeleton h-3 w-40" />
+        <div className="skeleton h-9 w-64" />
+      </div>
+      <div className="skeleton h-10 w-full max-w-md" />
+      <CardSkeleton lines={5} />
+      <SectionSkeleton title="Nadchodzące mecze" rows={2} />
+    </div>
   );
 }
 

@@ -59,22 +59,50 @@ let refreshInFlight: Promise<boolean> | null = null;
 
 async function refreshAccessToken(): Promise<boolean> {
   const { refreshToken } = useAuthStore.getState();
-  if (!refreshToken) return false;
+  if (refreshToken) {
+    const response = await fetch(buildUrl('/auth/refresh'), {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ refreshToken }),
+    });
+    if (response.ok) {
+      const data = (await response.json()) as RefreshResponse;
+      useAuthStore.getState().setAccessToken(data.accessToken, data.refreshToken);
+      return true;
+    }
+  }
+  // The refresh token is gone or rejected (it is scoped to the backend's boot id, so a restart kills
+  // it). With "remember me" on we can mint a whole new session instead of interrupting the user.
+  if (await reloginFromStoredCredentials()) return true;
+  useAuthStore.getState().clear();
+  return false;
+}
 
-  const response = await fetch(buildUrl('/auth/refresh'), {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ refreshToken }),
-  });
-
-  if (!response.ok) {
-    useAuthStore.getState().clear();
+/**
+ * Logs in again from remembered credentials. Written against `fetch` rather than the `api` helper on
+ * purpose: this runs *inside* the refresh path, and going back through `request` would re-enter the
+ * 401 interceptor.
+ */
+async function reloginFromStoredCredentials(): Promise<boolean> {
+  const { remember, credentials } = useAuthStore.getState();
+  if (!remember || !credentials) return false;
+  try {
+    const response = await fetch(buildUrl('/auth/login'), {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ username: credentials.username, password: credentials.password }),
+    });
+    if (!response.ok) {
+      // Password changed, account disabled, or a Turnstile challenge only a human can pass.
+      useAuthStore.getState().forgetCredentials();
+      return false;
+    }
+    useAuthStore.getState().setAuth((await response.json()) as RefreshResponse);
+    return true;
+  } catch {
+    // Network failure: keep the credentials, the ServerGate will retry once the backend is back.
     return false;
   }
-
-  const data = (await response.json()) as RefreshResponse;
-  useAuthStore.getState().setAccessToken(data.accessToken, data.refreshToken);
-  return true;
 }
 
 function ensureRefresh(): Promise<boolean> {

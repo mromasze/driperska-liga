@@ -57,9 +57,41 @@ public class DraftState {
     /** Admin pause: freezes the step timer; deadline is cleared and restored on resume. */
     public boolean paused;
     public int pausedRemainingSeconds;
+    /**
+     * Live pre-selection of the player on the clock ("hover"), broadcast to both teams so everyone
+     * sees what is about to be banned/picked — exactly like the in-client tournament draft. Cleared
+     * on every step advance.
+     */
+    public Integer hoverChampionId;
+    public UUID hoverPlayerId;
+    /**
+     * Steps whose champion was assigned by the timeout scheduler rather than by a player. Used by
+     * the UI to label a slot as auto-picked once the clock ran out.
+     */
+    public List<Integer> autoResolvedSteps = new ArrayList<>();
 
     public List<UUID> orderFor(Side side) {
         return side == Side.BLUE ? blueOrder : redOrder;
+    }
+
+    /**
+     * How many PICK steps this side has already consumed, i.e. the index into its draft order of the
+     * player currently on the clock. Derived from the step pointer rather than from how many
+     * champions happen to be assigned, so an admin correcting somebody's champion mid-draft never
+     * shifts whose turn it is.
+     */
+    public int picksConsumed(Side side) {
+        int consumed = 0;
+        for (int i = 0; i < currentIndex && i < sequence.size(); i++) {
+            Step step = sequence.get(i);
+            if (step.type == StepType.PICK && step.side == side) consumed++;
+        }
+        return consumed;
+    }
+
+    public void clearHover() {
+        hoverChampionId = null;
+        hoverPlayerId = null;
     }
 
     /** The canonical LoL tournament pick/ban order: 5 bans + 5 picks per team. */

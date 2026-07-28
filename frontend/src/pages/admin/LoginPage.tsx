@@ -4,14 +4,18 @@ import { useLogin, usePublicConfig } from '../../api/hooks/auth';
 import { Turnstile } from '../../components/Turnstile';
 import { Button } from '../../components/ui/Button';
 import { ApiError } from '../../api/client';
+import { useAuthStore } from '../../store/auth';
 
 export function LoginPage() {
   const login = useLogin();
   const config = usePublicConfig();
   const navigate = useNavigate();
   const location = useLocation();
-  const [username, setUsername] = useState('');
-  const [password, setPassword] = useState('');
+  const stored = useAuthStore((s) => s.credentials);
+  const storedRemember = useAuthStore((s) => s.remember);
+  const [username, setUsername] = useState(stored?.username ?? '');
+  const [password, setPassword] = useState(stored?.password ?? '');
+  const [remember, setRemember] = useState(storedRemember);
   const [turnstileToken, setTurnstileToken] = useState<string | null>(null);
 
   const turnstileEnabled = Boolean(config.data?.turnstileEnabled && config.data.turnstileSiteKey);
@@ -22,6 +26,11 @@ export function LoginPage() {
     if (blocked) return;
     login.mutate({ username, password, turnstileToken }, {
       onSuccess: (tokens) => {
+        const auth = useAuthStore.getState();
+        // Remembering the credentials is what lets the session outlive a backend restart — tokens
+        // alone cannot, because they are scoped to the backend's boot id.
+        if (remember) auth.rememberCredentials({ username, password });
+        else auth.forgetCredentials();
         const requested = (location.state as { from?: string } | null)?.from;
         navigate(requested ?? (tokens.account.role === 'PLAYER' ? '/panel' : '/admin'), { replace: true });
       },
@@ -48,6 +57,17 @@ export function LoginPage() {
           </label>
           <label className="block"><span className="kicker">Hasło</span>
             <input type="password" value={password} onChange={(e) => setPassword(e.target.value)} autoComplete="current-password" className="form-control mt-1" />
+          </label>
+          <label className="flex cursor-pointer items-start gap-2.5">
+            <input type="checkbox" checked={remember} onChange={(e) => setRemember(e.target.checked)}
+              className="mt-0.5 h-4 w-4 shrink-0 accent-[var(--gold)]" />
+            <span className="text-sm text-text">
+              Zapamiętaj mnie
+              <span className="block text-xs text-text-lo">
+                Sesja trwa do wylogowania — wracamy automatycznie po restarcie serwera.
+                Login i hasło zostaną zapisane w tej przeglądarce, więc używaj tylko na własnym urządzeniu.
+              </span>
+            </span>
           </label>
           {turnstileEnabled && config.data?.turnstileSiteKey && (
             <Turnstile siteKey={config.data.turnstileSiteKey} onToken={setTurnstileToken} />

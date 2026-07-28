@@ -137,7 +137,12 @@ public class DrawLobbyService {
 
     private DrawLobbyResponse toResponse(Match match) {
         Map<UUID, Player> players = new HashMap<>();
-        playerRepository.findByIdIn(match.getPoolPlayerIds()).forEach(p -> players.put(p.getId(), p));
+        // Look up by participant id as well as by pool id: after a substitution the two can disagree,
+        // and a missing entry used to NPE here, which took the whole draft screen down with a 500.
+        List<UUID> ids = new ArrayList<>(match.getPoolPlayerIds());
+        match.getParticipants().forEach(p -> ids.add(p.getPlayerId()));
+        playerRepository.findByIdIn(ids.stream().distinct().toList())
+                .forEach(p -> players.put(p.getId(), p));
         List<DrawVote> votes = voteRepository.findByMatchIdAndDrawRound(match.getId(), match.getDrawRound());
         DraftView draft = draftService.view(match);
         Set<UUID> captains = new HashSet<>();
@@ -147,7 +152,9 @@ public class DrawLobbyService {
         }
         List<LobbyPlayer> slots = match.getParticipants().stream().map(p -> {
             Player player = players.get(p.getPlayerId());
-            return new LobbyPlayer(p.getPlayerId(), player.getNickname(), player.getAvatarUrl(),
+            return new LobbyPlayer(p.getPlayerId(),
+                    player != null ? player.getNickname() : "?",
+                    player != null ? player.getAvatarUrl() : null,
                     p.getRole(), p.getSide(), p.getChampionId(), captains.contains(p.getPlayerId()));
         }).toList();
         List<UUID> accepted = votes.stream().filter(v -> v.getDecision() == DrawVoteDecision.ACCEPT)

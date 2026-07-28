@@ -30,12 +30,16 @@ export function useLogin() {
   });
 }
 
-/** POST /auth/logout → clears local auth state regardless of outcome. */
+/**
+ * POST /auth/logout → clears local auth state regardless of outcome. This is the explicit sign-out,
+ * so it also drops any remembered credentials — otherwise the next health poll would log the user
+ * straight back in.
+ */
 export function useLogout() {
-  const clear = useAuthStore((s) => s.clear);
+  const logout = useAuthStore((s) => s.logout);
   return useMutation({
     mutationFn: () => api.post<void>('/auth/logout'),
-    onSettled: () => clear(),
+    onSettled: () => logout(),
   });
 }
 

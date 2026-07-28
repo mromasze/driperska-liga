@@ -35,7 +35,13 @@ public final class DrawLobbyDtos {
             List<UUID> blueOrder, List<UUID> redOrder,  // top→bottom draft order (captain first)
             List<Integer> blueBans, List<Integer> redBans,
             List<DraftStepView> sequence,
-            List<DraftSwapView> swaps) {}
+            List<DraftSwapView> swaps,
+            /** Pre-selection of the player on the clock, visible to both teams. */
+            Integer hoverChampionId, UUID hoverPlayerId,
+            /** Step indexes whose champion was assigned by the timeout, not by a player. */
+            List<Integer> autoResolvedSteps,
+            /** Length of one ban/pick step in seconds, so the client can render the timer bar. */
+            int stepSeconds) {}
 
     public record DrawLobbyResponse(
             UUID matchId, MatchStatus status, int round, int requiredAccepts, int accepts, int rejects,

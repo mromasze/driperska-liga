@@ -3,7 +3,6 @@ package pl.romcio.driperska.match.api;
 import jakarta.validation.Valid;
 import java.util.UUID;
 import org.springframework.data.domain.Pageable;
-import org.springframework.data.domain.Sort;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 import pl.romcio.driperska.common.domain.Side;
@@ -53,21 +52,18 @@ public class MatchController {
     }
 
     /**
-     * Lists ordered by the actual game start (startedAt), never by creation/update time — edits
-     * and approvals must not reshuffle the list. Matches not started yet fall back to createdAt.
+     * Lists ordered by the actual game start (startedAt), never by creation/update time — edits and
+     * approvals must not reshuffle the list. Matches not started yet fall back to createdAt. The
+     * ordering lives in {@link pl.romcio.driperska.match.infra.MatchRepository#LIST_ORDER} rather
+     * than in a {@link Pageable} sort, so any client-supplied sort is ignored here.
      */
-    private static final Sort DEFAULT_LIST_SORT = Sort.by(
-            Sort.Order.desc("startedAt").with(Sort.NullHandling.NULLS_LAST),
-            Sort.Order.desc("createdAt"));
-
     @GetMapping
     public PageResponse<MatchSummaryResponse> list(
             @RequestParam(required = false) MatchStatus status,
             @RequestParam(required = false) UUID seasonId,
             Pageable pageable) {
-        Pageable effectivePageable = pageable.getSort().isSorted() ? pageable
-                : org.springframework.data.domain.PageRequest.of(
-                        pageable.getPageNumber(), pageable.getPageSize(), DEFAULT_LIST_SORT);
+        Pageable effectivePageable = org.springframework.data.domain.PageRequest.of(
+                pageable.getPageNumber(), pageable.getPageSize());
         MatchStatus effective = CurrentAccount.optional().isPresent() ? status : MatchStatus.APPROVED;
         return PageResponse.of(matchService.list(effective, seasonId, effectivePageable)
                 .map(assembler::toSummary));

@@ -4,7 +4,7 @@ import { useAuthStore } from '../../store/auth';
 import { Scoreboard } from '../../components/match/Scoreboard';
 import { SignOffPanel } from '../../components/admin/SignOffPanel';
 import { Button } from '../../components/ui/Button';
-import { LoadingState, EmptyState, ErrorState } from '../../components/ui/States';
+import { CardSkeleton, EmptyState, ErrorState, SectionSkeleton } from '../../components/ui/States';
 import { Badge } from '../../components/ui/Badge';
 import { formatDateTime } from '../../lib/format';
 
@@ -25,7 +25,7 @@ export function ApprovalsPage() {
       {pending.isError ? (
         <ErrorState error={pending.error} />
       ) : pending.isLoading ? (
-        <LoadingState />
+        <SectionSkeleton rows={2} />
       ) : list.length === 0 ? (
         <EmptyState title="Brak wyników do akceptacji" description="Wszystko zatwierdzone. 🎉" />
       ) : (
@@ -48,7 +48,7 @@ function ApprovalItem({ matchId }: { matchId: string }) {
   const [shareMsg, setShareMsg] = useState<string | null>(null);
 
   if (match.isError) return <ErrorState error={match.error} />;
-  if (match.isLoading || !match.data) return <LoadingState />;
+  if (match.isLoading || !match.data) return <CardSkeleton lines={6} />;
 
   const m = match.data;
   // Once approved/rejected the match leaves the queue — hide it immediately even if the list

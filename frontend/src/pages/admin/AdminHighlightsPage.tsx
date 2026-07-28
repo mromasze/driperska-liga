@@ -1,7 +1,7 @@
 import { useRef } from 'react';
 import { useDeleteHighlight, useHighlights, useUploadHighlight } from '../../api/hooks/highlights';
 import { Button } from '../../components/ui/Button';
-import { EmptyState, ErrorState, LoadingState } from '../../components/ui/States';
+import { EmptyState, ErrorState, SectionSkeleton } from '../../components/ui/States';
 import { formatDateTime } from '../../lib/format';
 
 function megabytes(bytes: number) {
@@ -14,7 +14,7 @@ export function AdminHighlightsPage() {
   const remove = useDeleteHighlight();
   const input = useRef<HTMLInputElement>(null);
 
-  if (highlights.isLoading) return <LoadingState />;
+  if (highlights.isLoading) return <SectionSkeleton title="Zagrywki" rows={3} />;
   if (highlights.isError) return <ErrorState error={highlights.error} />;
 
   const videos = highlights.data ?? [];

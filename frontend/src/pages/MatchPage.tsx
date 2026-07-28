@@ -4,7 +4,7 @@ import { Scoreboard } from '../components/match/Scoreboard';
 import { MatchPointsBreakdown } from '../components/match/MatchPointsBreakdown';
 import { PlayerOpinions } from '../components/match/PlayerOpinions';
 import { Badge } from '../components/ui/Badge';
-import { LoadingState, ErrorState, EmptyState } from '../components/ui/States';
+import { CardSkeleton, ErrorState, EmptyState } from '../components/ui/States';
 import { formatDateTime } from '../lib/format';
 import type { MatchStatus } from '../api/types';
 
@@ -26,7 +26,7 @@ export function MatchPage() {
   const { id } = useParams<{ id: string }>();
   const match = useMatch(id);
 
-  if (match.isLoading) return <LoadingState />;
+  if (match.isLoading) return <CardSkeleton lines={7} />;
   if (match.isError) return <ErrorState error={match.error} />;
   if (!match.data) return <EmptyState title="Nie znaleziono meczu" />;
 

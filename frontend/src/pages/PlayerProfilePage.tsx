@@ -7,7 +7,7 @@ import { Badge } from '../components/ui/Badge';
 import { StatTile } from '../components/ui/StatTile';
 import { PrBadge } from '../components/ui/PrBadge';
 import { ChampionIcon } from '../components/champion/ChampionIcon';
-import { LoadingState, ErrorState, EmptyState } from '../components/ui/States';
+import { CardSkeleton, ErrorState, EmptyState, SectionSkeleton } from '../components/ui/States';
 import { championSplashUrl } from '../lib/ddragon';
 import { formatDate, roleLabel } from '../lib/format';
 
@@ -19,7 +19,7 @@ export function PlayerProfilePage() {
   const matches = usePlayerMatches(id);
   const champions = useChampions();
 
-  if (player.isLoading) return <LoadingState />;
+  if (player.isLoading) return <CardSkeleton lines={6} />;
   if (player.isError) return <ErrorState error={player.error} />;
   if (!player.data) return <EmptyState title="Nie znaleziono gracza" />;
 
@@ -117,7 +117,7 @@ export function PlayerProfilePage() {
         <section>
           <h2 className="mb-4 font-display text-2xl">Historia meczów</h2>
           {matches.isLoading ? (
-            <LoadingState />
+            <SectionSkeleton rows={4} />
           ) : (matches.data?.length ?? 0) === 0 ? (
             <EmptyState title="Brak rozegranych meczów" />
           ) : (

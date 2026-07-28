@@ -4,7 +4,7 @@ import {
 } from '../../api/hooks/settings';
 import { RELEASES } from '../../content/releases';
 import { Button } from '../../components/ui/Button';
-import { ErrorState, LoadingState } from '../../components/ui/States';
+import { CardSkeleton, ErrorState } from '../../components/ui/States';
 
 export function AdminSettingsPage() {
   const settings = useAdminSettings();
@@ -13,7 +13,7 @@ export function AdminSettingsPage() {
   const [version, setVersion] = useState(RELEASES[0]?.version ?? '');
   const [patchMsg, setPatchMsg] = useState<string | null>(null);
 
-  if (settings.isLoading) return <LoadingState />;
+  if (settings.isLoading) return <CardSkeleton lines={5} />;
   if (settings.isError || !settings.data) return <ErrorState error={settings.error} />;
 
   const riotEnabled = settings.data.riotEnabled;

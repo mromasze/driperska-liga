@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { useSeasons, useCurrentSeason } from '../api/hooks/seasons';
 import { useRanking } from '../api/hooks/ranking';
 import { RankingTable } from '../components/ranking/RankingTable';
-import { LoadingState, EmptyState, ErrorState } from '../components/ui/States';
+import { EmptyState, ErrorState, TableSkeleton } from '../components/ui/States';
 
 export function RankingPage() {
   const seasons = useSeasons();
@@ -32,7 +32,7 @@ export function RankingPage() {
       </div>
 
       {ranking.isLoading ? (
-        <LoadingState />
+        <TableSkeleton rows={8} columns={6} />
       ) : ranking.isError ? (
         <ErrorState error={ranking.error} />
       ) : (ranking.data?.length ?? 0) === 0 ? (

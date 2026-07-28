@@ -27,6 +27,10 @@ public class DraftController {
 
     public record ChampionRequest(@NotNull Integer championId) {}
     public record SwapRequest(@NotNull UUID targetPlayerId, @NotNull SwapType type) {}
+    /** Null championId clears the pre-selection. */
+    public record HoverRequest(Integer championId) {}
+    /** Admin correction of one player's champion; null championId clears the slot. */
+    public record AdminChampionRequest(@NotNull UUID playerId, Integer championId) {}
 
     @PostMapping("/{matchId}/ban")
     @PreAuthorize("hasRole('PLAYER')")
@@ -39,6 +43,23 @@ public class DraftController {
     @PreAuthorize("hasRole('PLAYER')")
     public void pick(@PathVariable UUID matchId, @RequestBody ChampionRequest req) {
         draftService.pick(matchId, CurrentAccount.require().accountId(), req.championId());
+        lobbyService.publishUpdate(matchId);
+    }
+
+    /** Highlight (or clear) the pre-selection of the player on the clock; broadcast to both teams. */
+    @PostMapping("/{matchId}/hover")
+    @PreAuthorize("hasRole('PLAYER')")
+    public void hover(@PathVariable UUID matchId, @RequestBody HoverRequest req) {
+        draftService.hover(matchId, CurrentAccount.require().accountId(), req.championId());
+        lobbyService.publishUpdate(matchId);
+    }
+
+    /** Admin fixes a player's champion (e.g. they locked the wrong one) without touching turn order. */
+    @PostMapping("/{matchId}/champion")
+    @PreAuthorize("hasAnyRole('ADMIN','EDITOR')")
+    public void setChampion(@PathVariable UUID matchId, @RequestBody AdminChampionRequest req) {
+        draftService.adminSetChampion(matchId, req.playerId(), req.championId(),
+                CurrentAccount.require().accountId());
         lobbyService.publishUpdate(matchId);
     }
 

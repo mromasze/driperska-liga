@@ -68,7 +68,7 @@ public class MatchService {
         if (status != null && seasonId != null) return matchRepository.findByStatusAndSeasonId(status, seasonId, pageable);
         if (status != null) return matchRepository.findByStatus(status, pageable);
         if (seasonId != null) return matchRepository.findBySeasonId(seasonId, pageable);
-        return matchRepository.findAll(pageable);
+        return matchRepository.findAllForListing(pageable);
     }
 
     @Transactional(readOnly = true)
