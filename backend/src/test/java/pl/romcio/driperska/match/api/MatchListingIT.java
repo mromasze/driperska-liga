@@ -1,5 +1,6 @@
 package pl.romcio.driperska.match.api;
 
+import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.authentication;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
@@ -11,6 +12,7 @@ import java.util.UUID;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
+import org.springframework.data.domain.PageRequest;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.Authentication;
@@ -79,11 +81,35 @@ class MatchListingIT {
                 .andExpect(jsonPath("$.content[1].id").value(notStarted.getId().toString()));
     }
 
+    @Test
+    void listsMatchesForPlayerWithoutDistinctOrderByConflict() {
+        UUID playerId = UUID.randomUUID();
+        Match older = persistPending(Instant.now(), playerId);
+        Match newer = persistPending(Instant.now().plusSeconds(3600), playerId);
+
+        List<Match> oneStatus = matchRepository.findForPlayerAndStatus(
+                playerId, MatchStatus.RESULTS_SUBMITTED, PageRequest.of(0, 10));
+        assertEquals(List.of(newer.getId(), older.getId()),
+                oneStatus.stream().map(Match::getId).toList());
+
+        List<Match> manyStatuses = matchRepository.findForPlayerAndStatuses(
+                playerId, List.of(MatchStatus.RESULTS_SUBMITTED), PageRequest.of(0, 10));
+        assertEquals(List.of(newer.getId(), older.getId()),
+                manyStatuses.stream().map(Match::getId).toList());
+    }
+
     /** Walks the real lifecycle to RESULTS_SUBMITTED — {@code status} has no setter by design. */
     private Match persistPending(Instant startedAt) {
+        return persistPending(startedAt, UUID.randomUUID());
+    }
+
+    private Match persistPending(Instant startedAt, UUID poolPlayerId) {
         Match match = new Match(UUID.randomUUID(), DrawMode.BALANCED, UUID.randomUUID());
-        match.setPoolPlayerIds(List.of(UUID.randomUUID()));
-        match.replaceParticipants(List.of(new MatchParticipant(UUID.randomUUID(), Side.BLUE, Role.MID)));
+        match.setPoolPlayerIds(List.of(poolPlayerId));
+        match.replaceParticipants(List.of(
+                new MatchParticipant(UUID.randomUUID(), Side.BLUE, Role.MID),
+                new MatchParticipant(UUID.randomUUID(), Side.RED, Role.MID)
+        ));
         match.transitionTo(MatchStatus.TEAMS_DRAWN);
         match.transitionTo(MatchStatus.LIVE);
         match.transitionTo(MatchStatus.RESULTS_SUBMITTED);

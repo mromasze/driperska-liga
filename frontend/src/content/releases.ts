@@ -11,6 +11,16 @@ export interface ReleaseNote {
  */
 export const RELEASES: ReleaseNote[] = [
   {
+    version: 'v0.4.2',
+    date: '2026-07-28',
+    title: 'Naprawione widoki meczów gracza',
+    changes: [
+      'Naprawiono błąd 500, który na PostgreSQL mógł blokować aktywne lobby oraz listę meczów oczekujących na ocenę.',
+      'Pobieranie meczów z puli gracza zachowuje prawidłową kolejność po dacie rozpoczęcia i nie generuje już niezgodnego zapytania SQL.',
+      'Naprawiono start po aktualizacji z 0.4.1: automatyczne przeliczenie rankingu nie wpada już w konflikt istniejących statystyk sezonowych.',
+    ],
+  },
+  {
     version: 'v0.4.1',
     date: '2026-07-28',
     title: 'PR v2, uczciwsze LP i pełne ACE',

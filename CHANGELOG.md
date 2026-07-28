@@ -3,6 +3,13 @@
 Wszystkie istotne zmiany Driperskiej Ligi są opisywane tutaj oraz w
 `frontend/src/content/releases.ts`, który zasila patch notes na stronie głównej.
 
+## v0.4.2 — 2026-07-28
+
+- Naprawiono błąd 500 w widokach gracza korzystających z meczów zapisanych w jego puli (m.in. aktywne lobby i mecze do oceny). PostgreSQL odrzucał wygenerowane zapytanie `SELECT DISTINCT` z sortowaniem po `coalesce(started_at, created_at)`, ponieważ wyrażenie sortujące nie występowało w liście `SELECT`.
+- Zapytania `findForPlayerAndStatus` i `findForPlayerAndStatuses` filtrują teraz pulę przez JPQL `MEMBER OF`, bez zbędnego `JOIN + DISTINCT`; kolejność po faktycznej dacie startu pozostaje bez zmian.
+- Dodano test regresyjny wykonujący oba warianty zapytania i sprawdzający kolejność wyników.
+- Naprawiono wywracanie deploya 0.4.1 podczas jednorazowego przeliczania rankingu. Statystyki sezonu są teraz usuwane natychmiastowym bulk delete przed odbudową, więc Hibernate nie próbuje wstawić nowych rekordów przed usunięciem starych i nie narusza `ux_player_season`. Ponowne uruchomienie po nieudanym deployu jest bezpieczne.
+
 ## v0.4.1 — 2026-07-28
 
 - **Nowy PR v2.** Ocena występu korzysta z percentyli wcześniejszych graczy na tej samej pozycji (kroczące 60 próbek / 30 meczów). Przez pierwsze 20 próbek roli historia jest płynnie łączona z porównaniem bezpośrednich rywali w meczu. Wagi KDA pozostały bez zmian.

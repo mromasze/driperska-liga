@@ -52,15 +52,15 @@ public interface MatchRepository extends JpaRepository<Match, UUID> {
     Optional<Match> findDetailedById(UUID id);
 
     @EntityGraph(attributePaths = "participants")
-    @Query("select distinct m from Match m join m.poolPlayerIds playerId "
-            + "where playerId = :playerId and m.status = :status "
+    @Query("select m from Match m "
+            + "where :playerId member of m.poolPlayerIds and m.status = :status "
             + "order by coalesce(m.startedAt, m.createdAt) desc")
     List<Match> findForPlayerAndStatus(@Param("playerId") UUID playerId,
                                       @Param("status") MatchStatus status,
                                       Pageable pageable);
     @EntityGraph(attributePaths = "participants")
-    @Query("select distinct m from Match m join m.poolPlayerIds playerId "
-            + "where playerId = :playerId and m.status in :statuses "
+    @Query("select m from Match m "
+            + "where :playerId member of m.poolPlayerIds and m.status in :statuses "
             + "order by coalesce(m.startedAt, m.createdAt) desc")
     List<Match> findForPlayerAndStatuses(@Param("playerId") UUID playerId,
                                         @Param("statuses") java.util.Collection<MatchStatus> statuses,
