@@ -26,9 +26,11 @@ import org.springframework.web.cors.UrlBasedCorsConfigurationSource;
 public class SecurityConfig {
 
     private final JwtAuthenticationFilter jwtFilter;
+    private final ProblemAuthErrorHandler authErrors;
 
-    public SecurityConfig(JwtAuthenticationFilter jwtFilter) {
+    public SecurityConfig(JwtAuthenticationFilter jwtFilter, ProblemAuthErrorHandler authErrors) {
         this.jwtFilter = jwtFilter;
+        this.authErrors = authErrors;
     }
 
     @Bean
@@ -37,6 +39,11 @@ public class SecurityConfig {
                 .csrf(csrf -> csrf.disable())
                 .cors(cors -> cors.configurationSource(corsConfigurationSource()))
                 .sessionManagement(sm -> sm.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
+                // Missing/expired token must answer 401, not Spring's default 403 — see
+                // ProblemAuthErrorHandler. The web client keys its refresh-and-retry off the status.
+                .exceptionHandling(ex -> ex
+                        .authenticationEntryPoint(authErrors)
+                        .accessDeniedHandler(authErrors))
                 .authorizeHttpRequests(auth -> auth
                         // Authorization runs on the initial REQUEST dispatch. Large multipart uploads
                         // (clips/replays) are re-dispatched ASYNC by Tomcat; the JWT filter (a

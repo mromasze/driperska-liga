@@ -67,6 +67,18 @@ public interface MatchRepository extends JpaRepository<Match, UUID> {
                                         Pageable pageable);
     long countByStatus(MatchStatus status);
 
+    // --- admin maintenance (see MatchMaintenanceService) ---
+
+    @EntityGraph(attributePaths = "participants")
+    List<Match> findByStatusIn(java.util.Collection<MatchStatus> statuses);
+
+    long countByStatusIn(java.util.Collection<MatchStatus> statuses);
+
+    @EntityGraph(attributePaths = "participants")
+    List<Match> findByStatusNot(MatchStatus status);
+
+    long countByStatusNot(MatchStatus status);
+
     @Query("select m.id from Match m where m.status = :status and m.teamsDrawnAt is not null "
             + "and m.teamsDrawnAt < :threshold")
     List<UUID> findIdsForAutoConfirm(@Param("status") MatchStatus status,

@@ -13,4 +13,6 @@ public interface MatchDraftRepository extends JpaRepository<MatchDraft, UUID> {
     /** Drafts whose current step has run past its deadline — used by the timeout scheduler. */
     @Query("select d.matchId from MatchDraft d where d.deadline is not null and d.deadline < :now")
     List<UUID> findMatchIdsPastDeadline(@Param("now") Instant now);
+
+    void deleteByMatchId(UUID matchId);
 }

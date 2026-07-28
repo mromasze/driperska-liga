@@ -1,6 +1,10 @@
 import { useState } from 'react';
 import { Link } from 'react-router-dom';
 import { useMatches, useShareMatchToDiscord } from '../../api/hooks/matches';
+import {
+  useDeleteDraftsInProgress, useDeleteMatch, useMatchMaintenance, usePurgeUnapprovedMatches,
+  useStopAllMatches,
+} from '../../api/hooks/matchMaintenance';
 import type { MatchStatus, MatchSummary } from '../../api/types';
 import { Badge } from '../../components/ui/Badge';
 import { Button } from '../../components/ui/Button';
@@ -11,6 +15,10 @@ const STATUSES: Array<{ value: MatchStatus | ''; label: string }> = [
   { value: '', label: 'Wszystkie statusy' },
   { value: 'DRAFT', label: 'Szkic' },
   { value: 'TEAMS_DRAWN', label: 'Wylosowane składy' },
+  // Without these three the badge on a drafting match rendered blank.
+  { value: 'DRAFT_READY', label: 'Draft gotowy' },
+  { value: 'DRAFTING', label: 'Draft w toku' },
+  { value: 'DRAFTED', label: 'Po drafcie' },
   { value: 'LOBBY_READY', label: 'Lobby gotowe' },
   { value: 'LIVE', label: 'W toku' },
   { value: 'RESULTS_SUBMITTED', label: 'Do akceptacji' },
@@ -28,14 +36,28 @@ function tone(status: MatchStatus): 'default' | 'win' | 'loss' | 'pending' | 'in
   if (status === 'CANCELLED' || status === 'REJECTED') return 'loss';
   if (status === 'RESULTS_SUBMITTED') return 'pending';
   if (status === 'LIVE' || status === 'LOBBY_READY') return 'info';
+  if (status === 'DRAFTING' || status === 'DRAFTED' || status === 'DRAFT_READY') return 'info';
   return 'default';
 }
 
 function MatchRow({ match }: { match: MatchSummary }) {
   const share = useShareMatchToDiscord(match.id);
+  const remove = useDeleteMatch();
   const [message, setMessage] = useState<string | null>(null);
   const canShare = match.participantCount > 0
     && ['RESULTS_SUBMITTED', 'APPROVED', 'REJECTED'].includes(match.status);
+
+  const deleteThis = () => {
+    const warning = match.status === 'APPROVED'
+      ? 'To ZATWIERDZONY mecz — jego wyniki liczą się do rankingu i statystyk graczy.\n\n'
+      : '';
+    if (!window.confirm(
+      `${warning}Usunąć mecz ${match.id.slice(0, 8)} (${STATUS_LABEL[match.status]}) na zawsze?\n\n`
+      + 'Zniknie razem z draftem, wynikami, ocenami i historią. Tego nie można cofnąć.',
+    )) return;
+    setMessage(null);
+    remove.mutate(match.id, { onError: (error) => setMessage(`⚠ ${error.message}`) });
+  };
 
   return (
     <details className="match-dropdown glass overflow-hidden">
@@ -81,10 +103,131 @@ function MatchRow({ match }: { match: MatchSummary }) {
           >
             Otwórz / edytuj
           </Link>
+          <Button variant="danger" size="sm" disabled={remove.isPending} onClick={deleteThis}>
+            {remove.isPending ? 'Usuwanie…' : '🗑 Usuń mecz'}
+          </Button>
         </div>
         {message && <p className="mt-3 text-xs text-text-lo">{message}</p>}
       </div>
     </details>
+  );
+}
+
+/**
+ * Bulk housekeeping. Every button states how many matches it would touch and refuses to be pressed
+ * when that number is zero, so an admin never fires a destructive action blind.
+ */
+function MaintenanceSection() {
+  const summary = useMatchMaintenance();
+  const stopAll = useStopAllMatches();
+  const deleteDrafts = useDeleteDraftsInProgress();
+  const purge = usePurgeUnapprovedMatches();
+  const [message, setMessage] = useState<string | null>(null);
+
+  if (summary.isLoading || !summary.data) return null;
+  const s = summary.data;
+  const busy = stopAll.isPending || deleteDrafts.isPending || purge.isPending;
+
+  const run = (
+    mutation: typeof stopAll,
+    confirmText: string,
+    done: (count: number) => string,
+    typeToConfirm?: string,
+  ) => {
+    if (!window.confirm(confirmText)) return;
+    if (typeToConfirm) {
+      const typed = window.prompt(`Wpisz ${typeToConfirm}, żeby potwierdzić:`);
+      if (typed?.trim().toUpperCase() !== typeToConfirm) {
+        setMessage('⚠ Anulowano — potwierdzenie nie zgadza się.');
+        return;
+      }
+    }
+    setMessage(null);
+    mutation.mutate(undefined, {
+      onSuccess: (result) => setMessage(done(result.affected)),
+      onError: (error) => setMessage(`⚠ ${error.message}`),
+    });
+  };
+
+  return (
+    <section className="glass grid-tex p-5">
+      <h2 className="font-display text-xl">Porządki</h2>
+      <p className="mt-1 max-w-3xl text-sm text-text-lo">
+        Na liście jest {s.total} meczów, z czego {s.approved} zatwierdzonych.
+        Operacje oznaczone jako usuwanie są <strong className="text-loss">nieodwracalne</strong> —
+        kasują mecz razem z draftem, wynikami, ocenami i historią.
+      </p>
+
+      <div className="mt-4 grid gap-3 lg:grid-cols-3">
+        <div className="rounded-xl border border-line bg-[color:var(--bg-1)]/60 p-4">
+          <div className="font-display text-base text-text-hi">Zatrzymaj trwające mecze</div>
+          <p className="mt-1 text-xs text-text-lo">
+            Anuluje wszystko, co jest jeszcze w toku (losowanie, draft, lobby, gra).
+            Mecze zostają na liście jako anulowane — nic nie znika.
+          </p>
+          <div className="num mt-3 font-display text-2xl text-cyan">{s.running}</div>
+          <Button
+            className="mt-2 w-full"
+            variant="ghost"
+            disabled={busy || s.running === 0}
+            onClick={() => run(
+              stopAll,
+              `Anulować ${s.running} trwających meczów? Zostaną na liście jako anulowane.`,
+              (n) => `✓ Anulowano ${n} meczów.`,
+            )}
+          >
+            {stopAll.isPending ? 'Zatrzymywanie…' : '■ Zatrzymaj wszystkie'}
+          </Button>
+        </div>
+
+        <div className="rounded-xl border border-[color:var(--loss)]/40 bg-[color:var(--loss)]/5 p-4">
+          <div className="font-display text-base text-text-hi">Usuń mecze z rozpoczętym draftem</div>
+          <p className="mt-1 text-xs text-text-lo">
+            Kasuje mecze, w których draft już wystartował (trwa lub się zakończył, ale gra się nie
+            odbyła). Przydatne po testach i porzuconych wieczorach.
+          </p>
+          <div className="num mt-3 font-display text-2xl text-loss">{s.draftInProgress}</div>
+          <Button
+            className="mt-2 w-full"
+            variant="danger"
+            disabled={busy || s.draftInProgress === 0}
+            onClick={() => run(
+              deleteDrafts,
+              `Usunąć na zawsze ${s.draftInProgress} meczów z rozpoczętym draftem?\n\n`
+              + 'Tego nie można cofnąć.',
+              (n) => `✓ Usunięto ${n} meczów.`,
+            )}
+          >
+            {deleteDrafts.isPending ? 'Usuwanie…' : '🗑 Usuń drafty'}
+          </Button>
+        </div>
+
+        <div className="rounded-xl border border-[color:var(--loss)]/40 bg-[color:var(--loss)]/5 p-4">
+          <div className="font-display text-base text-text-hi">Wyczyść niezaakceptowane</div>
+          <p className="mt-1 text-xs text-text-lo">
+            Kasuje wszystko, co nie jest zatwierdzone — szkice, drafty, anulowane, odrzucone i wyniki
+            czekające na akceptację. Zostaje tylko {s.approved} zatwierdzonych meczów.
+          </p>
+          <div className="num mt-3 font-display text-2xl text-loss">{s.unapproved}</div>
+          <Button
+            className="mt-2 w-full"
+            variant="danger"
+            disabled={busy || s.unapproved === 0}
+            onClick={() => run(
+              purge,
+              `Usunąć na zawsze ${s.unapproved} niezaakceptowanych meczów?\n\n`
+              + `Na liście zostanie ${s.approved} zatwierdzonych. Tego nie można cofnąć.`,
+              (n) => `✓ Usunięto ${n} meczów. Zostały tylko zatwierdzone.`,
+              'USUN',
+            )}
+          >
+            {purge.isPending ? 'Czyszczenie…' : '🧹 Wyczyść listę'}
+          </Button>
+        </div>
+      </div>
+
+      {message && <p className="mt-4 text-sm text-text-hi">{message}</p>}
+    </section>
   );
 }
 
@@ -116,6 +259,8 @@ export function AdminMatchesPage() {
           + Nowy mecz
         </Link>
       </div>
+
+      <MaintenanceSection />
 
       <label className="block max-w-sm">
         <span className="kicker">Filtr statusu</span>

@@ -8,4 +8,6 @@ import pl.romcio.driperska.match.domain.DrawVote;
 public interface DrawVoteRepository extends JpaRepository<DrawVote, UUID> {
     boolean existsByMatchIdAndDrawRoundAndPlayerId(UUID matchId, int drawRound, UUID playerId);
     List<DrawVote> findByMatchIdAndDrawRound(UUID matchId, int drawRound);
+
+    void deleteByMatchId(UUID matchId);
 }

@@ -14,5 +14,6 @@ export const queryKeys = {
   matches: (query?: MatchesQuery) => ['matches', query ?? {}] as const,
   match: (id: string) => ['match', id] as const,
   matchEvents: (id: string) => ['match', id, 'events'] as const,
+  matchMaintenance: ['admin', 'matches', 'maintenance'] as const,
   champions: ['champions'] as const,
 };

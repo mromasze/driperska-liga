@@ -41,6 +41,10 @@ export function LoginPage() {
     ? login.error.message
     : login.isError ? 'Logowanie nie powiodło się' : null;
 
+  // ProtectedRoute sends the attempted path along when it bounces someone here, which only happens
+  // when there was no usable session — so say that instead of showing a bare login form.
+  const bouncedFrom = (location.state as { from?: string } | null)?.from;
+
   return (
     <div className="grid min-h-screen place-items-center p-4">
       <div className="glass grid-tex w-full max-w-sm p-8">
@@ -51,6 +55,11 @@ export function LoginPage() {
           <h1 className="font-display text-2xl">Logowanie</h1>
           <p className="mt-1 text-sm text-text-lo">Panel gracza i administracji · Driperska Liga</p>
         </div>
+        {bouncedFrom && !login.isError && (
+          <p className="mb-4 rounded-md border border-[color:var(--pending)]/40 bg-[color:var(--pending)]/10 p-3 text-sm text-pending">
+            Twoja sesja wygasła. Zaloguj się ponownie — wrócimy tam, gdzie byłeś.
+          </p>
+        )}
         <form onSubmit={onSubmit} className="space-y-4">
           <label className="block"><span className="kicker">Nick / login</span>
             <input value={username} onChange={(e) => setUsername(e.target.value)} autoFocus autoComplete="username" className="form-control mt-1" />

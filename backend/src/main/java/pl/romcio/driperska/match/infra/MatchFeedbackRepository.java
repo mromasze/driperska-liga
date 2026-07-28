@@ -10,4 +10,6 @@ public interface MatchFeedbackRepository extends JpaRepository<MatchFeedback, UU
     Optional<MatchFeedback> findByMatchIdAndVoterPlayerId(UUID matchId, UUID voterPlayerId);
     List<MatchFeedback> findByMatchId(UUID matchId);
     List<MatchFeedback> findByVoterPlayerId(UUID voterPlayerId);
+
+    void deleteByMatchId(UUID matchId);
 }

@@ -120,6 +120,20 @@ export interface MatchDetail {
 export interface MatchEvent { type: MatchEventType; actorAccountId: string | null; payloadJson: string | null; createdAt: string; }
 export interface MatchesQuery { status?: MatchStatus; seasonId?: string; page?: number; size?: number; }
 
+/** Counts behind the admin housekeeping buttons — GET /admin/matches/maintenance. */
+export interface MatchMaintenanceSummary {
+  total: number;
+  /** Matches whose champion draft has started (DRAFTING / DRAFTED). */
+  draftInProgress: number;
+  /** Matches still in flight — what "stop everything" would cancel. */
+  running: number;
+  /** Matches that are not APPROVED — what the purge would delete. */
+  unapproved: number;
+  /** Matches that would survive a purge. */
+  approved: number;
+}
+export interface AffectedResponse { affected: number; }
+
 export interface ManualSlot { playerId: string; side: Side; role: Role; }
 export interface CreateMatchRequest { seasonId: string; drawMode: DrawMode; playerIds: string[]; teams?: ManualSlot[]; }
 export interface DrawSlot { playerId: string; nickname: string; role: Role; mmr: number; }
