@@ -62,6 +62,8 @@ public class MatchParticipant {
     private Double mmrDelta;
     @Column(name = "is_mvp")
     private boolean mvp;
+    @Column(name = "is_ace", nullable = false)
+    private boolean ace;
 
     protected MatchParticipant() {
     }
@@ -93,11 +95,13 @@ public class MatchParticipant {
         this.largestMultiKill = largestMultiKill;
     }
 
-    public void applyComputed(double performanceRating, int lpAwarded, double mmrDelta, boolean mvp) {
+    public void applyComputed(double performanceRating, int lpAwarded, double mmrDelta,
+                              boolean mvp, boolean ace) {
         this.performanceRating = performanceRating;
         this.lpAwarded = lpAwarded;
         this.mmrDelta = mmrDelta;
         this.mvp = mvp;
+        this.ace = ace;
     }
 
     public UUID getId() {
@@ -182,5 +186,9 @@ public class MatchParticipant {
 
     public boolean isMvp() {
         return mvp;
+    }
+
+    public boolean isAce() {
+        return ace;
     }
 }

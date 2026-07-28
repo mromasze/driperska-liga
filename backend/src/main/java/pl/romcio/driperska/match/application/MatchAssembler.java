@@ -1,5 +1,7 @@
 package pl.romcio.driperska.match.application;
 
+import static pl.romcio.driperska.ranking.application.PerformanceHistoryService.toContext;
+
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -17,8 +19,10 @@ import pl.romcio.driperska.match.api.MatchDtos.ParticipantResponse;
 import pl.romcio.driperska.match.api.MatchDtos.PrMetric;
 import pl.romcio.driperska.match.api.MatchDtos.RiotInfoResponse;
 import pl.romcio.driperska.common.domain.Side;
+import pl.romcio.driperska.ranking.application.PerformanceHistoryService;
 import pl.romcio.driperska.ranking.application.ScoringConfigProvider;
-import pl.romcio.driperska.ranking.domain.MatchStatsContext;
+import pl.romcio.driperska.ranking.domain.PerformanceRatingV2Calculator;
+import pl.romcio.driperska.ranking.domain.PointsEngine;
 import pl.romcio.driperska.ranking.domain.RatingCalculator;
 import pl.romcio.driperska.ranking.domain.ScoringConfig;
 import java.util.ArrayList;
@@ -40,20 +44,23 @@ public class MatchAssembler {
     private final ChampionRepository championRepository;
     private final MatchApprovalRepository approvalRepository;
     private final ScoringConfigProvider scoringConfigProvider;
-    private final RatingCalculator ratingCalculator;
+    private final PerformanceRatingV2Calculator ratingCalculator;
+    private final PerformanceHistoryService historyService;
 
     public MatchAssembler(MatchRepository matchRepository,
                           PlayerRepository playerRepository,
                           ChampionRepository championRepository,
                           MatchApprovalRepository approvalRepository,
                           ScoringConfigProvider scoringConfigProvider,
-                          RatingCalculator ratingCalculator) {
+                          PerformanceRatingV2Calculator ratingCalculator,
+                          PerformanceHistoryService historyService) {
         this.matchRepository = matchRepository;
         this.playerRepository = playerRepository;
         this.championRepository = championRepository;
         this.approvalRepository = approvalRepository;
         this.scoringConfigProvider = scoringConfigProvider;
         this.ratingCalculator = ratingCalculator;
+        this.historyService = historyService;
     }
 
     /** Reloads the match inside this read-only transaction so lazy collections resolve safely. */
@@ -102,7 +109,7 @@ public class MatchAssembler {
                 champion != null ? champion.getIconUrl() : null,
                 p.getKills(), p.getDeaths(), p.getAssists(), round2(p.kda()),
                 p.getCs(), p.getGold(), p.getDamageToChampions(), p.getVisionScore(),
-                p.getLargestMultiKill(), p.getPerformanceRating(), p.getLpAwarded(), p.isMvp(),
+                p.getLargestMultiKill(), p.getPerformanceRating(), p.getLpAwarded(), p.isMvp(), p.isAce(),
                 lpBreakdown);
     }
 
@@ -115,58 +122,35 @@ public class MatchAssembler {
         if (winning == null) return Map.of();
         ScoringConfig cfg = scoringConfigProvider.forSeason(match.getSeasonId());
         Map<UUID, RatingCalculator.PrDetail> prDetails =
-                ratingCalculator.computeDetailed(toContext(match), cfg);
-        // ACE = highest performance rating on the losing side.
-        UUID aceId = null;
-        double bestLoserPr = -1;
-        for (MatchParticipant p : match.getParticipants()) {
-            if (p.getSide() == winning) continue;
-            double pr = p.getPerformanceRating() == null ? 0.0 : p.getPerformanceRating();
-            if (pr > bestLoserPr) { bestLoserPr = pr; aceId = p.getPlayerId(); }
-        }
+                ratingCalculator.computeDetailed(toContext(match), cfg, historyService.before(match));
         Map<UUID, LpBreakdown> out = new HashMap<>();
         for (MatchParticipant p : match.getParticipants()) {
             if (p.getPerformanceRating() == null && p.getLpAwarded() == null) continue;
-            out.put(p.getPlayerId(), lpBreakdownFor(p, winning, cfg, p.getPlayerId().equals(aceId),
-                    prDetails.get(p.getId())));
+            out.put(p.getPlayerId(), lpBreakdownFor(p, winning, cfg, prDetails.get(p.getId())));
         }
         return out;
     }
 
-    /** Same input the ranking engine scores with — keeps the shown PR math identical to the stored one. */
-    private static MatchStatsContext toContext(Match match) {
-        List<MatchStatsContext.ParticipantInput> inputs = new ArrayList<>();
-        for (MatchParticipant p : match.getParticipants()) {
-            inputs.add(new MatchStatsContext.ParticipantInput(
-                    p.getId(), p.getPlayerId(), p.getSide(), p.getRole(),
-                    p.getKills(), p.getDeaths(), p.getAssists(), p.getCs(), p.getGold(),
-                    p.getDamageToChampions(), p.getVisionScore(), p.getLargestMultiKill()));
-        }
-        int duration = match.getDurationSeconds() != null ? match.getDurationSeconds() : 1800;
-        return new MatchStatsContext(match.getWinningSide(), duration, inputs);
-    }
-
     private static LpBreakdown lpBreakdownFor(MatchParticipant p, Side winning, ScoringConfig cfg,
-                                              boolean isAce, RatingCalculator.PrDetail prDetail) {
+                                              RatingCalculator.PrDetail prDetail) {
         boolean won = p.getSide() == winning;
         double pr = p.getPerformanceRating() == null ? 0.0 : p.getPerformanceRating();
         List<LpComponent> c = new ArrayList<>();
         c.add(new LpComponent(won ? "Zwycięstwo" : "Porażka", won ? cfg.lpWin() : cfg.lpLoss()));
-        c.add(new LpComponent("Występ (PR " + Math.round(pr) + " ÷ " + cfg.lpPerformanceDivisor() + ")",
-                (int) Math.round(pr / cfg.lpPerformanceDivisor())));
+        c.add(new LpComponent("Próg występu (PR " + Math.round(pr) + ")",
+                PointsEngine.performancePoints(pr)));
         if (p.isMvp()) c.add(new LpComponent("MVP meczu", cfg.lpMvpBonus()));
-        if (isAce && !won) c.add(new LpComponent("ACE przegranej drużyny", cfg.lpAceBonus()));
-        if (p.getLargestMultiKill() >= 5) c.add(new LpComponent("Pentakill", cfg.lpPentaBonus()));
-        else if (p.getLargestMultiKill() == 4) c.add(new LpComponent("Quadrakill", cfg.lpQuadraBonus()));
-        if (p.getDeaths() == 0 && (p.getKills() + p.getAssists()) >= 1) {
-            c.add(new LpComponent("Bez śmierci", cfg.lpFlawlessBonus()));
+        if (p.isAce()) {
+            c.add(new LpComponent(p.isMvp()
+                    ? "ACE (tytuł — bonus zawarty w MVP)"
+                    : "ACE przegranej drużyny", p.isMvp() ? 0 : cfg.lpAceBonus()));
         }
         int total = Math.max(0, c.stream().mapToInt(LpComponent::points).sum());
         String formula = "Baza: +" + cfg.lpWin() + " za wygraną / +" + cfg.lpLoss()
-                + " za przegraną. Występ: zaokrąglone PR ÷ " + cfg.lpPerformanceDivisor()
-                + ". Bonusy: MVP +" + cfg.lpMvpBonus() + ", ACE +" + cfg.lpAceBonus()
-                + ", penta +" + cfg.lpPentaBonus() + ", quadra +" + cfg.lpQuadraBonus()
-                + ", bez śmierci +" + cfg.lpFlawlessBonus() + ". Minimum 0 LP.";
+                + " za przegraną. Występ: PR <35: -2, 35–44: -1, 45–54: 0, "
+                + "55–64: +1, 65–74: +2, 75+: +3. MVP +" + cfg.lpMvpBonus()
+                + ", ACE od PR " + Math.round(cfg.lpAceMinPr()) + ": +" + cfg.lpAceBonus()
+                + "; bonusy nie łączą się. Penta, quadra i flawless są osiągnięciami bez LP.";
         List<PrMetric> prMetrics = prDetail == null ? List.of()
                 : prDetail.metrics().stream()
                 .map(m -> new PrMetric(m.key(), m.value(), m.average(), m.normalized(),

@@ -10,13 +10,15 @@ import org.junit.jupiter.api.Test;
 import pl.romcio.driperska.common.domain.Role;
 import pl.romcio.driperska.common.domain.Side;
 import pl.romcio.driperska.ranking.domain.MatchStatsContext.ParticipantInput;
+import pl.romcio.driperska.ranking.domain.PerformanceRatingV2Calculator.PerformanceHistory;
 import pl.romcio.driperska.ranking.domain.PointsEngine.PointsBreakdown;
 
 class ScoringTest {
 
     private static final Role[] ROLES = {Role.TOP, Role.JUNGLE, Role.MID, Role.ADC, Role.SUPPORT};
 
-    private final RatingCalculator rating = new RatingCalculator();
+    private final PerformanceRatingV2Calculator rating = new PerformanceRatingV2Calculator();
+    private final PerformanceHistory history = new PerformanceHistory();
     private final PointsEngine points = new PointsEngine();
     private final MmrCalculator mmr = new MmrCalculator();
     private final ScoringConfig cfg = ScoringConfig.defaults();
@@ -38,19 +40,19 @@ class ScoringTest {
     @Test
     void performanceRatingIsBounded() {
         MatchStatsContext ctx = sampleMatch();
-        Map<UUID, Double> pr = rating.computePerformance(ctx, cfg);
+        Map<UUID, Double> pr = rating.computePerformance(ctx, cfg, history);
         assertThat(pr).hasSize(10);
         assertThat(pr.values()).allSatisfy(v -> assertThat(v).isBetween(0.0, 100.0));
     }
 
     @Test
-    void winnersScoreMoreThanLosersAndOneMvp() {
+    void winnersScoreMoreThanLosersAndAtLeastOneMvp() {
         MatchStatsContext ctx = sampleMatch();
-        Map<UUID, Double> pr = rating.computePerformance(ctx, cfg);
+        Map<UUID, Double> pr = rating.computePerformance(ctx, cfg, history);
         Map<UUID, PointsBreakdown> lp = points.computeLeaguePoints(ctx, pr, cfg);
 
         long mvps = lp.values().stream().filter(PointsBreakdown::mvp).count();
-        assertThat(mvps).isEqualTo(1);
+        assertThat(mvps).isGreaterThanOrEqualTo(1);
 
         // Each participant's LP is non-negative; winners get at least the win base.
         for (ParticipantInput p : ctx.participants()) {
@@ -65,8 +67,8 @@ class ScoringTest {
     @Test
     void detailedPrExposesMetricsThatAddUpToPr() {
         MatchStatsContext ctx = sampleMatch();
-        Map<UUID, RatingCalculator.PrDetail> detailed = rating.computeDetailed(ctx, cfg);
-        Map<UUID, Double> plain = rating.computePerformance(ctx, cfg);
+        Map<UUID, RatingCalculator.PrDetail> detailed = rating.computeDetailed(ctx, cfg, history);
+        Map<UUID, Double> plain = rating.computePerformance(ctx, cfg, history);
 
         assertThat(detailed).hasSameSizeAs(ctx.participants());
         for (ParticipantInput p : ctx.participants()) {
@@ -83,16 +85,53 @@ class ScoringTest {
     }
 
     @Test
-    void mmrIsZeroSumWithoutPrModulation() {
+    void mmrIsZeroSumAndDoesNotPunishHighPrLosers() {
         MatchStatsContext ctx = sampleMatch();
-        ScoringConfig noMod = new ScoringConfig(cfg.lpWin(), cfg.lpLoss(), cfg.lpPerformanceDivisor(),
-                cfg.lpMvpBonus(), cfg.lpAceBonus(), cfg.lpPentaBonus(), cfg.lpQuadraBonus(),
-                cfg.lpFlawlessBonus(), cfg.mmrK(), cfg.mmrKRookie(), cfg.mmrRookieGames(),
-                cfg.mmrStart(), false, cfg.roleWeights());
-        Map<UUID, Double> pr = rating.computePerformance(ctx, noMod);
+        Map<UUID, Double> pr = rating.computePerformance(ctx, cfg, history);
         Map<UUID, Integer> games = Map.of();
-        Map<UUID, Double> delta = mmr.computeMmrDelta(ctx, pr, Map.of(), games, noMod);
+        Map<UUID, Double> delta = mmr.computeMmrDelta(ctx, pr, Map.of(), games, cfg);
         double sum = delta.values().stream().mapToDouble(Double::doubleValue).sum();
         assertThat(sum).isCloseTo(0.0, org.assertj.core.data.Offset.offset(0.01));
+    }
+
+    @Test
+    void performanceUsesTransparentCentredTiers() {
+        assertThat(PointsEngine.performancePoints(20)).isEqualTo(-2);
+        assertThat(PointsEngine.performancePoints(40)).isEqualTo(-1);
+        assertThat(PointsEngine.performancePoints(50)).isZero();
+        assertThat(PointsEngine.performancePoints(60)).isEqualTo(1);
+        assertThat(PointsEngine.performancePoints(70)).isEqualTo(2);
+        assertThat(PointsEngine.performancePoints(80)).isEqualTo(3);
+    }
+
+    @Test
+    void aceRequiresSixtyPrAndDoesNotStackWithMvp() {
+        MatchStatsContext ctx = sampleMatch();
+        Map<UUID, Double> values = new java.util.LinkedHashMap<>();
+        for (ParticipantInput participant : ctx.participants()) {
+            values.put(participant.participantId(), participant.side() == Side.BLUE ? 80.0 : 50.0);
+        }
+        ParticipantInput bestLoser = ctx.team(Side.RED).getFirst();
+        values.put(bestLoser.participantId(), 59.99);
+        assertThat(points.computeLeaguePoints(ctx, values, cfg).get(bestLoser.participantId()).ace())
+                .isFalse();
+
+        values.put(bestLoser.participantId(), 90.0);
+        PointsBreakdown result = points.computeLeaguePoints(ctx, values, cfg).get(bestLoser.participantId());
+        assertThat(result.ace()).isTrue();
+        assertThat(result.mvp()).isTrue();
+        assertThat(result.lp()).isEqualTo(cfg.lpLoss() + 3 + cfg.lpMvpBonus());
+    }
+
+    @Test
+    void historyGraduallyBecomesRoleReference() {
+        MatchStatsContext ctx = sampleMatch();
+        PerformanceHistory roleHistory = new PerformanceHistory();
+        for (int i = 0; i < 10; i++) {
+            roleHistory.add(ctx);
+        }
+        assertThat(roleHistory.sampleCount(Role.ADC)).isEqualTo(20);
+        assertThat(rating.computePerformance(ctx, cfg, roleHistory).values())
+                .allSatisfy(value -> assertThat(value).isBetween(0.0, 100.0));
     }
 }

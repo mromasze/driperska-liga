@@ -3,6 +3,20 @@
 Wszystkie istotne zmiany Driperskiej Ligi są opisywane tutaj oraz w
 `frontend/src/content/releases.ts`, który zasila patch notes na stronie głównej.
 
+## v0.4.1 — 2026-07-28
+
+- **Nowy PR v2.** Ocena występu korzysta z percentyli wcześniejszych graczy na tej samej pozycji (kroczące 60 próbek / 30 meczów). Przez pierwsze 20 próbek roli historia jest płynnie łączona z porównaniem bezpośrednich rywali w meczu. Wagi KDA pozostały bez zmian.
+- Gold share zastąpiony efektywnością `damage / gold`: ranking premiuje wykorzystanie zasobów, nie samo przejmowanie złota. Pozostałe składniki to KDA, KP, CS/min, damage/min i vision/min.
+- **Nowe LP:** wygrana +10, przegrana +4; występ jest liczony progami PR (`<35: -2`, `35–44: -1`, `45–54: 0`, `55–64: +1`, `65–74: +2`, `75+: +3`).
+- MVP daje +3. ACE daje +2 najlepszemu przegranemu dopiero od PR 60. MVP i ACE mogą być współdzielone przy remisie; jeśli ta sama osoba jest MVP i ACE, oba tytuły są widoczne, ale bonusy nie stackują się.
+- Penta, quadra i flawless pozostają osiągnięciami, ale nie przyznają LP i nie faworyzują już konkretnych ról w tabeli.
+- **Ranking sezonu nie jest już sortowany po sumie LP.** Główny wynik to skorygowana średnia `(suma LP + 5 × średnia ligi) / (mecze + 5)`. Do klasyfikacji potrzeba 5 meczów; wcześniej wynik jest prowizoryczny. Suma LP zostaje jako licznik aktywności.
+- MMR używa czystego Elo bez mnożnika PR — dobry gracz przegranej drużyny nie traci już więcej MMR od słabego.
+- ACE jest trwale zapisywane na meczu i agregowane na profilu oraz w tabeli. Migracja `V6` dodaje `is_ace` i `ace_count`.
+- Przy pierwszym uruchomieniu 0.4.1 wszystkie sezony są automatycznie i jednokrotnie przeliczane chronologicznie do PR/LP v2.
+- `Season.scoringConfigJson` jest teraz faktycznie odczytywany; niepoprawna konfiguracja bezpiecznie wraca do domyślnych zasad v2.
+- Zaktualizowano stronę główną, rozpiski punktów meczu, profile, tabelę rankingu i dokumentację zasad.
+
 ## v0.4.0 — 2026-07-28
 
 - **Naprawiony błąd 500 na wszystkich listach meczów.** `GET /api/v1/matches` zwracał 500 dla każdego filtra (i bez filtra), co wywalało Pulpit, Akceptacje, listę meczów i licznik w menu. Przyczyna: dodane w v0.3.2 sortowanie `startedAt DESC NULLS LAST` przechodziło przez Criteria API (zapytania pochodne Spring Data), a Hibernate 6 odrzuca tam sterowanie kolejnością nulli — `UnsupportedOperationException: Applying Null Precedence using Criteria Queries is not yet supported`. Kolejność jest teraz wpisana w JPQL (`order by coalesce(m.startedAt, m.createdAt) desc, m.createdAt desc`) w `MatchRepository.LIST_ORDER`, a kontroler nie buduje już `Sort`. Dodany test regresyjny `MatchListingIT` przechodzi po wszystkich statusach.

@@ -1,5 +1,7 @@
 package pl.romcio.driperska.ranking.application;
 
+import static pl.romcio.driperska.ranking.application.PerformanceHistoryService.toContext;
+
 import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.HashMap;
@@ -16,12 +18,12 @@ import pl.romcio.driperska.match.domain.MatchParticipant;
 import pl.romcio.driperska.match.domain.MatchStatus;
 import pl.romcio.driperska.match.infra.MatchRepository;
 import pl.romcio.driperska.ranking.domain.MatchStatsContext;
-import pl.romcio.driperska.ranking.domain.MatchStatsContext.ParticipantInput;
 import pl.romcio.driperska.ranking.domain.MmrCalculator;
+import pl.romcio.driperska.ranking.domain.PerformanceRatingV2Calculator;
+import pl.romcio.driperska.ranking.domain.PerformanceRatingV2Calculator.PerformanceHistory;
 import pl.romcio.driperska.ranking.domain.PlayerSeasonStats;
 import pl.romcio.driperska.ranking.domain.PointsEngine;
 import pl.romcio.driperska.ranking.domain.PointsEngine.PointsBreakdown;
-import pl.romcio.driperska.ranking.domain.RatingCalculator;
 import pl.romcio.driperska.ranking.domain.ScoringConfig;
 import pl.romcio.driperska.ranking.infra.PlayerSeasonStatsRepository;
 
@@ -31,23 +33,26 @@ public class RankingService {
 
     private final MatchRepository matchRepository;
     private final PlayerSeasonStatsRepository statsRepository;
-    private final RatingCalculator ratingCalculator;
+    private final PerformanceRatingV2Calculator ratingCalculator;
     private final PointsEngine pointsEngine;
     private final MmrCalculator mmrCalculator;
     private final ScoringConfigProvider configProvider;
+    private final PerformanceHistoryService historyService;
 
     public RankingService(MatchRepository matchRepository,
                           PlayerSeasonStatsRepository statsRepository,
-                          RatingCalculator ratingCalculator,
+                          PerformanceRatingV2Calculator ratingCalculator,
                           PointsEngine pointsEngine,
                           MmrCalculator mmrCalculator,
-                          ScoringConfigProvider configProvider) {
+                          ScoringConfigProvider configProvider,
+                          PerformanceHistoryService historyService) {
         this.matchRepository = matchRepository;
         this.statsRepository = statsRepository;
         this.ratingCalculator = ratingCalculator;
         this.pointsEngine = pointsEngine;
         this.mmrCalculator = mmrCalculator;
         this.configProvider = configProvider;
+        this.historyService = historyService;
     }
 
     @EventListener
@@ -59,7 +64,7 @@ public class RankingService {
         }
         ScoringConfig cfg = configProvider.forSeason(match.getSeasonId());
         Map<UUID, PlayerSeasonStats> statsByPlayer = loadSeasonStats(match.getSeasonId());
-        scoreMatch(match, cfg, statsByPlayer);
+        scoreMatch(match, cfg, statsByPlayer, historyService.before(match));
         statsRepository.saveAll(statsByPlayer.values());
     }
 
@@ -83,12 +88,13 @@ public class RankingService {
         }
         ScoringConfig cfg = configProvider.forSeason(match.getSeasonId());
         MatchStatsContext ctx = toContext(match);
-        Map<UUID, Double> pr = ratingCalculator.computePerformance(ctx, cfg);
+        Map<UUID, Double> pr = ratingCalculator.computePerformance(ctx, cfg, historyService.before(match));
         Map<UUID, PointsBreakdown> points = pointsEngine.computeLeaguePoints(ctx, pr, cfg);
         for (MatchParticipant p : match.getParticipants()) {
             double rating = pr.getOrDefault(p.getId(), 0.0);
-            PointsBreakdown breakdown = points.getOrDefault(p.getId(), new PointsBreakdown(0, false));
-            p.applyComputed(rating, breakdown.lp(), 0.0, breakdown.mvp());
+            PointsBreakdown breakdown = points.getOrDefault(
+                    p.getId(), new PointsBreakdown(0, false, false));
+            p.applyComputed(rating, breakdown.lp(), 0.0, breakdown.mvp(), breakdown.ace());
         }
     }
 
@@ -98,29 +104,48 @@ public class RankingService {
         statsRepository.deleteBySeasonId(seasonId);
         ScoringConfig cfg = configProvider.forSeason(seasonId);
         Map<UUID, PlayerSeasonStats> statsByPlayer = new HashMap<>();
+        PerformanceHistory history = new PerformanceHistory();
         List<Match> matches = matchRepository.findByStatusOrderByCompletedAtDesc(MatchStatus.APPROVED).stream()
                 .filter(m -> m.getSeasonId().equals(seasonId))
                 .sorted(Comparator.comparing(Match::getCompletedAt))
                 .toList();
         for (Match match : matches) {
-            scoreMatch(match, cfg, statsByPlayer);
+            scoreMatch(match, cfg, statsByPlayer, history);
+            history.add(toContext(match));
         }
         statsRepository.saveAll(statsByPlayer.values());
     }
 
-    @Transactional(readOnly = true)
-    public List<PlayerSeasonStats> ranking(UUID seasonId) {
-        List<PlayerSeasonStats> rows = new ArrayList<>(statsRepository.findBySeasonId(seasonId));
-        rows.sort(Comparator
-                .comparingInt(PlayerSeasonStats::getTotalLp).reversed()
-                .thenComparing(Comparator.comparingDouble(PlayerSeasonStats::winRate).reversed())
-                .thenComparing(Comparator.comparingDouble(PlayerSeasonStats::avgPerformanceRating).reversed())
-                .thenComparing(Comparator.comparingInt(PlayerSeasonStats::getMvpCount).reversed())
-                .thenComparingInt(PlayerSeasonStats::getGames));
-        return rows;
+    public record RankingEntry(PlayerSeasonStats stats, double rankingScore, boolean qualified) {
     }
 
-    private void scoreMatch(Match match, ScoringConfig cfg, Map<UUID, PlayerSeasonStats> statsByPlayer) {
+    @Transactional(readOnly = true)
+    public List<RankingEntry> ranking(UUID seasonId) {
+        List<PlayerSeasonStats> rows = new ArrayList<>(statsRepository.findBySeasonId(seasonId));
+        ScoringConfig cfg = configProvider.forSeason(seasonId);
+        int games = rows.stream().mapToInt(PlayerSeasonStats::getGames).sum();
+        int points = rows.stream().mapToInt(PlayerSeasonStats::getTotalLp).sum();
+        double leagueAverage = games == 0 ? cfg.rankingPriorPoints() : points / (double) games;
+        List<RankingEntry> ranking = rows.stream()
+                .map(stats -> new RankingEntry(stats,
+                        round2((stats.getTotalLp() + cfg.rankingPriorGames() * leagueAverage)
+                                / (stats.getGames() + (double) cfg.rankingPriorGames())),
+                        stats.getGames() >= cfg.rankingMinGames()))
+                .toList();
+        return ranking.stream()
+                .sorted(Comparator.comparing(RankingEntry::qualified).reversed()
+                        .thenComparing(Comparator.comparingDouble(
+                                RankingEntry::rankingScore).reversed())
+                        .thenComparing(Comparator.comparingInt(
+                                (RankingEntry entry) -> entry.stats().getGames()).reversed())
+                        .thenComparing(Comparator.comparingDouble(
+                                (RankingEntry entry) -> entry.stats().avgPerformanceRating()).reversed()))
+                .toList();
+    }
+
+    private void scoreMatch(Match match, ScoringConfig cfg,
+                            Map<UUID, PlayerSeasonStats> statsByPlayer,
+                            PerformanceHistory history) {
         MatchStatsContext ctx = toContext(match);
 
         Map<UUID, Double> currentMmr = new HashMap<>();
@@ -131,22 +156,24 @@ public class RankingService {
             gamesPlayed.put(p.getPlayerId(), s != null ? s.getGames() : 0);
         }
 
-        Map<UUID, Double> pr = ratingCalculator.computePerformance(ctx, cfg);
+        Map<UUID, Double> pr = ratingCalculator.computePerformance(ctx, cfg, history);
         Map<UUID, PointsBreakdown> points = pointsEngine.computeLeaguePoints(ctx, pr, cfg);
         Map<UUID, Double> mmrDelta = mmrCalculator.computeMmrDelta(ctx, pr, currentMmr, gamesPlayed, cfg);
 
         for (MatchParticipant p : match.getParticipants()) {
             double rating = pr.getOrDefault(p.getId(), 0.0);
-            PointsBreakdown breakdown = points.getOrDefault(p.getId(), new PointsBreakdown(0, false));
+            PointsBreakdown breakdown = points.getOrDefault(
+                    p.getId(), new PointsBreakdown(0, false, false));
             double delta = mmrDelta.getOrDefault(p.getId(), 0.0);
             boolean won = p.getSide() == match.getWinningSide();
             boolean penta = p.getLargestMultiKill() >= 5;
 
-            p.applyComputed(rating, breakdown.lp(), delta, breakdown.mvp());
+            p.applyComputed(rating, breakdown.lp(), delta, breakdown.mvp(), breakdown.ace());
 
             PlayerSeasonStats stats = statsByPlayer.computeIfAbsent(p.getPlayerId(),
                     id -> new PlayerSeasonStats(id, match.getSeasonId(), cfg.mmrStart()));
-            stats.addMatch(won, breakdown.lp(), rating, delta, breakdown.mvp(), penta);
+            stats.addMatch(won, breakdown.lp(), rating, delta,
+                    breakdown.mvp(), breakdown.ace(), penta);
         }
     }
 
@@ -156,15 +183,7 @@ public class RankingService {
         return map;
     }
 
-    private static MatchStatsContext toContext(Match match) {
-        List<ParticipantInput> inputs = new ArrayList<>();
-        for (MatchParticipant p : match.getParticipants()) {
-            inputs.add(new ParticipantInput(
-                    p.getId(), p.getPlayerId(), p.getSide(), p.getRole(),
-                    p.getKills(), p.getDeaths(), p.getAssists(), p.getCs(), p.getGold(),
-                    p.getDamageToChampions(), p.getVisionScore(), p.getLargestMultiKill()));
-        }
-        int duration = match.getDurationSeconds() != null ? match.getDurationSeconds() : 1800;
-        return new MatchStatsContext(match.getWinningSide(), duration, inputs);
+    private static double round2(double value) {
+        return Math.round(value * 100.0) / 100.0;
     }
 }

@@ -12,16 +12,16 @@ warstw, z których każda odpowiada na inne pytanie:
 | **Punkty Ligowe (LP)** | „Jak wypadasz w sezonie?" | tak, ranking sezonu | tabela ligowa, tytuł sezonu |
 | **MMR (Elo)** | „Jak mocny jesteś naprawdę?" | opcjonalnie | balansowanie losowania drużyn |
 
-Wszystkie wagi/bonusy siedzą w `ScoringConfig` (YAML/jsonb per sezon), więc system stroimy bez
+Wszystkie wagi/bonusy siedzą w `ScoringConfig` (opcjonalny pełny JSON per sezon), więc system stroimy bez
 zmian w kodzie. Poniższe liczby to **rozsądny domyślny zestaw** do dostrojenia po pierwszych meczach.
 
 ---
 
 ## 4.2 Performance Rating (PR) — ocena meczu 0–100
 
-PR ocenia **grę indywidualną względem reszty meczu**, z **wagami zależnymi od roli** (support nie
-jest karany za niskie CS, ADC nie jest karany za niski vision itd.). Liczony wyłącznie z wpisanych
-statystyk — bez wpływu wyniku meczu (żeby „MVP przegranych" miało sens).
+PR v2 ocenia grę indywidualną względem **historycznych występów na tej samej roli**. Nie dostaje
+bezpośredniego bonusu za zwycięstwo. Wagi zależą od roli i zachowują wysokie znaczenie KDA.
+Historia jest krocząca: maksymalnie 60 próbek roli, czyli 30 wcześniejszych meczów.
 
 ### Krok 1 — metryki bazowe (per uczestnik)
 Z surowych statystyk i czasu gry `min = durationSeconds / 60`:
@@ -32,24 +32,24 @@ Z surowych statystyk i czasu gry `min = durationSeconds / 60`:
 | `KP` (kill participation) | `(K + A) / max(1, teamKills)` |
 | `CSpm` | `CS / min` |
 | `DMGpm` | `damageToChampions / min` |
-| `DMGshare` | `damageToChampions / max(1, teamDamage)` |
-| `GOLDshare` | `gold / max(1, teamGold)` |
+| `EFF` | `damageToChampions / max(1, gold)` |
 | `VSpm` | `visionScore / min` |
 
-`teamKills`, `teamDamage`, `teamGold` = sumy po uczestnikach tej samej strony.
+`teamKills` to suma zabójstw drużyny. Efektywność zastępuje gold share: system premiuje wykorzystanie
+zasobów, a nie samo przejęcie dużej części złota.
 
-### Krok 2 — normalizacja względem meczu
-Każdą metrykę normalizujemy do skali 0–1 względem **średniej dla tej samej roli w tym meczu**
-(a gdy w danej roli jest tylko jeden gracz na mapie — względem średniej całego meczu):
+### Krok 2 — historyczny percentyl roli
+Każda metryka otrzymuje wynik 0–1 jako percentyl wśród wcześniejszych występów na tej samej roli.
+Wartość `0.50` oznacza medianę roli, `0.80` wynik lepszy od 80% próbek.
 
-```
-norm(x) = clamp( x / (2 * avgRole(x)) , 0, 1)
-```
+### Krok 3 — bezpieczny start sezonu
+Dopóki rola nie ma 20 próbek, percentyl historyczny jest płynnie łączony z bezpośrednim porównaniem
+dwóch graczy tej roli w bieżącym meczu:
 
-Interpretacja: dokładnie średnia roli → 0.5; dwukrotność średniej lub więcej → 1.0. Odporne na
-skrajne wartości (clamp), niezależne od patcha/długości gry (wszystko relatywne).
+`norm = historyWeight × percentileHistory + (1-historyWeight) × comparisonInMatch`,
+gdzie `historyWeight = min(1, liczbaPróbek / 20)`.
 
-### Krok 3 — wagi ról
+### Krok 4 — wagi ról
 Profile wag (sumują się do 1.0 w każdej roli):
 
 | Metryka | TOP | JUNGLE | MID | ADC | SUPPORT |
@@ -57,28 +57,18 @@ Profile wag (sumują się do 1.0 w każdej roli):
 | KDA | 0.25 | 0.20 | 0.20 | 0.20 | 0.25 |
 | KP | 0.15 | 0.25 | 0.20 | 0.15 | 0.30 |
 | CSpm | 0.15 | 0.10 | 0.15 | 0.20 | 0.00 |
-| DMGpm/share | 0.25 | 0.20 | 0.30 | 0.35 | 0.15 |
-| GOLDshare | 0.10 | 0.10 | 0.05 | 0.05 | 0.05 |
+| DMGpm | 0.25 | 0.20 | 0.30 | 0.35 | 0.15 |
+| EFF (damage/gold) | 0.10 | 0.10 | 0.05 | 0.05 | 0.05 |
 | VSpm | 0.10 | 0.15 | 0.10 | 0.05 | 0.25 |
 
-> Dla DMG używamy średniej z `norm(DMGpm)` i `norm(DMGshare)` — łapie i „ile bijesz", i „jaki masz
-> udział w drużynie". Wagi to punkt startowy; do kalibracji w `ScoringConfig`.
+> DMGpm mierzy presję, a EFF wykorzystanie otrzymanego złota. Wagi KDA z v1 pozostały bez zmian.
+> Wszystkie wagi są konfigurowalne w `ScoringConfig`.
 
-### Krok 4 — złożenie
+### Krok 5 — złożenie
 ```
 PR = 100 * Σ_metryka ( waga_roli(metryka) * norm(metryka) )
 ```
-Wynik 0–100. Typowy gracz ≈ 50, wyróżniający się 65–80, dominujący 80+.
-
-### Worked example (skrót)
-ADC: 10/2/8, CS 250, dmg 30k, gold 15k, vision 20, gra 30 min; średnie roli ADC w meczu:
-KDA 4.5, CSpm 7.0, DMGpm 850, DMGshare 0.26, GOLDshare 0.24, VSpm 0.9, KP 0.55.
-- KDA = 18/2 = 9.0 → norm = clamp(9/(2·4.5),0,1)=1.0
-- CSpm = 8.33 → norm = clamp(8.33/14,0,1)=0.595
-- DMGpm = 1000 → norm=clamp(1000/1700)=0.588; DMGshare=0.30→norm=clamp(.30/.52)=0.577; śr.≈0.583
-- GOLDshare = 0.25 → 0.52 ; VSpm=0.667→0.37 ; KP=0.6→0.545
-- PR = 100·(0.20·1.0 + 0.15·0.545 + 0.20·0.595 + 0.35·0.583 + 0.05·0.52 + 0.05·0.37)
-     = 100·(0.20+0.0818+0.119+0.204+0.026+0.0185) ≈ **64.9** → solidna gra.
+Wynik 0–100. Około 50 oznacza typowy występ dla roli, 65–74 dobry, 75+ wyróżniający.
 
 ---
 
@@ -87,33 +77,31 @@ KDA 4.5, CSpm 7.0, DMGpm 850, DMGshare 0.26, GOLDshare 0.24, VSpm 0.9, KP 0.55.
 To, co widać w tabeli i wyłania mistrza sezonu. Naliczane **przy akceptacji meczu**.
 
 ```
-LP(gracz) = LP_bazowe(wynik) + LP_performance(PR) + Σ bonusy
+LP(gracz) = LP_bazowe(wynik) + próg_występu(PR) + nagroda_indywidualna
 ```
 
 | Składnik | Wartość |
 |----------|---------|
-| **LP_bazowe** | wygrana: **+10**, przegrana: **+2** (nagroda za udział — warto grać nawet w słabym składzie) |
-| **LP_performance** | `round(PR / 10)` → **0–10** (nigdy nie karze; premiuje dobrą grę niezależnie od wyniku) |
-| **MVP meczu** | +5 (najwyższy PR w meczu) |
-| **ACE przegranych** | +3 (najwyższy PR po przegranej stronie — „nieśli mimo porażki") |
-| **Pentakill** | +5 |
-| **Quadrakill** | +2 |
-| **Flawless (0 śmierci, ≥1 udział)** | +2 |
+| **LP_bazowe** | wygrana: **+10**, przegrana: **+4** |
+| **PR <35** | −2 |
+| **PR 35–44** | −1 |
+| **PR 45–54** | 0 |
+| **PR 55–64** | +1 |
+| **PR 65–74** | +2 |
+| **PR ≥75** | +3 |
+| **MVP meczu** | +3 (najwyższy PR w meczu) |
+| **ACE przegranych** | +2 (najwyższy PR przegranych, wymagane PR ≥60) |
 
-Zakres realny: dominujące zwycięstwo z MVP i pentą ≈ `10+10+5+5 = 30 LP`; blada przegrana ≈ `2+2 = 4 LP`.
-System jest **niekarzący** (brak ujemnych LP) — sprzyja frekwencji, a i tak różnicuje wyraźnie.
+MVP i ACE mogą być współdzielone przy remisie PR. Jeśli przegrany jest jednocześnie MVP i ACE,
+widzi oba tytuły, ale dostaje tylko bonus MVP. Penta, quadra i flawless pozostają osiągnięciami bez LP.
 
-### Tabela sezonu i tie-breakery
-Sortowanie rankingu:
-1. `totalLp` malejąco,
-2. win rate (`wins/games`),
-3. średni PR (`avgPerformanceRating`),
-4. liczba MVP,
-5. mniej rozegranych gier (premiuje efektywność przy remisie punktów).
+### Tabela sezonu
+Suma LP jest licznikiem aktywności. Kolejność wyznacza skorygowana średnia:
 
-> **Opcjonalny „soft cap" antygrindowy:** jeśli liczba meczów graczy jest bardzo nierówna, można
-> pokazać dodatkowo ranking wg **średniego LP na mecz** (min. próg gier, np. 5), obok sumy LP.
-> Konfigurowalne; domyślnie tabela wg sumy LP + kolumna „LP/mecz" informacyjnie.
+`rankingScore = (totalLp + 5 × leagueAveragePoints) / (games + 5)`.
+
+Pięć wirtualnych meczów na poziomie średniej ligi stabilizuje małą próbkę. Do pełnej klasyfikacji
+potrzeba 5 rozegranych meczów; wcześniej wynik jest oznaczony jako prowizoryczny i sortowany niżej.
 
 ---
 
@@ -130,17 +118,13 @@ Ukryty (lub półjawny) rating siły gracza, aktualizowany po każdym zaakceptow
 - Wynik `S`: 1 dla zwycięskiej strony, 0 dla przegranej.
 - Zmiana dla gracza:
   ```
-  ΔMMR_i = K * (S_teamGracza − E_teamGracza) * modPR_i
+  ΔMMR_i = K * (S_teamGracza − E_teamGracza)
   ```
-  gdzie:
-  - `K` = 32 (nowicjusze < 10 gier: K=48 dla szybszej kalibracji),
-  - `modPR_i` = `0.75 + 0.5 * (PR_i / 100)` — kto wybił się w meczu, zyskuje/traci więcej
-    (mnożnik ≈ 0.75–1.25). Opcjonalny; przy `scoring.mmrPrModulation=false` → `modPR_i = 1`.
+  gdzie `K` = 32, a dla nowicjuszy z mniej niż 10 gier `K` = 48.
 
-MMR liczymy tylko dla meczów z pełnym, poprawnym scoreboardem (10 graczy). Zmiana zapisywana w
-`MatchParticipant.mmrDelta` i agregowana do `PlayerSeasonStats.mmr` (dla ciągłości można też trzymać
-globalny MMR gracza niezależny od sezonu — decyzja: **MMR globalny, przenoszony między sezonami**,
-LP resetowane co sezon).
+PR nie moduluje MMR: dobry gracz przegranej drużyny nie traci więcej punktów niż słaby. Zmiana zapisywana w
+`MatchParticipant.mmrDelta` i agregowana do `PlayerSeasonStats.mmr`. MMR i LP są obecnie
+prowadzone w ramach sezonu.
 
 ---
 
@@ -163,12 +147,13 @@ record ParticipantStats(Role role, int k, int d, int a, int cs, int gold,
                          int damage, int vision, int largestMultiKill, Side side) {}
 
 interface RatingCalculator {
-    /** PR 0–100 dla każdego uczestnika, w kontekście całego meczu. */
-    Map<ParticipantId, Double> computePerformance(MatchStatsContext ctx, ScoringConfig cfg);
+    /** PR v2 0–100 z historycznym percentylem roli. */
+    Map<ParticipantId, Double> computePerformance(MatchStatsContext ctx, ScoringConfig cfg,
+                                                   PerformanceHistory history);
 }
 
 interface PointsEngine {
-    /** LP per uczestnik: bazowe + performance + bonusy (MVP/ACE/penta...). */
+    /** LP per uczestnik: baza + próg PR + niestackujące MVP/ACE. */
     Map<ParticipantId, Integer> computeLeaguePoints(MatchStatsContext ctx,
                                                      Map<ParticipantId, Double> pr,
                                                      ScoringConfig cfg);

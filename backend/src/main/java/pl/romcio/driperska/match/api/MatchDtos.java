@@ -115,10 +115,11 @@ public final class MatchDtos {
             Double performanceRating,
             Integer lpAwarded,
             boolean mvp,
+            boolean ace,
             LpBreakdown lpBreakdown) {
     }
 
-    /** One line of a player's LP math (e.g. "Zwycięstwo" → +10, "Występ (PR 68 ÷ 10)" → +7). */
+    /** One line of a player's LP math (e.g. "Zwycięstwo" → +10, "Próg PR 68" → +2). */
     public record LpComponent(String label, int points) {}
 
     /**

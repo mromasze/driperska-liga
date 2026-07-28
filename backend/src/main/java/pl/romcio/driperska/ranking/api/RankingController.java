@@ -14,6 +14,7 @@ import org.springframework.web.bind.annotation.RestController;
 import pl.romcio.driperska.player.domain.Player;
 import pl.romcio.driperska.player.infra.PlayerRepository;
 import pl.romcio.driperska.ranking.application.RankingService;
+import pl.romcio.driperska.ranking.application.RankingService.RankingEntry;
 import pl.romcio.driperska.ranking.domain.PlayerSeasonStats;
 import pl.romcio.driperska.season.application.SeasonService;
 
@@ -35,12 +36,13 @@ public class RankingController {
     @GetMapping
     public List<RankingRowResponse> ranking(@RequestParam(required = false) UUID season) {
         UUID seasonId = season != null ? season : seasonService.current().getId();
-        List<PlayerSeasonStats> rows = rankingService.ranking(seasonId);
+        List<RankingEntry> rows = rankingService.ranking(seasonId);
         Map<UUID, Player> players = new HashMap<>();
-        playerRepository.findByIdIn(rows.stream().map(PlayerSeasonStats::getPlayerId).toList())
+        playerRepository.findByIdIn(rows.stream().map(row -> row.stats().getPlayerId()).toList())
                 .forEach(p -> players.put(p.getId(), p));
         AtomicInteger rank = new AtomicInteger(0);
-        return rows.stream().map(s -> {
+        return rows.stream().map(entry -> {
+            PlayerSeasonStats s = entry.stats();
             Player p = players.get(s.getPlayerId());
             return new RankingRowResponse(
                     rank.incrementAndGet(),
@@ -49,7 +51,8 @@ public class RankingController {
                     p != null ? p.getAvatarUrl() : null,
                     s.getTotalLp(), s.getGames(), s.getWins(), s.getLosses(),
                     s.winRate(), s.avgPerformanceRating(), s.getMmr(),
-                    s.getMvpCount(), s.getPentaCount());
+                    s.getMvpCount(), s.getAceCount(), s.getPentaCount(),
+                    entry.rankingScore(), entry.qualified());
         }).toList();
     }
 
@@ -77,6 +80,9 @@ public class RankingController {
             double avgPerformanceRating,
             double mmr,
             int mvpCount,
-            int pentaCount) {
+            int aceCount,
+            int pentaCount,
+            double rankingScore,
+            boolean qualified) {
     }
 }

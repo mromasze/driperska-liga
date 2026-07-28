@@ -13,11 +13,13 @@ export function RankingTable({ rows }: { rows: RankingRow[] }) {
           <tr className="kicker border-b border-line text-left">
             <th className="px-4 py-3 font-semibold">#</th>
             <th className="px-4 py-3 font-semibold">Gracz</th>
-            <th className="px-3 py-3 text-right font-semibold">LP</th>
+            <th className="px-3 py-3 text-right font-semibold">Wynik</th>
+            <th className="px-3 py-3 text-right font-semibold">Σ LP</th>
             <th className="px-3 py-3 text-center font-semibold">Bilans</th>
             <th className="px-3 py-3 text-right font-semibold">Win%</th>
             <th className="px-3 py-3 text-center font-semibold">Avg PR</th>
             <th className="px-3 py-3 text-right font-semibold">MVP</th>
+            <th className="px-3 py-3 text-right font-semibold">ACE</th>
             <th className="px-4 py-3 text-right font-semibold">MMR</th>
           </tr>
         </thead>
@@ -36,10 +38,18 @@ export function RankingTable({ rows }: { rows: RankingRow[] }) {
               <td className="px-4 py-3">
                 <Link to={`/players/${r.playerId}`} className="flex items-center gap-3 hover:text-gold">
                   <Avatar src={r.avatarUrl} name={r.nickname} size={34} ring={r.rank <= 3} />
-                  <span className="font-medium text-text-hi">{r.nickname}</span>
+                  <span>
+                    <span className="font-medium text-text-hi">{r.nickname}</span>
+                    {!r.qualified && (
+                      <span className="ml-2 text-xs text-text-lo" title="Do klasyfikacji potrzeba 5 meczów">
+                        prowizoryczny
+                      </span>
+                    )}
+                  </span>
                 </Link>
               </td>
-              <td className="num px-3 py-3 text-right text-base font-bold text-gold">{r.totalLp}</td>
+              <td className="num px-3 py-3 text-right text-base font-bold text-gold">{r.rankingScore.toFixed(2)}</td>
+              <td className="num px-3 py-3 text-right text-text-lo">{r.totalLp}</td>
               <td className="num px-3 py-3 text-center text-text-lo">
                 <span className="text-win">{r.wins}</span>
                 <span className="text-text-lo"> - </span>
@@ -50,6 +60,7 @@ export function RankingTable({ rows }: { rows: RankingRow[] }) {
                 <PrBadge value={r.avgPerformanceRating} size="sm" />
               </td>
               <td className="num px-3 py-3 text-right">{r.mvpCount || '—'}</td>
+              <td className="num px-3 py-3 text-right">{r.aceCount || '—'}</td>
               <td className="num px-4 py-3 text-right text-text-lo">{Math.round(r.mmr)}</td>
             </tr>
           ))}

@@ -20,33 +20,36 @@ export function ScoringInfo({ defaultOpen = false }: { defaultOpen?: boolean }) 
         <div>
           <div className="kicker text-gold">Performance Rating (PR) · 0–100</div>
           <p className="mt-1">
-            Ocena Twojej gry w meczu, <strong>niezależna od wyniku</strong> — liczona ze statystyk z
-            wagami zależnymi od roli (support nie jest karany za niskie CS, ADC za niski vision itd.)
-            i porównywana do średniej tej roli w meczu. Składniki: KDA, udział w zabójstwach (KP),
-            CS/min, obrażenia do bohaterów, udział w złocie i vision score.
+            Ocena gry bez bezpośredniego bonusu za zwycięstwo, liczona ze statystyk z wagami
+            zależnymi od roli. PR v2 porównuje wynik z wcześniejszymi występami na tej samej pozycji.
+            Podczas pierwszych 20 próbek roli historyczny percentyl jest stopniowo łączony z
+            bezpośrednim porównaniem w danym meczu. Składniki: KDA, udział w zabójstwach (KP),
+            CS/min, obrażenia/min, efektywność obrażenia/złoto i vision/min.
+            <strong> Wagi KDA pozostały wysokie i zależne od pozycji.</strong>
           </p>
           <p className="mt-1 text-text-lo">Przeciętnie ≈ 50, dobra gra 65–80, dominacja 80+.</p>
         </div>
 
         <div>
           <div className="kicker text-gold">Punkty Ligowe (LP) · ranking sezonu</div>
-          <p className="mt-1">Naliczane przy akceptacji meczu przez admina, nigdy ujemne:</p>
+          <p className="mt-1">Naliczane przy akceptacji meczu przez admina:</p>
           <ul className="mt-2 space-y-1">
-            <li>• Wygrana <strong className="text-win">+10</strong>, przegrana <strong>+2</strong> (nagroda za udział)</li>
-            <li>• Jakość gry: <strong>+ round(PR / 10)</strong> → 0–10 punktów</li>
-            <li>• MVP meczu (najwyższy PR) <strong>+5</strong></li>
-            <li>• ACE przegranych (najlepszy PR po stronie, która przegrała) <strong>+3</strong></li>
-            <li>• Pentakill <strong>+5</strong>, Quadrakill <strong>+2</strong>, Flawless (0 śmierci) <strong>+2</strong></li>
+            <li>• Wygrana <strong className="text-win">+10</strong>, przegrana <strong>+4</strong></li>
+            <li>• Próg PR: <strong>&lt;35: −2</strong>, 35–44: −1, 45–54: 0, 55–64: +1, 65–74: +2, 75+: +3</li>
+            <li>• MVP meczu (najwyższy PR) <strong>+3</strong></li>
+            <li>• ACE przegranych: najwyższy PR po przegranej stronie, wymagane PR ≥60, <strong>+2</strong></li>
+            <li>• Jeżeli przegrany jest jednocześnie MVP i ACE, widzi oba tytuły, ale dostaje tylko bonus MVP</li>
+            <li>• Remis PR oznacza współdzielony tytuł; penta, quadra i flawless są osiągnięciami bez LP</li>
           </ul>
           <p className="mt-2 text-text-lo">
-            Przykład: dominujące zwycięstwo z MVP i pentą ≈ 30 LP; blada przegrana ≈ 4 LP.
+            Przykład: przeciętna wygrana = 10 LP, dobry ACE z PR 70 = 8 LP, słaba przegrana z PR 30 = 2 LP.
           </p>
         </div>
 
         <div>
           <div className="kicker text-gold">MMR · balans losowania</div>
           <p className="mt-1">
-            Ukryty rating siły (start 1000, system Elo), aktualizowany po każdym zaakceptowanym
+            Ukryty rating siły (start 1000, czyste Elo bez mnożnika PR), aktualizowany po każdym zaakceptowanym
             meczu. Używany <strong>tylko</strong> do wyrównanego losowania drużyn (tryb Balanced) —
             nie wpływa na ranking ligowy.
           </p>
@@ -55,7 +58,10 @@ export function ScoringInfo({ defaultOpen = false }: { defaultOpen?: boolean }) 
         <div>
           <div className="kicker">Kolejność w tabeli sezonu</div>
           <p className="mt-1 text-text-lo">
-            Suma LP → win rate → średni PR → liczba MVP → mniej rozegranych gier.
+            Główny wynik to skorygowana średnia punktów na mecz:
+            <strong> (suma LP + 5 × średnia ligi) ÷ (mecze + 5)</strong>.
+            Do pełnej klasyfikacji potrzeba 5 meczów; wcześniej wynik jest oznaczony jako prowizoryczny.
+            Suma LP zostaje widoczna jako licznik aktywności, ale nie ustala kolejności tabeli.
           </p>
         </div>
       </div>

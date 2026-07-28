@@ -54,10 +54,10 @@ public class PlayerStatsController {
         List<ChampionPoolEntry> pool = championPool(history);
 
         SeasonAggregate aggregate = stats == null
-                ? new SeasonAggregate(0, 0, 0, 0, 0.0, 0.0, 1000.0, 0, 0)
+                ? new SeasonAggregate(0, 0, 0, 0, 0.0, 0.0, 1000.0, 0, 0, 0)
                 : new SeasonAggregate(stats.getTotalLp(), stats.getGames(), stats.getWins(),
                 stats.getLosses(), stats.winRate(), stats.avgPerformanceRating(), stats.getMmr(),
-                stats.getMvpCount(), stats.getPentaCount());
+                stats.getMvpCount(), stats.getAceCount(), stats.getPentaCount());
         return new PlayerStatsResponse(id, seasonId, aggregate, pool);
     }
 
@@ -75,7 +75,7 @@ public class PlayerStatsController {
                     champion != null ? champion.getIconUrl() : null,
                     p.getKills(), p.getDeaths(), p.getAssists(),
                     Math.round(p.kda() * 100.0) / 100.0,
-                    p.getPerformanceRating(), p.getLpAwarded(), p.isMvp(),
+                    p.getPerformanceRating(), p.getLpAwarded(), p.isMvp(), p.isAce(),
                     p.getMatch().getStartedAt(), p.getMatch().getCompletedAt()));
         }
         return entries;
@@ -122,7 +122,8 @@ public class PlayerStatsController {
     }
 
     public record SeasonAggregate(int totalLp, int games, int wins, int losses, double winRate,
-                                  double avgPerformanceRating, double mmr, int mvpCount, int pentaCount) {
+                                  double avgPerformanceRating, double mmr, int mvpCount,
+                                  int aceCount, int pentaCount) {
     }
 
     public record ChampionPoolEntry(int championId, String championName, String iconUrl,
@@ -136,7 +137,7 @@ public class PlayerStatsController {
     public record PlayerMatchEntry(UUID matchId, Side side, Role role, boolean won,
                                    Integer championId, String championName, String championIconUrl,
                                    int kills, int deaths, int assists, double kda,
-                                   Double performanceRating, Integer lpAwarded, boolean mvp,
+                                   Double performanceRating, Integer lpAwarded, boolean mvp, boolean ace,
                                    Instant startedAt, Instant completedAt) {
     }
 }

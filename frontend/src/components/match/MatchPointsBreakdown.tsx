@@ -5,13 +5,13 @@ const METRIC_LABEL: Record<string, string> = {
   KP: 'Udział w zabójstwach',
   CS: 'CS / min',
   DMG: 'Obrażenia / min',
-  GOLD: 'Udział w złocie',
+  EFF: 'Obrażenia / złoto',
   VISION: 'Wizja / min',
 };
 
-/** KP and GOLD are ratios (0–1) — show them as percentages; the rest are plain numbers. */
+/** KP is a ratio (0–1) — show it as a percentage; the rest are plain numbers. */
 function metricValue(key: string, v: number): string {
-  return key === 'KP' || key === 'GOLD' ? `${Math.round(v * 100)}%` : v.toFixed(2);
+  return key === 'KP' ? `${Math.round(v * 100)}%` : v.toFixed(2);
 }
 
 /**
@@ -46,7 +46,7 @@ function PlayerPoints({ participant: p }: { participant: MatchParticipant }) {
         <span className="h-2.5 w-2.5 shrink-0 rounded-full"
           style={{ background: p.side === 'BLUE' ? 'var(--blue)' : 'var(--red)' }} />
         <span className="min-w-0 flex-1 truncate font-medium text-text-hi">
-          {p.nickname}{p.mvp && ' 👑'}
+          {p.nickname}{p.mvp && ' 👑'}{p.ace && ' 🛡️'}
         </span>
         <span className="num shrink-0 font-display text-lg font-bold text-gold">
           {breakdown.total} LP
@@ -80,7 +80,7 @@ function PlayerPoints({ participant: p }: { participant: MatchParticipant }) {
                   <tr className="text-left text-text-lo">
                     <th className="py-1 pr-2 font-medium">Metryka</th>
                     <th className="py-1 pr-2 text-right font-medium">Ty</th>
-                    <th className="py-1 pr-2 text-right font-medium">Śr. meczu</th>
+                    <th className="py-1 pr-2 text-right font-medium">Punkt odniesienia</th>
                     <th className="py-1 pr-2 text-right font-medium">Norma</th>
                     <th className="py-1 pr-2 text-right font-medium">Waga</th>
                     <th className="py-1 text-right font-medium">Pkt PR</th>
@@ -100,8 +100,9 @@ function PlayerPoints({ participant: p }: { participant: MatchParticipant }) {
               </table>
             </div>
             <p className="mt-1.5 text-xs text-text-lo">
-              Norma: średnia meczu → 0,50, podwójna średnia → 1,00. Pkt PR = norma × waga × 100.
-              Wagi zależą od pozycji. Obrażenia to średnia z obrażeń/min i udziału w obrażeniach drużyny.
+              PR v2 porównuje występ z wcześniejszymi graczami na tej samej pozycji (percentyl);
+              podczas zbierania pierwszych 20 próbek łączy historię z bezpośrednim porównaniem w meczu.
+              Pkt PR = norma × waga pozycji × 100. Wagi KDA pozostały bez zmian.
             </p>
           </div>
         )}

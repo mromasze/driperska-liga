@@ -52,7 +52,7 @@ export function HomePage() {
         <StatTile label="Aktywni gracze" value={players.data?.totalElements ?? 0} accent="cyan" />
         <StatTile label="Rozegrane mecze" value={matches.data?.totalElements ?? 0} accent="violet" />
         <StatTile label="Lider sezonu" value={leader?.nickname ?? '—'}
-          sub={leader ? `${leader.totalLp} LP` : undefined} accent="gold" className="col-span-2 sm:col-span-1" />
+          sub={leader ? `wynik ${leader.rankingScore.toFixed(2)}` : undefined} accent="gold" className="col-span-2 sm:col-span-1" />
       </section>
 
       <section>

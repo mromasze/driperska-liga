@@ -47,6 +47,9 @@ public class PlayerSeasonStats {
     @Column(name = "mvp_count", nullable = false)
     private int mvpCount;
 
+    @Column(name = "ace_count", nullable = false)
+    private int aceCount;
+
     @Column(name = "penta_count", nullable = false)
     private int pentaCount;
 
@@ -62,7 +65,8 @@ public class PlayerSeasonStats {
         this.mmr = startMmr;
     }
 
-    public void addMatch(boolean won, int lp, double pr, double mmrDelta, boolean mvp, boolean penta) {
+    public void addMatch(boolean won, int lp, double pr, double mmrDelta,
+                         boolean mvp, boolean ace, boolean penta) {
         this.games++;
         if (won) {
             this.wins++;
@@ -74,6 +78,9 @@ public class PlayerSeasonStats {
         this.mmr += mmrDelta;
         if (mvp) {
             this.mvpCount++;
+        }
+        if (ace) {
+            this.aceCount++;
         }
         if (penta) {
             this.pentaCount++;
@@ -123,6 +130,10 @@ public class PlayerSeasonStats {
 
     public int getMvpCount() {
         return mvpCount;
+    }
+
+    public int getAceCount() {
+        return aceCount;
     }
 
     public int getPentaCount() {

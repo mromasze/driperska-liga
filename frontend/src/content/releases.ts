@@ -11,6 +11,21 @@ export interface ReleaseNote {
  */
 export const RELEASES: ReleaseNote[] = [
   {
+    version: 'v0.4.1',
+    date: '2026-07-28',
+    title: 'PR v2, uczciwsze LP i pełne ACE',
+    changes: [
+      'PR v2 porównuje występ z wcześniejszymi graczami na tej samej pozycji. Wagi KDA pozostały bez zmian.',
+      'Złoto oceniamy przez efektywność obrażenia/złoto, zamiast nagradzać samo przejmowanie zasobów.',
+      'Nowe LP: wygrana +10, przegrana +4, a jakość występu daje od −2 do +3 według przejrzystych progów PR.',
+      'MVP daje +3. ACE daje +2 najlepszemu przegranemu od PR 60; MVP i ACE nie stackują bonusów.',
+      'Penta, quadra i flawless są nadal osiągnięciami, ale nie wpływają na LP.',
+      'Tabela premiuje jakość zamiast samej liczby gier: główny wynik to stabilizowana średnia punktów, a pełna klasyfikacja zaczyna się od 5 meczów.',
+      'MMR to teraz czyste Elo — dobry przegrany nie traci więcej MMR przez wysoki PR.',
+      'Historyczne sezony zostaną automatycznie przeliczone do nowych zasad po wdrożeniu.',
+    ],
+  },
+  {
     version: 'v0.4.0',
     date: '2026-07-28',
     title: 'Draft na pełny ekran, dźwięki i naprawione listy meczów',

@@ -56,7 +56,7 @@ export interface PlayersQuery { active?: boolean; role?: Role; search?: string; 
 
 export interface SeasonAggregate {
   totalLp: number; games: number; wins: number; losses: number; winRate: number;
-  avgPerformanceRating: number; mmr: number; mvpCount: number; pentaCount: number;
+  avgPerformanceRating: number; mmr: number; mvpCount: number; aceCount: number; pentaCount: number;
 }
 export interface ChampionPoolEntry {
   championId: number; championName: string | null; iconUrl: string | null;
@@ -67,14 +67,15 @@ export interface PlayerMatchEntry {
   matchId: string; side: Side; role: Role; won: boolean; championId: number | null;
   championName: string | null; championIconUrl: string | null; kills: number; deaths: number;
   assists: number; kda: number; performanceRating: number | null; lpAwarded: number | null;
-  mvp: boolean; startedAt: string | null; completedAt: string | null;
+  mvp: boolean; ace: boolean; startedAt: string | null; completedAt: string | null;
 }
 
 export interface Season { id: string; name: string; startDate: string | null; endDate: string | null; status: SeasonStatus; }
 export interface RankingRow {
   rank: number; playerId: string; nickname: string; avatarUrl: string | null; totalLp: number;
   games: number; wins: number; losses: number; winRate: number; avgPerformanceRating: number;
-  mmr: number; mvpCount: number; pentaCount: number;
+  mmr: number; mvpCount: number; aceCount: number; pentaCount: number;
+  rankingScore: number; qualified: boolean;
 }
 
 export interface LpComponent { label: string; points: number; }
@@ -89,7 +90,7 @@ export interface MatchParticipant {
   championId: number | null; championName: string | null; championIconUrl: string | null;
   kills: number; deaths: number; assists: number; kda: number; cs: number; gold: number;
   damageToChampions: number; visionScore: number; largestMultiKill: number;
-  performanceRating: number | null; lpAwarded: number | null; mvp: boolean;
+  performanceRating: number | null; lpAwarded: number | null; mvp: boolean; ace: boolean;
   lpBreakdown: LpBreakdown | null;
 }
 export interface Approval {

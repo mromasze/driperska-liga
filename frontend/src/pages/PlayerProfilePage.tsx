@@ -75,7 +75,7 @@ export function PlayerProfilePage() {
       </section>
 
       {/* Season stat tiles */}
-      <section className="grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-6">
+      <section className="grid grid-cols-2 gap-4 sm:grid-cols-4 lg:grid-cols-7">
         <StatTile label="Punkty (LP)" value={agg?.totalLp ?? 0} accent="gold" />
         <StatTile label="Mecze" value={agg?.games ?? 0} />
         <StatTile
@@ -86,6 +86,7 @@ export function PlayerProfilePage() {
         />
         <StatTile label="Śr. PR" value={Math.round(agg?.avgPerformanceRating ?? 0)} accent="cyan" />
         <StatTile label="MVP" value={agg?.mvpCount ?? 0} accent="violet" />
+        <StatTile label="ACE" value={agg?.aceCount ?? 0} />
         <StatTile label="MMR" value={Math.round(agg?.mmr ?? 1000)} />
       </section>
 
@@ -138,6 +139,7 @@ export function PlayerProfilePage() {
                         {m.won ? 'Wygrana' : 'Przegrana'}
                       </span>
                       {m.mvp && <span title="MVP">👑</span>}
+                      {m.ace && <span title="ACE przegranych">🛡️</span>}
                       <span className="kicker">{roleLabel(m.role)}</span>
                     </div>
                     <div className="num text-xs text-text-lo">

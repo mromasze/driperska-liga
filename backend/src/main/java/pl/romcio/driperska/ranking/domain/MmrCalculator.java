@@ -34,11 +34,7 @@ public class MmrCalculator {
             int games = gamesPlayed.getOrDefault(p.playerId(), 0);
             double k = games < cfg.mmrRookieGames() ? cfg.mmrKRookie() : cfg.mmrK();
 
-            double modPr = 1.0;
-            if (cfg.mmrPrModulation()) {
-                modPr = 0.75 + 0.5 * (pr.getOrDefault(p.participantId(), 50.0) / 100.0);
-            }
-            result.put(p.participantId(), round2(k * (actual - expected) * modPr));
+            result.put(p.participantId(), round2(k * (actual - expected)));
         }
         return result;
     }

@@ -10,17 +10,16 @@ import pl.romcio.driperska.common.domain.Role;
 public record ScoringConfig(
         int lpWin,
         int lpLoss,
-        int lpPerformanceDivisor,   // LP_performance = round(PR / divisor)
         int lpMvpBonus,
         int lpAceBonus,
-        int lpPentaBonus,
-        int lpQuadraBonus,
-        int lpFlawlessBonus,
+        double lpAceMinPr,
+        int rankingPriorGames,
+        double rankingPriorPoints,
+        int rankingMinGames,
         double mmrK,
         double mmrKRookie,
         int mmrRookieGames,
         double mmrStart,
-        boolean mmrPrModulation,
         Map<Role, RoleWeights> roleWeights) {
 
     /** Metric weights for a role; should sum to ~1.0. */
@@ -29,9 +28,10 @@ public record ScoringConfig(
 
     public static ScoringConfig defaults() {
         return new ScoringConfig(
-                10, 2, 10,
-                5, 3, 5, 2, 2,
-                32, 48, 10, 1000.0, true,
+                10, 4,
+                3, 2, 60.0,
+                5, 7.0, 5,
+                32, 48, 10, 1000.0,
                 Map.of(
                         Role.TOP, new RoleWeights(0.25, 0.15, 0.15, 0.25, 0.10, 0.10),
                         Role.JUNGLE, new RoleWeights(0.20, 0.25, 0.10, 0.20, 0.10, 0.15),
