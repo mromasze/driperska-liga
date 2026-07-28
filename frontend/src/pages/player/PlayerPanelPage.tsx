@@ -57,12 +57,19 @@ export function PlayerPanelPage() {
   const lobby = draw.data;
   const draftActive = DRAFT_STATUSES.includes(lobby?.status ?? '');
 
-  // Jump straight to the board when the admin starts the draft, and back out when it is over, so a
-  // player who was on another tab does not miss their turn.
+  // Follow a draft that *starts* while the player is in the panel, so nobody on another tab misses
+  // their turn — but never on the first load. Opening the panel during a running match used to drop
+  // the player straight into a full-screen board; now the pulsing "Draft" tab invites them in and
+  // they choose when to enter.
+  const sawDraftActive = useRef<boolean | null>(null);
   useEffect(() => {
+    if (draw.isLoading) return;
+    const firstReading = sawDraftActive.current === null;
+    sawDraftActive.current = draftActive;
+    if (firstReading) return;
     if (draftActive) setTab('draft');
     else setTab((current) => (current === 'draft' ? 'dashboard' : current));
-  }, [draftActive]);
+  }, [draftActive, draw.isLoading]);
 
   if (player.isLoading) return <PanelSkeleton />;
   if (player.isError || !player.data) return <ErrorState error={player.error} />;
@@ -125,7 +132,10 @@ export function PlayerPanelPage() {
             className={`-mb-px border-b-2 px-4 py-2.5 font-display text-sm font-semibold transition ${
               tab === t.id
                 ? 'border-gold text-text-hi'
-                : 'border-transparent text-text-lo hover:text-text'
+                : t.id === 'draft'
+                  // The board no longer opens by itself, so the way in has to stand out.
+                  ? 'border-gold/40 text-gold hover:text-gold-soft'
+                  : 'border-transparent text-text-lo hover:text-text'
             }`}
           >
             <span className="inline-flex items-center gap-1.5">
@@ -136,7 +146,9 @@ export function PlayerPanelPage() {
                 </span>
               )}
               {t.id === 'draft' && (
-                <span className="h-2 w-2 animate-pulse rounded-full bg-gold" aria-label="w toku" />
+                <span className="on-clock-tag inline-flex items-center gap-1 rounded-full bg-gold px-2 py-0.5 text-[10px] font-bold uppercase tracking-wider text-[#1a1205]">
+                  na żywo
+                </span>
               )}
             </span>
           </button>

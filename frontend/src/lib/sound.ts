@@ -44,7 +44,8 @@ const CUE_TONES: Record<SoundCue, [number, number, OscillatorType, number][]> = 
   yourTurn: [[880, 0.12, 'triangle', 0.6], [1175, 0.16, 'triangle', 0.5]],
   lockIn: [[523, 0.09, 'square', 0.35], [784, 0.14, 'triangle', 0.45]],
   ban: [[196, 0.16, 'sawtooth', 0.4], [147, 0.22, 'sawtooth', 0.35]],
-  tick: [[1320, 0.05, 'square', 0.25]],
+  // Deliberately loud and long: this is the last-five-seconds alarm, heard over the music bed.
+  tick: [[1320, 0.1, 'square', 0.7]],
   draftDone: [[523, 0.14, 'triangle', 0.5], [659, 0.14, 'triangle', 0.5], [880, 0.34, 'triangle', 0.45]],
   error: [[160, 0.28, 'square', 0.35]],
 };
@@ -63,6 +64,8 @@ class SoundEngine {
   /** Cached load attempt, so repeated `startMusic()` calls never create a second element. */
   private musicLoad: Promise<HTMLAudioElement | null> | null = null;
   private fadeTimer: number | null = null;
+  /** Multiplier on the music bed, dropped while the countdown is ticking. */
+  private musicDuck = 1;
   private context: AudioContext | null = null;
   private cues = new Map<SoundCue, HTMLAudioElement | null>();
   private listeners = new Set<() => void>();
@@ -83,7 +86,15 @@ class SoundEngine {
   /** Effective gain applied to everything: 0 while muted. */
   private gain(): number { return this.muted ? 0 : this.volume; }
   /** The bed sits under the cues, so it never drowns out "your turn". */
-  private musicGain(): number { return this.gain() * 0.6; }
+  private musicGain(): number { return this.gain() * 0.6 * this.musicDuck; }
+
+  /** Pulls the music down under the countdown ticks, then lets it back up. */
+  duckMusic(ducked: boolean) {
+    const factor = ducked ? 0.3 : 1;
+    if (this.musicDuck === factor) return;
+    this.musicDuck = factor;
+    if (this.music && this.fadeTimer === null) this.music.volume = this.musicGain();
+  }
 
   setVolume(value: number) {
     this.volume = Math.min(1, Math.max(0, value));
@@ -172,6 +183,7 @@ class SoundEngine {
    */
   stopMusic(fadeMs = 1200) {
     this.musicWanted = false;
+    this.musicDuck = 1;
     this.cancelFade();
     const music = this.music;
     if (!music) return;

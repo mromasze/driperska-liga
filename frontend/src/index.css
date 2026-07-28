@@ -312,14 +312,25 @@
    Draft board — the stage has to read from across the room.
    ============================================================ */
 
-/* Opaque backdrop with team-coloured glows: blue on the left, red on the right, gold underfoot.
-   Much higher contrast than the flat page background the board used to sit on. */
+/* Opaque backdrop: deep near-black with the tech grid, plus a narrow team tint bled in from each
+   edge. The tints are a single horizontal gradient with a dead zone in the middle — overlapping
+   radial glows turned the whole stage purple. Carries its own grid, so it replaces `.grid-tex`. */
 .draft-stage {
   background-color: var(--bg);
   background-image:
-    radial-gradient(56rem 38rem at 6% -12%, rgba(76, 130, 245, 0.26), transparent 62%),
-    radial-gradient(56rem 38rem at 94% -12%, rgba(255, 81, 98, 0.24), transparent 62%),
-    radial-gradient(60rem 34rem at 50% 118%, rgba(242, 193, 78, 0.16), transparent 60%);
+    linear-gradient(rgba(255, 255, 255, 0.028) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(255, 255, 255, 0.028) 1px, transparent 1px),
+    linear-gradient(
+      90deg,
+      rgba(76, 130, 245, 0.16) 0%,
+      rgba(76, 130, 245, 0.04) 18%,
+      transparent 34%,
+      transparent 66%,
+      rgba(255, 81, 98, 0.035) 82%,
+      rgba(255, 81, 98, 0.14) 100%
+    );
+  background-size: 34px 34px, 34px 34px, 100% 100%;
+  background-repeat: repeat, repeat, no-repeat;
 }
 
 /* The player currently on the clock. Bigger than its neighbours (sized by the layout) and wrapped in

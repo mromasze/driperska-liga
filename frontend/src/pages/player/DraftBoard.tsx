@@ -150,7 +150,8 @@ export function DraftBoard({ lobby, myPlayerId, streamState, onCollapse, fullscr
   return (
     <section
       className={cn(
-        'draft-stage grid-tex flex flex-col gap-3 overflow-hidden',
+        // `.draft-stage` carries its own grid texture, so no `grid-tex` here.
+        'draft-stage flex flex-col gap-3 overflow-hidden',
         fullscreen
           // The players' view: the board owns the whole viewport.
           ? 'fixed inset-0 z-40 h-[100dvh] p-3 sm:p-4'
@@ -237,6 +238,8 @@ export function DraftBoard({ lobby, myPlayerId, streamState, onCollapse, fullscr
               onClockName={onClockName}
               hoverChamp={draft.hoverChampionId != null ? champById.get(draft.hoverChampionId) : undefined}
               banning={draft.currentType === 'BAN'}
+              step={draft.currentIndex + 1}
+              totalSteps={draft.sequence.length}
             />
           )}
 
@@ -348,11 +351,31 @@ function ChampionPool({ champions, selected, disabled, search, onSearch, onPick,
 }
 
 /** What the other nine players see while somebody else is on the clock. */
-function WaitingCard({ paused, onClockName, hoverChamp, banning }: {
+function WaitingCard({ paused, onClockName, hoverChamp, banning, step, totalSteps }: {
   paused: boolean; onClockName?: string; hoverChamp?: Champion; banning: boolean;
+  step: number; totalSteps: number;
 }) {
   return (
-    <div className="flex min-h-0 flex-1 flex-col items-center justify-center gap-4 rounded-xl border-2 border-line-strong bg-[color:var(--bg-1)] p-5 text-center">
+    <div className="relative flex min-h-0 flex-1 flex-col items-center justify-center gap-4 rounded-xl border-2 border-line-strong bg-[color:var(--bg-1)] p-5 text-center">
+      {/* Progress along the pick/ban sequence — otherwise this panel is a large empty box for the
+          nine players who are not on the clock. */}
+      <div className="absolute inset-x-0 top-0 flex flex-col gap-2 p-4">
+        <div className="flex items-baseline justify-between">
+          <span className="kicker">Krok {step} / {totalSteps}</span>
+          <span className={cn('kicker', banning ? 'text-loss' : 'text-gold')}>
+            {banning ? 'ban' : 'wybór'}
+          </span>
+        </div>
+        <div className="flex gap-1">
+          {Array.from({ length: totalSteps }).map((_, i) => (
+            <span key={i} className={cn('h-1 flex-1 rounded-full',
+              i < step - 1 ? 'bg-[color:var(--gold)]/60'
+                : i === step - 1 ? 'on-clock-tag bg-gold'
+                : 'bg-bg-3')} />
+          ))}
+        </div>
+      </div>
+
       {paused ? (
         <p className="font-display text-xl text-pending">⏸ Draft wstrzymany przez admina.</p>
       ) : (
@@ -427,7 +450,9 @@ function DraftTeam({ title, side, color, players, bans, champById, draft, myPlay
         })}
       </div>
 
-      <div className="flex min-h-0 flex-1 flex-col gap-1.5 overflow-y-auto p-1.5">
+      {/* Centred rather than stretched: five rows spread over a tall column left each one a mostly
+          empty 170px slab. Capped heights keep them tight and the team grouped. */}
+      <div className="flex min-h-0 flex-1 flex-col justify-center gap-1.5 overflow-y-auto p-1.5">
         {players.map((player) => {
           const onClock = !isDone && draft.currentPlayerId === player.playerId;
           // While a player is on the clock for a PICK, show their live pre-selection in their own slot
@@ -444,9 +469,9 @@ function DraftTeam({ title, side, color, players, bans, champById, draft, myPlay
                 'relative flex items-center gap-3 rounded-[var(--r-sm)] px-3 transition-all duration-300',
                 onClock
                   // Whoever is on the clock gets a frame that is both larger and pulsing.
-                  ? 'on-clock-frame z-10 flex-[1.9] bg-[color:var(--gold)]/15 py-2.5'
+                  ? 'on-clock-frame z-10 max-h-[128px] flex-[1.5] bg-[color:var(--gold)]/15 py-2.5'
                   // Same 2px border as the frame, so switching turns shifts nothing sideways.
-                  : 'flex-1 border-2 border-line bg-[color:var(--bg-2)]/60 py-2',
+                  : 'max-h-[88px] flex-1 border-2 border-line bg-[color:var(--bg-2)]/60 py-2',
               )}>
               <div className={cn('shrink-0', isPreview && 'rounded-md opacity-70 ring-2 ring-gold')}>
                 <ChampionIcon iconUrl={champ?.iconUrl} name={champ?.name} size={onClock ? 54 : 40} />
@@ -569,12 +594,17 @@ function useDraftAudio({ draft, isDone, myTurn, remaining }: {
     wasDone.current = isDone;
   }, [isDone]);
 
+  // Last five seconds: one beep per second, with the music pulled down underneath it so nobody can
+  // miss the clock running out — whether it is their pick or not.
   useEffect(() => {
-    if (isDone || draft?.paused) return;
-    if (remaining > 0 && remaining <= 5 && lastTick.current !== remaining) {
-      lastTick.current = remaining;
-      sound.play('tick');
+    const countingDown = !isDone && !draft?.paused && remaining > 0 && remaining <= 5;
+    sound.duckMusic(countingDown);
+    if (!countingDown) {
+      lastTick.current = null;
+      return;
     }
-    if (remaining > 5) lastTick.current = null;
+    if (lastTick.current === remaining) return;
+    lastTick.current = remaining;
+    sound.play('tick');
   }, [remaining, isDone, draft?.paused]);
 }
