@@ -13,6 +13,7 @@ import { Spinner } from '../../components/ui/States';
 import { cn } from '../../lib/cn';
 import { roleLabel } from '../../lib/format';
 import { sound } from '../../lib/sound';
+import { useSoundSettings } from '../../lib/useSound';
 
 /** Order a team top→bottom by the draft order (captain first); picks flow down this list. */
 const sortByOrder = (players: LobbyPlayer[], order: string[]) =>
@@ -448,9 +449,12 @@ function useDraftAudio({ draft, isDone, myTurn, remaining }: {
 }) {
   const prevIndex = useRef<number | null>(null);
   const prevType = useRef<string | null>(null);
-  const wasMyTurn = useRef(false);
+  const notifiedTurn = useRef<number | null>(null);
+  const remindedTurn = useRef<number | null>(null);
+  const previousCountdown = useRef<{ index: number; remaining: number } | null>(null);
   const wasDone = useRef(false);
   const lastTick = useRef<number | null>(null);
+  const { unlocked } = useSoundSettings();
 
   useEffect(() => {
     sound.armOnFirstGesture();
@@ -479,9 +483,27 @@ function useDraftAudio({ draft, isDone, myTurn, remaining }: {
   }, [draft, isDone]);
 
   useEffect(() => {
-    if (myTurn && !wasMyTurn.current) sound.play('yourTurn');
-    wasMyTurn.current = myTurn;
-  }, [myTurn]);
+    if (!draft || !myTurn || !unlocked || notifiedTurn.current === draft.currentIndex) return;
+    sound.play('yourTurn');
+    notifiedTurn.current = draft.currentIndex;
+  }, [draft, myTurn, unlocked]);
+
+  // Remind the active player once when their clock crosses 10 seconds. Tracking the crossing avoids
+  // a double cue when the board opens or audio is unlocked in the middle of an already-running turn.
+  useEffect(() => {
+    if (!draft) return;
+    const previous = previousCountdown.current;
+    const crossedReminder = previous?.index === draft.currentIndex
+      && previous.remaining > 10
+      && remaining <= 10;
+    previousCountdown.current = { index: draft.currentIndex, remaining };
+
+    if (myTurn && unlocked && !draft.paused && crossedReminder
+      && remindedTurn.current !== draft.currentIndex) {
+      sound.play('yourTurn');
+      remindedTurn.current = draft.currentIndex;
+    }
+  }, [draft, myTurn, remaining, unlocked]);
 
   useEffect(() => {
     if (isDone && !wasDone.current) sound.play('draftDone');

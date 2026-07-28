@@ -63,6 +63,7 @@ class SoundEngine {
   private context: AudioContext | null = null;
   private cues = new Map<SoundCue, HTMLAudioElement | null>();
   private listeners = new Set<() => void>();
+  private gestureCleanup: (() => void) | null = null;
 
   subscribe(listener: () => void): () => void {
     this.listeners.add(listener);
@@ -99,18 +100,22 @@ class SoundEngine {
 
   /** Enables audio on the first real user gesture anywhere in the page. */
   armOnFirstGesture() {
-    if (this.unlocked) return;
+    if (this.unlocked || this.gestureCleanup) return;
     const unlock = () => {
       this.unlock();
+    };
+    window.addEventListener('pointerdown', unlock);
+    window.addEventListener('keydown', unlock);
+    this.gestureCleanup = () => {
       window.removeEventListener('pointerdown', unlock);
       window.removeEventListener('keydown', unlock);
     };
-    window.addEventListener('pointerdown', unlock, { once: true });
-    window.addEventListener('keydown', unlock, { once: true });
   }
 
   unlock() {
     if (this.unlocked) return;
+    this.gestureCleanup?.();
+    this.gestureCleanup = null;
     this.unlocked = true;
     try {
       this.context = new AudioContext();

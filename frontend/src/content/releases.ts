@@ -21,6 +21,8 @@ export const RELEASES: ReleaseNote[] = [
       'Perfect KDA daje +1 LP za 0 śmierci i co najmniej jedno zabójstwo lub asystę. Wynik 0/0/0 nie dostaje bonusu.',
       'Bonusy za najlepsze KDA i perfect KDA stackują się ze sobą oraz z MVP albo ACE.',
       'Historyczne sezony zostaną automatycznie przeliczone po wdrożeniu.',
+      'Patch notes na Discordzie trafiają wyłącznie na dedykowany, jawnie skonfigurowany kanał.',
+      'Dźwięk draftu odblokowuje się po pierwszej interakcji w aplikacji, a gracz dostaje przypomnienie o swojej turze przy 10 sekundach.',
     ],
   },
   {

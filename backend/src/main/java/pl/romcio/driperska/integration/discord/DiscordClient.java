@@ -82,10 +82,10 @@ public class DiscordClient {
         }
     }
 
-    /** Posts a patch-notes image (with caption + @everyone) to the patch-notes/announce channel. */
+    /** Posts a patch-notes image (with caption + @everyone) to the dedicated patch-notes channel. */
     public Delivery sendPatchNotesImage(String caption, byte[] png, String filename) {
         if (!properties.patchNotesChannelConfigured()) {
-            return Delivery.failed("Kanał patch notes Discord nie jest skonfigurowany (DISCORD_PATCH_CHANNEL_ID / DISCORD_ANNOUNCE_CHANNEL_ID)");
+            return Delivery.failed("Kanał patch notes Discord nie jest skonfigurowany (DISCORD_PATCH_CHANNEL_ID)");
         }
         try {
             String payloadJson = objectMapper.writeValueAsString(

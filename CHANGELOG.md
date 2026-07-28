@@ -12,6 +12,8 @@ Wszystkie istotne zmiany Driperskiej Ligi są opisywane tutaj oraz w
 - Oba bonusy KDA łączą się ze sobą oraz z MVP albo ACE. Samo MVP i ACE nadal nie stackują się dla tej samej osoby.
 - Rozpiska meczu, historia gracza i scoreboard pokazują nowe wyróżnienia, a tabela rozdziela bazowy wynik od bonusu aktywności.
 - Wszystkie historyczne sezony zostaną automatycznie i jednokrotnie przeliczone do nowych zasad po wdrożeniu.
+- Patch notes na Discordzie wymagają teraz jawnie ustawionego, dedykowanego `DISCORD_PATCH_CHANNEL_ID` i nie wpadają już awaryjnie na kanał ogłoszeń.
+- Dźwięk draftu odblokowuje się po pierwszej interakcji w całej aplikacji; aktywny gracz dostaje pewne powiadomienie o swojej turze oraz jednorazowe przypomnienie po przekroczeniu 10 sekund.
 
 ## v0.4.2 — 2026-07-28
 

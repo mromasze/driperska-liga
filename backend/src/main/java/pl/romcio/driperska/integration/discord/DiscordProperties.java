@@ -27,9 +27,9 @@ public class DiscordProperties {
     public boolean announceChannelConfigured() {
         return StringUtils.hasText(botToken) && StringUtils.hasText(announceChannel());
     }
-    /** Channel for patch notes — falls back to the announcements channel when not set separately. */
+    /** Dedicated channel for patch notes. */
     public String patchNotesChannel() {
-        return StringUtils.hasText(patchNotesChannelId) ? patchNotesChannelId : announceChannel();
+        return patchNotesChannelId;
     }
     public boolean patchNotesChannelConfigured() {
         return StringUtils.hasText(botToken) && StringUtils.hasText(patchNotesChannel());
