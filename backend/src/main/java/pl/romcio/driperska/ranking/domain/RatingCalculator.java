@@ -12,7 +12,8 @@ import pl.romcio.driperska.ranking.domain.ScoringConfig.RoleWeights;
 
 /**
  * Computes each participant's Performance Rating (0–100) relative to the rest of the match, with
- * role-weighted metrics. Pure and stateless — see docs/04-points-and-ranking.md.
+ * role-relative normalization and configured metric weights. Pure and stateless — see
+ * docs/04-points-and-ranking.md.
  */
 @Component
 public class RatingCalculator {

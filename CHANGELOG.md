@@ -3,6 +3,14 @@
 Wszystkie istotne zmiany Driperskiej Ligi są opisywane tutaj oraz w
 `frontend/src/content/releases.ts`, który zasila patch notes na stronie głównej.
 
+## v0.4.4 — 2026-07-28
+
+- **PR i MVP są teraz porównywalne między rolami.** Pozycja nadal określa rywala oraz historyczną bazę normalizacji, ale nie zmienia już wartości tego samego wyniku 0–1.
+- Wszystkie role korzystają ze wspólnych wag ligi: **KDA 35%, KP 20%, CS/min 10%, damage/min 25%, damage/złoto 5%, vision/min 5%**. KDA pozostaje najważniejszą pojedynczą metryką.
+- Usunięto podwójne uwzględnianie roli: wcześniej wynik był najpierw normalizowany względem danej pozycji, a następnie ponownie modyfikowany odmiennymi wagami TOP/JUNGLE/MID/ADC/SUPPORT. Przez to gracz z lepszym znormalizowanym KDA mógł dostać mniej punktów KDA wyłącznie z powodu pozycji.
+- Dla przypadku regresyjnego ze scoreboardu nowe wagi zmieniają porównanie z około 61:60 na około **66:69** na korzyść gracza z lepszym KDA i damage.
+- Po wdrożeniu wszystkie historyczne sezony zostaną automatycznie przeliczone według schematu rankingu 4.
+
 ## v0.4.3 — 2026-07-28
 
 - **Poprawiono wybór MVP przez PR v2.** Historia pozycji nie może już przejąć 100% oceny po 20 próbkach. Jej udział rośnie maksymalnie do 50%, a co najmniej połowa PR zawsze wynika z bezpośredniego porównania graczy tej samej roli w bieżącym meczu. Widoczny punkt odniesienia pokazuje teraz połączenie średniej z meczu i mediany historii.

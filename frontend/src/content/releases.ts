@@ -11,6 +11,17 @@ export interface ReleaseNote {
  */
 export const RELEASES: ReleaseNote[] = [
   {
+    version: 'v0.4.4',
+    date: '2026-07-28',
+    title: 'Porównywalny PR i MVP między rolami',
+    changes: [
+      'Pozycja nadal określa bazę porównania, ale końcowe wagi są takie same dla wszystkich ról — dobry wynik 0–1 ma identyczną wartość na TOP-ie, ADC i pozostałych pozycjach.',
+      'Nowe wagi ligi: KDA 35%, KP 20%, CS/min 10%, damage/min 25%, efektywność 5% i vision/min 5%.',
+      'Usunięto sytuację, w której lepsze znormalizowane KDA dawało mniej punktów tylko z powodu innej pozycji.',
+      'Historyczne mecze zostaną automatycznie przeliczone do nowych zasad.',
+    ],
+  },
+  {
     version: 'v0.4.3',
     date: '2026-07-28',
     title: 'Aktywność i bonusy za KDA',

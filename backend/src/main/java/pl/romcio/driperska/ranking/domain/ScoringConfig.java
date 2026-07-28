@@ -31,6 +31,9 @@ public record ScoringConfig(
     }
 
     public static ScoringConfig defaults() {
+        // Role-specific normalization already accounts for different role expectations. Using one
+        // league-wide weight profile keeps PR and MVP comparable between roles.
+        RoleWeights leagueWeights = new RoleWeights(0.35, 0.20, 0.10, 0.25, 0.05, 0.05);
         return new ScoringConfig(
                 10, 4,
                 3, 2, 60.0,
@@ -38,11 +41,11 @@ public record ScoringConfig(
                 5, 7.0, 5, 0.10, 20,
                 32, 48, 10, 1000.0,
                 Map.of(
-                        Role.TOP, new RoleWeights(0.25, 0.15, 0.15, 0.25, 0.10, 0.10),
-                        Role.JUNGLE, new RoleWeights(0.20, 0.25, 0.10, 0.20, 0.10, 0.15),
-                        Role.MID, new RoleWeights(0.20, 0.20, 0.15, 0.30, 0.05, 0.10),
-                        Role.ADC, new RoleWeights(0.20, 0.15, 0.20, 0.35, 0.05, 0.05),
-                        Role.SUPPORT, new RoleWeights(0.25, 0.30, 0.00, 0.15, 0.05, 0.25)));
+                        Role.TOP, leagueWeights,
+                        Role.JUNGLE, leagueWeights,
+                        Role.MID, leagueWeights,
+                        Role.ADC, leagueWeights,
+                        Role.SUPPORT, leagueWeights));
     }
 
     public RoleWeights weightsFor(Role role) {

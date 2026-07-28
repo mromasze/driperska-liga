@@ -20,13 +20,15 @@ export function ScoringInfo({ defaultOpen = false }: { defaultOpen?: boolean }) 
         <div>
           <div className="kicker text-gold">Performance Rating (PR) · 0–100</div>
           <p className="mt-1">
-            Ocena gry bez bezpośredniego bonusu za zwycięstwo, liczona ze statystyk z wagami
-            zależnymi od roli. PR v2 porównuje wynik z wcześniejszymi występami na tej samej pozycji.
+            Ocena gry bez bezpośredniego bonusu za zwycięstwo, liczona ze statystyk normalizowanych
+            względem roli. PR v2 porównuje wynik z wcześniejszymi występami na tej samej pozycji.
             Historyczny percentyl jest stopniowo łączony z bezpośrednim porównaniem rywali na tej
             samej pozycji, ale historia ma maksymalnie 50% wagi — bieżący mecz zawsze stanowi co
             najmniej połowę oceny. Składniki: KDA, udział w zabójstwach (KP), CS/min,
             obrażenia/min, efektywność obrażenia/złoto i vision/min.
-            <strong> Wagi KDA pozostały wysokie i zależne od pozycji.</strong>
+            Normalizacja zależy od pozycji, ale końcowe wagi są wspólne dla wszystkich:
+            <strong> KDA 35%, KP 20%, CS 10%, obrażenia 25%, efektywność 5%, wizja 5%.</strong>
+            Dzięki temu PR i MVP można uczciwie porównywać między rolami.
           </p>
           <p className="mt-1 text-text-lo">Przeciętnie ≈ 50, dobra gra 65–80, dominacja 80+.</p>
         </div>

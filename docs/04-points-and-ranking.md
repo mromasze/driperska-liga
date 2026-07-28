@@ -20,7 +20,8 @@ zmian w kodzie. Poniższe liczby to **rozsądny domyślny zestaw** do dostrojeni
 ## 4.2 Performance Rating (PR) — ocena meczu 0–100
 
 PR v2 ocenia grę indywidualną względem **historycznych występów na tej samej roli**. Nie dostaje
-bezpośredniego bonusu za zwycięstwo. Wagi zależą od roli i zachowują wysokie znaczenie KDA.
+bezpośredniego bonusu za zwycięstwo. Normalizacja zależy od roli, natomiast wspólne wagi ligi
+pozwalają porównywać końcowy PR między pozycjami i zachowują wysokie znaczenie KDA.
 Historia jest krocząca: maksymalnie 60 próbek roli, czyli 30 wcześniejszych meczów.
 
 ### Krok 1 — metryki bazowe (per uczestnik)
@@ -52,20 +53,21 @@ gdzie `historyWeight = 0,50 × min(1, liczbaPróbek / 20)`.
 Historia dochodzi maksymalnie do 50% wagi. Nawet po zebraniu pełnej próby bezpośredni występ
 w bieżącym meczu nadal stanowi co najmniej połowę PR i nie pozwala słabej bazie roli rozstrzygnąć MVP.
 
-### Krok 4 — wagi ról
-Profile wag (sumują się do 1.0 w każdej roli):
+### Krok 4 — wspólne wagi ligi
+Normalizacja jest zależna od roli, dlatego końcowe wagi są wspólne dla wszystkich pozycji.
+Zapobiega to sytuacji, w której identyczny wynik 0–1 daje różną liczbę punktów tylko dlatego,
+że jeden gracz jest TOP-em, a drugi ADC. Wagi sumują się do 1.0:
 
-| Metryka | TOP | JUNGLE | MID | ADC | SUPPORT |
-|---------|----:|-------:|----:|----:|--------:|
-| KDA | 0.25 | 0.20 | 0.20 | 0.20 | 0.25 |
-| KP | 0.15 | 0.25 | 0.20 | 0.15 | 0.30 |
-| CSpm | 0.15 | 0.10 | 0.15 | 0.20 | 0.00 |
-| DMGpm | 0.25 | 0.20 | 0.30 | 0.35 | 0.15 |
-| EFF (damage/gold) | 0.10 | 0.10 | 0.05 | 0.05 | 0.05 |
-| VSpm | 0.10 | 0.15 | 0.10 | 0.05 | 0.25 |
+| Metryka | Waga |
+|---------|-----:|
+| KDA | **0.35** |
+| KP | 0.20 |
+| CSpm | 0.10 |
+| DMGpm | 0.25 |
+| EFF (damage/gold) | 0.05 |
+| VSpm | 0.05 |
 
-> DMGpm mierzy presję, a EFF wykorzystanie otrzymanego złota. Wagi KDA z v1 pozostały bez zmian.
-> Wszystkie wagi są konfigurowalne w `ScoringConfig`.
+> KDA pozostaje najważniejszą pojedynczą metryką. Wszystkie wagi są konfigurowalne w `ScoringConfig`.
 
 ### Krok 5 — złożenie
 ```

@@ -182,6 +182,33 @@ class ScoringTest {
     }
 
     @Test
+    void leagueWeightsKeepCrossRoleMvpComparable() {
+        ScoringConfig.RoleWeights expected = cfg.weightsFor(Role.TOP);
+        for (Role role : Role.values()) {
+            assertThat(cfg.weightsFor(role)).isEqualTo(expected);
+        }
+
+        // Regression values from a match where the old role-specific weights awarded MVP to TOP
+        // despite ADC having clearly stronger normalized KDA and damage.
+        double topScore = weightedScore(expected, 0.88, 0.69, 0.53, 0.45, 0.40, 0.55);
+        double adcScore = weightedScore(expected, 0.96, 0.68, 0.45, 0.48, 0.46, 0.50);
+
+        assertThat(adcScore - topScore).isGreaterThanOrEqualTo(2.5);
+    }
+
+    private static double weightedScore(ScoringConfig.RoleWeights weights,
+                                        double kda, double kp, double cs, double damage,
+                                        double efficiency, double vision) {
+        return 100.0 * (
+                weights.kda() * kda
+                        + weights.kp() * kp
+                        + weights.cs() * cs
+                        + weights.damage() * damage
+                        + weights.gold() * efficiency
+                        + weights.vision() * vision);
+    }
+
+    @Test
     void historyGraduallyStabilizesRoleReference() {
         MatchStatsContext ctx = sampleMatch();
         PerformanceHistory roleHistory = new PerformanceHistory();

@@ -83,7 +83,7 @@ function PlayerPoints({ participant: p }: { participant: MatchParticipant }) {
                     <th className="py-1 pr-2 text-right font-medium">Ty</th>
                     <th className="py-1 pr-2 text-right font-medium">Baza porównania</th>
                     <th className="py-1 pr-2 text-right font-medium">Wynik 0–1</th>
-                    <th className="py-1 pr-2 text-right font-medium">Waga</th>
+                    <th className="py-1 pr-2 text-right font-medium">Waga ligi</th>
                     <th className="py-1 text-right font-medium">Pkt PR</th>
                   </tr>
                 </thead>
@@ -105,7 +105,8 @@ function PlayerPoints({ participant: p }: { participant: MatchParticipant }) {
               Historia dochodzi maksymalnie do 50% wagi, więc bieżący mecz zawsze stanowi co najmniej
               połowę oceny. Baza porównania orientacyjnie łączy medianę historii i średnią rywali;
               kolumna „Wynik 0–1” pokazuje dokładny rezultat połączenia obu ocen.
-              Pkt PR = wynik × waga pozycji × 100. Wagi KDA pozostały bez zmian.
+              Pkt PR = wynik × wspólna waga ligi × 100. Te same wagi obowiązują każdą rolę,
+              dzięki czemu PR i MVP są porównywalne między pozycjami.
             </p>
           </div>
         )}

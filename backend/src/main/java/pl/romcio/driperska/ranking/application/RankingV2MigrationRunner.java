@@ -21,7 +21,7 @@ public class RankingV2MigrationRunner implements ApplicationRunner {
 
     private static final Logger log = LoggerFactory.getLogger(RankingV2MigrationRunner.class);
     private static final String KEY = "ranking.schema.version";
-    private static final String VERSION = "3";
+    private static final String VERSION = "4";
 
     private final AppSettingRepository settings;
     private final SeasonRepository seasons;
