@@ -136,6 +136,7 @@ export function DraftBoard({ lobby, myPlayerId, streamState, onCollapse, fullscr
   const phaseLabel = isDone ? 'Draft zakończony'
     : draft.currentType === 'BAN' ? 'Faza banów' : 'Faza wyborów';
   const sideName = draft.currentSide === 'BLUE' ? 'Niebiescy' : draft.currentSide === 'RED' ? 'Czerwoni' : '';
+  const onClockName = all.find((p) => p.playerId === draft.currentPlayerId)?.nickname;
   const mySwaps = draft.swaps.filter((s) => s.toPlayerId === myPlayerId || s.fromPlayerId === myPlayerId);
 
   const teamProps = {
@@ -149,24 +150,28 @@ export function DraftBoard({ lobby, myPlayerId, streamState, onCollapse, fullscr
   return (
     <section
       className={cn(
-        'grid-tex flex flex-col gap-3 overflow-hidden bg-[color:var(--bg)]',
+        'draft-stage grid-tex flex flex-col gap-3 overflow-hidden',
         fullscreen
+          // The players' view: the board owns the whole viewport.
           ? 'fixed inset-0 z-40 h-[100dvh] p-3 sm:p-4'
-          : 'glass draw-stage rounded-xl p-4 sm:p-6',
+          // Collapsed into a panel it still goes edge to edge — `.draft-bleed` uncaps the layout
+          // container's max-width (see index.css), so nothing is squeezed into a narrow column.
+          : 'draft-bleed draw-stage min-h-[86dvh] rounded-xl border-2 border-line-strong p-3 sm:p-5',
       )}
     >
       {/* --- Top bar: phase, clock, sound, connection ------------------------------------ */}
       <header className="flex shrink-0 flex-wrap items-center justify-between gap-x-4 gap-y-2">
         <div className="min-w-0">
           <div className="kicker text-gold">Draft turniejowy</div>
-          <h2 className="truncate font-display text-xl leading-tight sm:text-2xl">{phaseLabel}</h2>
+          <h2 className="truncate font-display text-2xl leading-tight text-text-hi sm:text-3xl">{phaseLabel}</h2>
           {!isDone && (
-            <p className="text-xs text-text-lo sm:text-sm">
+            <p className="text-sm text-text sm:text-base">
               Teraz:{' '}
               <strong style={{ color: draft.currentSide === 'BLUE' ? 'var(--blue)' : 'var(--red)' }}>
                 {sideName}
               </strong>{' '}
               — {draft.currentType === 'BAN' ? 'ban (kapitan)' : 'wybór postaci'}
+              {onClockName && <> · <strong className="text-gold">{onClockName}</strong></>}
             </p>
           )}
         </div>
@@ -175,14 +180,14 @@ export function DraftBoard({ lobby, myPlayerId, streamState, onCollapse, fullscr
           {!isDone && (
             <div className="text-right">
               {draft.paused ? (
-                <div className="num font-display text-2xl font-bold text-pending sm:text-3xl">⏸ PAUZA</div>
+                <div className="num font-display text-3xl font-bold text-pending sm:text-4xl">⏸ PAUZA</div>
               ) : (
                 <>
-                  <div className={cn('num font-display text-3xl font-bold leading-none sm:text-4xl',
-                    remaining <= 5 ? 'text-loss' : 'text-text-hi')}>
+                  <div className={cn('num font-display text-4xl font-bold leading-none sm:text-5xl',
+                    remaining <= 5 ? 'on-clock-tag text-loss' : 'text-text-hi')}>
                     0:{String(remaining).padStart(2, '0')}
                   </div>
-                  <div className="mt-1.5 h-1.5 w-24 overflow-hidden rounded-full bg-bg-2 sm:w-28">
+                  <div className="mt-2 h-2 w-28 overflow-hidden rounded-full bg-bg-2 sm:w-36">
                     <div className="h-full rounded-full bg-gradient-to-r from-cyan to-gold transition-all duration-500"
                       style={{ width: `${Math.min(100, (remaining / stepSeconds) * 100)}%` }} />
                   </div>
@@ -209,7 +214,7 @@ export function DraftBoard({ lobby, myPlayerId, streamState, onCollapse, fullscr
       )}
 
       {/* --- Stage: blue | pool | red ---------------------------------------------------- */}
-      <div className="grid min-h-0 flex-1 gap-3 lg:grid-cols-[minmax(0,1fr)_minmax(0,1.15fr)_minmax(0,1fr)]">
+      <div className="grid min-h-0 flex-1 gap-3 lg:grid-cols-[minmax(0,1fr)_minmax(0,1.35fr)_minmax(0,1fr)] sm:gap-4">
         <DraftTeam title="Niebiescy" side="BLUE" color="var(--blue)"
           players={sortByOrder(lobby.blue, draft.blueOrder)} bans={draft.blueBans} {...teamProps} />
 
@@ -229,7 +234,7 @@ export function DraftBoard({ lobby, myPlayerId, streamState, onCollapse, fullscr
           ) : (
             <WaitingCard
               paused={draft.paused}
-              onClockName={all.find((p) => p.playerId === draft.currentPlayerId)?.nickname}
+              onClockName={onClockName}
               hoverChamp={draft.hoverChampionId != null ? champById.get(draft.hoverChampionId) : undefined}
               banning={draft.currentType === 'BAN'}
             />
@@ -316,22 +321,22 @@ function ChampionPool({ champions, selected, disabled, search, onSearch, onPick,
   search: string; onSearch: (v: string) => void; onPick: (id: number) => void; banning: boolean;
 }) {
   return (
-    <div className="flex min-h-0 flex-1 flex-col rounded-xl border-2 border-gold bg-[color:var(--gold)]/5 p-3">
-      <div className="mb-2 flex shrink-0 flex-wrap items-center justify-between gap-2">
-        <div className={cn('font-display text-lg font-bold sm:text-xl',
-          banning ? 'text-loss' : 'text-gold', !disabled && 'animate-pulse')}>
+    <div className="on-clock-frame flex min-h-0 flex-1 flex-col rounded-xl bg-[color:var(--bg-1)] p-3">
+      <div className="mb-2.5 flex shrink-0 flex-wrap items-center justify-between gap-2">
+        <div className={cn('font-display text-xl font-bold sm:text-2xl',
+          banning ? 'text-loss' : 'text-gold', !disabled && 'on-clock-tag')}>
           {banning ? '🚫 TWOJA KOLEJ — BANUJ' : '⚡ TWOJA KOLEJ — WYBIERZ POSTAĆ'}
         </div>
         <input value={search} onChange={(e) => onSearch(e.target.value)} placeholder="Szukaj postaci…"
-          className="w-full rounded-md border border-line bg-[color:var(--bg-1)] px-3 py-1.5 text-sm sm:w-44" />
+          className="w-full rounded-md border border-line-strong bg-[color:var(--bg-2)] px-3 py-2 text-sm sm:w-52" />
       </div>
-      <div className="grid min-h-0 flex-1 auto-rows-min grid-cols-6 gap-1.5 overflow-y-auto pr-1 sm:grid-cols-8 lg:grid-cols-7 xl:grid-cols-9">
+      <div className="grid min-h-0 flex-1 auto-rows-min grid-cols-6 gap-2 overflow-y-auto pr-1 sm:grid-cols-8 lg:grid-cols-8 xl:grid-cols-10 2xl:grid-cols-12">
         {champions.map((c) => (
           <button key={c.id} type="button" title={c.name} disabled={disabled}
             onClick={() => onPick(c.id)}
-            className={cn('rounded-md ring-2 transition disabled:opacity-40',
-              selected === c.id ? 'ring-gold' : 'ring-transparent hover:ring-gold/50')}>
-            <ChampionIcon iconUrl={c.iconUrl} name={c.name} size={44} />
+            className={cn('rounded-md ring-2 transition hover:scale-105 disabled:opacity-40',
+              selected === c.id ? 'scale-105 ring-gold shadow-glow-gold' : 'ring-transparent hover:ring-gold/60')}>
+            <ChampionIcon iconUrl={c.iconUrl} name={c.name} size={52} />
           </button>
         ))}
         {champions.length === 0 && (
@@ -347,26 +352,29 @@ function WaitingCard({ paused, onClockName, hoverChamp, banning }: {
   paused: boolean; onClockName?: string; hoverChamp?: Champion; banning: boolean;
 }) {
   return (
-    <div className="flex min-h-0 flex-1 flex-col items-center justify-center gap-3 rounded-xl border border-line bg-[color:var(--bg-1)]/60 p-5 text-center">
+    <div className="flex min-h-0 flex-1 flex-col items-center justify-center gap-4 rounded-xl border-2 border-line-strong bg-[color:var(--bg-1)] p-5 text-center">
       {paused ? (
-        <p className="font-display text-lg text-pending">⏸ Draft wstrzymany przez admina.</p>
+        <p className="font-display text-xl text-pending">⏸ Draft wstrzymany przez admina.</p>
       ) : (
         <>
-          <p className="text-sm text-text-lo">
-            {onClockName ? <>Tura: <strong className="text-text-hi">{onClockName}</strong></> : 'Czekaj na swoją kolej…'}
+          <p className="text-base text-text">
+            {onClockName
+              ? <>Tura: <strong className="font-display text-xl text-gold">{onClockName}</strong></>
+              : 'Czekaj na swoją kolej…'}
           </p>
           {hoverChamp ? (
-            <div className="flex flex-col items-center gap-2">
-              <ChampionIcon iconUrl={hoverChamp.iconUrl} name={hoverChamp.name} size={92} />
+            <div className="flex flex-col items-center gap-3">
+              <ChampionIcon iconUrl={hoverChamp.iconUrl} name={hoverChamp.name} size={128}
+                className={cn('ring-2', banning ? 'ring-loss' : 'ring-gold')} />
               <div>
-                <div className="font-display text-xl text-text-hi">{hoverChamp.name}</div>
-                <div className={cn('kicker', banning ? 'text-loss' : 'text-gold')}>
+                <div className="font-display text-2xl text-text-hi">{hoverChamp.name}</div>
+                <div className={cn('kicker on-clock-tag', banning ? 'text-loss' : 'text-gold')}>
                   {banning ? 'zaraz zbanuje' : 'zaraz wybierze'}
                 </div>
               </div>
             </div>
           ) : (
-            <div className="grid h-24 w-24 place-items-center rounded-lg border border-dashed border-line text-3xl text-text-lo">
+            <div className="grid h-32 w-32 place-items-center rounded-lg border-2 border-dashed border-line-strong text-5xl text-text-lo">
               ?
             </div>
           )}
@@ -399,27 +407,27 @@ function DraftTeam({ title, side, color, players, bans, champById, draft, myPlay
 }) {
   const active = draft.currentSide === side && draft.status !== 'DONE';
   return (
-    <div className={cn('flex min-h-0 flex-col overflow-hidden rounded-xl border bg-[color:var(--bg-1)]/80',
-      active ? 'border-gold' : 'border-line')}>
-      <div className="flex shrink-0 items-center justify-between px-3 py-2 font-display text-sm font-semibold"
-        style={{ color, background: `color-mix(in srgb, ${color} 12%, transparent)` }}>
+    <div className={cn('flex min-h-0 flex-col overflow-hidden rounded-xl border-2 bg-[color:var(--bg-1)]',
+      active ? 'border-gold shadow-glow-gold' : 'border-line-strong')}>
+      <div className="flex shrink-0 items-center justify-between px-3 py-2.5 font-display text-base font-bold"
+        style={{ color, background: `color-mix(in srgb, ${color} 22%, transparent)` }}>
         <span>{title}</span>
         {active && <Badge tone="win">tura</Badge>}
       </div>
 
       {/* Ban strip */}
-      <div className="flex shrink-0 items-center gap-1.5 border-b border-line px-3 py-1.5">
+      <div className="flex shrink-0 items-center gap-2 border-b border-line-strong bg-[color:var(--bg)]/50 px-3 py-2">
         <span className="kicker text-text-lo">Bany</span>
         {Array.from({ length: 5 }).map((_, i) => {
           const champ = bans[i] != null ? champById.get(bans[i]) : undefined;
           return bans[i] != null
-            ? <ChampionIcon key={i} iconUrl={champ?.iconUrl} name={champ?.name} size={26}
-                className="opacity-60 grayscale" />
-            : <span key={i} className="h-6 w-6 rounded-md border border-dashed border-line" />;
+            ? <ChampionIcon key={i} iconUrl={champ?.iconUrl} name={champ?.name} size={30}
+                className="opacity-70 grayscale ring-loss/50" />
+            : <span key={i} className="h-[30px] w-[30px] rounded-md border border-dashed border-line-strong" />;
         })}
       </div>
 
-      <div className="flex min-h-0 flex-1 flex-col divide-y divide-line overflow-y-auto">
+      <div className="flex min-h-0 flex-1 flex-col gap-1.5 overflow-y-auto p-1.5">
         {players.map((player) => {
           const onClock = !isDone && draft.currentPlayerId === player.playerId;
           // While a player is on the clock for a PICK, show their live pre-selection in their own slot
@@ -432,22 +440,34 @@ function DraftTeam({ title, side, color, players, bans, champById, draft, myPlay
           const canSwap = isDone && mySide === side && player.playerId !== myPlayerId;
           return (
             <div key={player.playerId}
-              className={cn('relative flex flex-1 items-center gap-2.5 px-3 py-2',
-                onClock && 'bg-[color:var(--gold)]/10 ring-1 ring-inset ring-gold')}>
-              <div className={cn('shrink-0', isPreview && 'opacity-60 ring-2 ring-gold rounded-md')}>
-                <ChampionIcon iconUrl={champ?.iconUrl} name={champ?.name} size={38} />
+              className={cn(
+                'relative flex items-center gap-3 rounded-[var(--r-sm)] px-3 transition-all duration-300',
+                onClock
+                  // Whoever is on the clock gets a frame that is both larger and pulsing.
+                  ? 'on-clock-frame z-10 flex-[1.9] bg-[color:var(--gold)]/15 py-2.5'
+                  // Same 2px border as the frame, so switching turns shifts nothing sideways.
+                  : 'flex-1 border-2 border-line bg-[color:var(--bg-2)]/60 py-2',
+              )}>
+              <div className={cn('shrink-0', isPreview && 'rounded-md opacity-70 ring-2 ring-gold')}>
+                <ChampionIcon iconUrl={champ?.iconUrl} name={champ?.name} size={onClock ? 54 : 40} />
               </div>
               <div className="min-w-0 flex-1">
-                <div className="flex items-center gap-1.5 text-sm font-medium text-text-hi">
+                <div className={cn('flex items-center gap-1.5 font-medium text-text-hi',
+                  onClock ? 'font-display text-base font-bold sm:text-lg' : 'text-sm')}>
                   <span className="truncate">{player.nickname}</span>
                   {player.captain && <span title="Kapitan (robi bany)" className="text-gold">★</span>}
                   {player.playerId === myPlayerId && <span className="kicker text-cyan">(Ty)</span>}
                 </div>
-                <div className="truncate text-xs text-text-lo">
+                <div className={cn('truncate', onClock ? 'text-sm text-text' : 'text-xs text-text-lo')}>
                   {roleLabel(player.role)}
                   {champ ? ` · ${champ.name}` : ''}
                   {isPreview && <span className="text-gold"> · zaznaczono</span>}
                 </div>
+                {onClock && (
+                  <div className="on-clock-tag kicker mt-0.5 text-gold">
+                    {draft.currentType === 'BAN' ? '▶ teraz banuje' : '▶ teraz wybiera'}
+                  </div>
+                )}
               </div>
               {canSwap && (
                 <button type="button"
@@ -492,10 +512,18 @@ function useDraftAudio({ draft, isDone, myTurn, remaining }: {
   }, []);
 
   // Music runs for the duration of the draft only.
+  //
+  // The dependency is deliberately a boolean, not `draft`: every pick, ban and clock push hands us a
+  // brand-new draft object, and depending on it re-ran this effect — stopping and restarting the
+  // track from the top on every action. The bed now just loops until the draft is over, at which
+  // point `stopMusic()` fades it out.
+  const musicWanted = Boolean(draft) && !isDone;
   useEffect(() => {
-    if (draft && !isDone) void sound.startMusic();
+    if (!musicWanted) return;
+    void sound.startMusic();
+    // Draft finished, or the board went away: fade out.
     return () => sound.stopMusic();
-  }, [draft, isDone]);
+  }, [musicWanted]);
 
   useEffect(() => {
     if (!draft) return;

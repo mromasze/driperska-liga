@@ -21,6 +21,10 @@ const BOT_SPEEDS: { value: BotSpeed; label: string }[] = [
  * Same component, same audio cues, same clock as the live tournament draft — only the transport is
  * different: instead of the API and SSE, a local simulation drives the state (see `lib/draftSim`).
  * Nothing here touches a match or the database.
+ *
+ * The board opens full-screen, exactly as it does in the player panel, so what an admin sees here is
+ * pixel-for-pixel what the ten players see. The simulation controls ride above it in a floating dock
+ * rather than sitting beside the board, which would have changed the layout being tested.
  */
 export function AdminDraftTestPage() {
   const champions = useChampions();
@@ -29,7 +33,8 @@ export function AdminDraftTestPage() {
   const [stepSeconds, setStepSeconds] = useState(30);
   const [botSpeed, setBotSpeed] = useState<BotSpeed>('normal');
   const [autoPlayMe, setAutoPlayMe] = useState(false);
-  const [fullscreen, setFullscreen] = useState(false);
+  // Matches the players' default (`PlayerPanelPage` opens the draft tab full-screen too).
+  const [fullscreen, setFullscreen] = useState(true);
 
   const sim = useDraftSimulation({
     champions: champions.data ?? [],
@@ -119,15 +124,7 @@ export function AdminDraftTestPage() {
           {!sim.running ? (
             <Button variant="gold" onClick={startSim}>▶ Uruchom symulację</Button>
           ) : (
-            <>
-              <Button variant="ghost" onClick={sim.togglePause}>
-                {sim.lobby?.draft?.paused ? '▶ Wznów' : '⏸ Pauza'}
-              </Button>
-              <Button variant="ghost" onClick={sim.skipStep} disabled={sim.finished}>⏭ Pomiń krok</Button>
-              <Button variant="ghost" onClick={sim.finish} disabled={sim.finished}>⏩ Dokończ draft</Button>
-              <Button variant="ghost" onClick={startSim}>↻ Od nowa</Button>
-              <Button variant="danger" onClick={sim.stop}>■ Zatrzymaj</Button>
-            </>
+            <SimControls sim={sim} onRestart={startSim} />
           )}
 
           <label className="ml-auto flex items-center gap-2 text-sm text-text-lo">
@@ -144,17 +141,33 @@ export function AdminDraftTestPage() {
             Tryb obserwatora: widzisz dokładnie to, co gracz czekający na swoją kolej.
           </p>
         )}
+        {sim.running && !fullscreen && (
+          <p className="mt-3 text-xs text-text-lo">
+            Widok zwinięty. Kliknij ⛶ na planszy, żeby wrócić do widoku 1:1 z panelem gracza.
+          </p>
+        )}
       </section>
 
       {sim.lobby ? (
-        <DraftBoard
-          lobby={sim.lobby}
-          myPlayerId={mySeat ?? '—'}
-          actions={sim.actions}
-          streamState="live"
-          fullscreen={fullscreen}
-          onCollapse={() => setFullscreen((open) => !open)}
-        />
+        <>
+          <DraftBoard
+            lobby={sim.lobby}
+            myPlayerId={mySeat ?? '—'}
+            actions={sim.actions}
+            streamState="live"
+            fullscreen={fullscreen}
+            onCollapse={() => setFullscreen((open) => !open)}
+          />
+          {/* The board covers the viewport when full-screen, so the sim controls float above it. */}
+          {fullscreen && (
+            <div className="fixed bottom-4 left-1/2 z-50 -translate-x-1/2">
+              <div className="panel flex flex-wrap items-center justify-center gap-2 px-3 py-2 shadow-pop">
+                <span className="kicker mr-1 hidden text-gold sm:inline">Symulacja</span>
+                <SimControls sim={sim} onRestart={startSim} />
+              </div>
+            </div>
+          )}
+        </>
       ) : (
         <EmptyState
           title="Symulacja nie działa"
@@ -163,5 +176,22 @@ export function AdminDraftTestPage() {
         />
       )}
     </div>
+  );
+}
+
+/** The pause / skip / finish / restart / stop row, shared by the settings card and the floating dock. */
+function SimControls({ sim, onRestart }: {
+  sim: ReturnType<typeof useDraftSimulation>; onRestart: () => void;
+}) {
+  return (
+    <>
+      <Button variant="ghost" size="sm" onClick={sim.togglePause}>
+        {sim.lobby?.draft?.paused ? '▶ Wznów' : '⏸ Pauza'}
+      </Button>
+      <Button variant="ghost" size="sm" onClick={sim.skipStep} disabled={sim.finished}>⏭ Pomiń krok</Button>
+      <Button variant="ghost" size="sm" onClick={sim.finish} disabled={sim.finished}>⏩ Dokończ</Button>
+      <Button variant="ghost" size="sm" onClick={onRestart}>↻ Od nowa</Button>
+      <Button variant="danger" size="sm" onClick={sim.stop}>■ Zatrzymaj</Button>
+    </>
   );
 }

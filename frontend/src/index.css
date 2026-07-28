@@ -307,6 +307,64 @@
 @media (prefers-reduced-motion: reduce) {
   .draw-stage, .draw-player { animation: none; opacity: 1; }
 }
+
+/* ============================================================
+   Draft board — the stage has to read from across the room.
+   ============================================================ */
+
+/* Opaque backdrop with team-coloured glows: blue on the left, red on the right, gold underfoot.
+   Much higher contrast than the flat page background the board used to sit on. */
+.draft-stage {
+  background-color: var(--bg);
+  background-image:
+    radial-gradient(56rem 38rem at 6% -12%, rgba(76, 130, 245, 0.26), transparent 62%),
+    radial-gradient(56rem 38rem at 94% -12%, rgba(255, 81, 98, 0.24), transparent 62%),
+    radial-gradient(60rem 34rem at 50% 118%, rgba(242, 193, 78, 0.16), transparent 60%);
+}
+
+/* The player currently on the clock. Bigger than its neighbours (sized by the layout) and wrapped in
+   a gold frame that breathes, so there is never a question about whose turn it is. */
+@keyframes on-clock-pulse {
+  0%, 100% {
+    border-color: color-mix(in srgb, var(--gold) 65%, transparent);
+    box-shadow:
+      0 0 0 1px color-mix(in srgb, var(--gold) 35%, transparent),
+      0 0 24px -6px color-mix(in srgb, var(--gold) 55%, transparent),
+      inset 0 0 28px -14px var(--gold);
+  }
+  50% {
+    border-color: var(--gold-soft);
+    box-shadow:
+      0 0 0 3px color-mix(in srgb, var(--gold) 85%, transparent),
+      0 0 52px -4px color-mix(in srgb, var(--gold) 80%, transparent),
+      inset 0 0 40px -10px var(--gold);
+  }
+}
+/* Radius is left to the caller, so this composes with whatever `rounded-*` the element already has. */
+.on-clock-frame {
+  border: 2px solid var(--gold);
+  animation: on-clock-pulse 1.15s ease-in-out infinite;
+}
+
+/* The "TERAZ WYBIERA" tag riding on the frame. */
+@keyframes on-clock-blink {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.35; }
+}
+.on-clock-tag { animation: on-clock-blink 1.15s ease-in-out infinite; }
+
+@media (prefers-reduced-motion: reduce) {
+  .on-clock-frame, .on-clock-tag { animation: none; }
+  .on-clock-frame { box-shadow: 0 0 0 3px var(--gold), 0 0 40px -8px rgba(242, 193, 78, 0.7); }
+}
+
+/* A draft board collapsed into a panel needs the whole page width, so the centred layout container
+   drops its width cap while one is on the page. Done with `:has()` rather than 100vw negative
+   margins, which would land off-centre in the admin layout (it has a sidebar). The container's own
+   padding stays, so the rest of the page keeps its gutters. */
+main:has(.draft-bleed) {
+  max-width: none;
+}
 /* Collapsible match rows in the admin panel */
 .match-dropdown > summary { list-style: none; }
 .match-dropdown > summary::-webkit-details-marker { display: none; }

@@ -60,6 +60,9 @@ class SoundEngine {
   private unlocked = false;
   private music: HTMLAudioElement | null = null;
   private musicWanted = false;
+  /** Cached load attempt, so repeated `startMusic()` calls never create a second element. */
+  private musicLoad: Promise<HTMLAudioElement | null> | null = null;
+  private fadeTimer: number | null = null;
   private context: AudioContext | null = null;
   private cues = new Map<SoundCue, HTMLAudioElement | null>();
   private listeners = new Set<() => void>();
@@ -79,22 +82,26 @@ class SoundEngine {
   isUnlocked(): boolean { return this.unlocked; }
   /** Effective gain applied to everything: 0 while muted. */
   private gain(): number { return this.muted ? 0 : this.volume; }
+  /** The bed sits under the cues, so it never drowns out "your turn". */
+  private musicGain(): number { return this.gain() * 0.6; }
 
   setVolume(value: number) {
     this.volume = Math.min(1, Math.max(0, value));
     localStorage.setItem(VOLUME_KEY, String(this.volume));
     // Raising the slider from zero is an unmute in spirit; honour that.
     if (this.volume > 0 && this.muted) this.setMuted(false);
-    if (this.music) this.music.volume = this.gain() * 0.6;
+    // Never fight an in-flight fade-out: the fade owns the volume until it finishes.
+    if (this.music && this.fadeTimer === null) this.music.volume = this.musicGain();
     this.emit();
   }
 
   setMuted(muted: boolean) {
     this.muted = muted;
     localStorage.setItem(MUTED_KEY, muted ? '1' : '0');
-    if (this.music) this.music.volume = this.gain() * 0.6;
+    if (this.music && this.fadeTimer === null) this.music.volume = this.musicGain();
+    // Muting only pauses — the position is kept, so unmuting picks the track up where it was.
     if (muted) this.music?.pause();
-    else if (this.musicWanted) void this.music?.play().catch(() => undefined);
+    else if (this.musicWanted) void this.startMusic();
     this.emit();
   }
 
@@ -127,18 +134,31 @@ class SoundEngine {
     this.emit();
   }
 
-  /** Starts (or resumes) the looping music bed. No-op until audio is unlocked. */
+  /**
+   * Starts the looping music bed, or leaves it alone if it is already playing.
+   *
+   * Idempotent on purpose: the draft board calls this whenever its state changes, and the track must
+   * keep running across every pick and ban — it only ever loops back to the start by itself.
+   */
   async startMusic() {
     this.musicWanted = true;
     if (!this.unlocked || this.muted) return;
+    this.cancelFade();
     if (!this.music) {
-      const element = await loadFirst(MUSIC_SOURCES);
       // No music file shipped: stay silent rather than looping a synth drone forever.
+      this.musicLoad ??= loadFirst(MUSIC_SOURCES);
+      const element = await this.musicLoad;
       if (!element) return;
-      element.loop = true;
-      this.music = element;
+      // A stopMusic() that landed while the file was loading wins.
+      if (!this.musicWanted || this.muted) return;
+      if (!this.music) {
+        element.loop = true;
+        this.music = element;
+      }
     }
-    this.music.volume = this.gain() * 0.6;
+    this.music.volume = this.musicGain();
+    // Already running: touching play()/currentTime here is what used to restart the track.
+    if (!this.music.paused) return;
     try {
       await this.music.play();
     } catch {
@@ -146,10 +166,50 @@ class SoundEngine {
     }
   }
 
-  stopMusic() {
+  /**
+   * Fades the bed out and rewinds it. Called when the draft ends (or the board unmounts), so the
+   * music disappears instead of being cut off mid-bar.
+   */
+  stopMusic(fadeMs = 1200) {
     this.musicWanted = false;
-    this.music?.pause();
-    if (this.music) this.music.currentTime = 0;
+    this.cancelFade();
+    const music = this.music;
+    if (!music) return;
+    if (fadeMs <= 0 || music.paused) {
+      this.rewindMusic();
+      return;
+    }
+    const from = music.volume;
+    const steps = Math.max(1, Math.round(fadeMs / 60));
+    let step = 0;
+    this.fadeTimer = window.setInterval(() => {
+      // startMusic() ran mid-fade (draft restarted): abandon the fade and let it play on.
+      if (this.musicWanted) {
+        this.cancelFade();
+        music.volume = this.musicGain();
+        return;
+      }
+      step += 1;
+      if (step >= steps) {
+        this.cancelFade();
+        this.rewindMusic();
+        return;
+      }
+      music.volume = from * (1 - step / steps);
+    }, 60);
+  }
+
+  private cancelFade() {
+    if (this.fadeTimer === null) return;
+    window.clearInterval(this.fadeTimer);
+    this.fadeTimer = null;
+  }
+
+  private rewindMusic() {
+    if (!this.music) return;
+    this.music.pause();
+    this.music.currentTime = 0;
+    this.music.volume = this.musicGain();
   }
 
   play(cue: SoundCue) {
