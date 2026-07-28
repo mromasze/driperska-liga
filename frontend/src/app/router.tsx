@@ -21,6 +21,8 @@ import { AdminHighlightsPage } from '../pages/admin/AdminHighlightsPage';
 import { AdminSchedulePage } from '../pages/admin/AdminSchedulePage';
 import { AdminDiagnosticsPage } from '../pages/admin/AdminDiagnosticsPage';
 import { AdminSettingsPage } from '../pages/admin/AdminSettingsPage';
+import { AdminAiPage } from '../pages/admin/AdminAiPage';
+import { AdminDraftTestPage } from '../pages/admin/AdminDraftTestPage';
 import { PlayerPanelPage } from '../pages/player/PlayerPanelPage';
 
 export function AppRoutes() {
@@ -55,6 +57,8 @@ export function AppRoutes() {
           <Route path="/admin/schedule" element={<AdminSchedulePage />} />
           <Route path="/admin/diagnostics" element={<AdminDiagnosticsPage />} />
           <Route path="/admin/settings" element={<AdminSettingsPage />} />
+          <Route path="/admin/ai" element={<AdminAiPage />} />
+          <Route path="/admin/draft-test" element={<AdminDraftTestPage />} />
           <Route path="/admin/matches/:id/control" element={<MatchControlPage />} />
         </Route>
       </Route>

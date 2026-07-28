@@ -3,6 +3,21 @@
 Wszystkie istotne zmiany Driperskiej Ligi są opisywane tutaj oraz w
 `frontend/src/content/releases.ts`, który zasila patch notes na stronie głównej.
 
+## v0.4.5 — 2026-07-28
+
+- **Cała konfiguracja `.env` jest edytowalna w locie.** Nowy `GET/PUT /api/v1/admin/config` (ADMIN) pokazuje każde ustawienie z grupami, opisami i nazwą zmiennej środowiskowej. Zapis nadpisania trafia do `app_setting` i jest natychmiast wpisywany setterem w odpowiedni bean `@ConfigurationProperties`, więc reszta aplikacji czyta swoją konfigurację jak dotąd i nie wie o tej tabeli. Nadpisania są odtwarzane przy każdym starcie (`RuntimeConfigService.applyStoredOverrides`), więc przeżywają restart bez ruszania pliku na serwerze. `POST /api/v1/admin/config/reset` kasuje nadpisanie i przywraca wartość, z którą wystartował proces.
+- **Sekrety nigdy nie wracają do przeglądarki w całości** — tylko maska (`abc…7890`) plus flaga „ustawione”. Dlatego pole sekretu startuje puste, a niedotknięte pola nie są w ogóle wysyłane przy zapisie: „zostaw bez zmian” to pominięty klucz, nie odesłanie tego, co pokazaliśmy.
+- **Ustawienia konsumowane raz przy starcie są tylko do odczytu.** `JWT_SECRET` (podmiana unieważniłaby wszystkie sesje), `MEDIA_DIR`, Data Dragon i konto bootstrap są widoczne dla podglądu, ale zapis ich odrzuca z jasnym komunikatem. Token Discorda działa od razu dla wysyłki wiadomości, natomiast nasłuch głosów RSVP (websocket JDA) łączy się przy starcie — panel mówi to wprost.
+- **Nowa zakładka „AI”.** Aktywny model, stan połączenia z Ollamą, lista modeli dostępnych na koncie (`GET /api/v1/admin/ai/models`) i przycisk „Testuj” (`POST /api/v1/admin/ai/test`), który wysyła jedno krótkie zapytanie do wskazanego modelu i mierzy czas — bez zapisywania czegokolwiek. Model można więc sprawdzić, zanim stanie się tym, od którego zależy odczyt screenshotów.
+- `OllamaVisionClient` przestał zamrażać limit czasu w fabryce żądań przy tworzeniu beana — klient HTTP jest przebudowywany, gdy zmieni się `OLLAMA_TIMEOUT_SECONDS`. Bez tego zmiana limitu w panelu nie miałaby żadnego efektu.
+- Czas kroku draftu i auto-akceptacja składu przeszły z `@Value` w konstruktorze na `DraftProperties` / `DrawProperties`, a `APP_PUBLIC_URL` na `AppCoreProperties` — wartości są czytane przy każdym użyciu, więc dają się zmieniać między meczami.
+- **Nowa zakładka „Test draftu”.** Pełna symulacja draftu turniejowego: ten sam komponent planszy, te same cue dźwiękowe i ten sam zegar, co u graczy — tylko stan pochodzi z lokalnego silnika (`lib/draftSim`), a nie z API i SSE. Wybierasz miejsce w składzie (albo tryb obserwatora), czas kroku i tempo botów; możesz pauzować, pomijać krok, dokańczać draft i oddać własną turę botowi. Boty odpowiadają też na propozycje zamiany pozycji/postaci po drafcie. Żaden mecz ani gracz nie jest zapisywany.
+- `DraftBoard` przyjmuje teraz opcjonalne `actions` (`DraftActions`); domyślnie są to prawdziwe endpointy. To jedyna zmiana, jakiej wymagało ponowne użycie planszy w symulacji — plansza gracza działa dokładnie jak wcześniej.
+- Symulacja odtwarza reguły serwera 1:1 (kolejność `DraftState.tournamentSequence`, bany kapitana, picki spływające po kolejności drużyny, licznik blokujący zaznaczoną postać). Zweryfikowane pełnym przejściem 20 kroków: 5+5 banów, 10 obsadzonych slotów, zero duplikatów.
+- Zakładka „Mecze” w panelu admina jest zwijanym menu — rozwija się sama, gdy jesteś w środku, a licznik akceptacji przechodzi na nagłówek, kiedy grupa jest zwinięta.
+- **Karty ostatnich wyników pokazują składy.** Sam wynik nigdy nie mówił, *który* to był mecz — teraz każda karta ma ikony postaci i nicki obu drużyn, linia po linii, z wyróżnionym MVP.
+- Migracja `V7` rozszerza `app_setting.setting_value` do `VARCHAR(2048)`, bo tabela trzyma teraz również klucze API i adresy.
+
 ## v0.4.4 — 2026-07-28
 
 - **PR i MVP są teraz porównywalne między rolami.** Pozycja nadal określa rywala oraz historyczną bazę normalizacji, ale nie zmienia już wartości tego samego wyniku 0–1.

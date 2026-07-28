@@ -1,7 +1,7 @@
 import { Link } from 'react-router-dom';
-import type { MatchDetail } from '../../api/types';
+import type { MatchDetail, MatchParticipant } from '../../api/types';
 import { formatDate, formatDuration } from '../../lib/format';
-import { matchMvp, teamKills } from '../../lib/match';
+import { lineupOf, matchMvp, teamKills } from '../../lib/match';
 import { cn } from '../../lib/cn';
 import { ChampionIcon } from '../champion/ChampionIcon';
 import { PrBadge } from '../ui/PrBadge';
@@ -12,12 +12,15 @@ export function MatchCard({ match }: { match: MatchDetail }) {
   const redKills = teamKills(match, 'RED');
   const mvp = matchMvp(match);
   const blueWon = match.winningSide === 'BLUE';
+  const blueLineup = lineupOf(match, 'BLUE');
+  const redLineup = lineupOf(match, 'RED');
+  const lanes = Math.max(blueLineup.length, redLineup.length);
 
   return (
     <Link to={`/matches/${match.id}`} className="glass lift block overflow-hidden p-0">
       <div className="flex items-stretch">
         <SideBar won={blueWon} color="var(--blue)" />
-        <div className="flex-1 p-4">
+        <div className="min-w-0 flex-1 p-4">
           <div className="flex items-center justify-between text-xs text-text-lo">
             <span className="num">{formatDate(match.startedAt ?? match.completedAt ?? match.createdAt)}</span>
             <span className="num">{formatDuration(match.durationSeconds)}</span>
@@ -28,6 +31,21 @@ export function MatchCard({ match }: { match: MatchDetail }) {
             <span className="font-display text-sm text-text-lo">:</span>
             <TeamScore label="RED" score={redKills} color="var(--red)" won={match.winningSide === 'RED'} align="right" />
           </div>
+
+          {/*
+            Both lineups, lane against lane. A scoreline alone never told you *which* match you were
+            looking at — the portraits and nicknames do, at a glance, before the card is even clicked.
+          */}
+          {lanes > 0 && (
+            <div className="mt-3 space-y-1 border-t border-line pt-3">
+              {Array.from({ length: lanes }).map((_, lane) => (
+                <div key={lane} className="flex items-center gap-2">
+                  <LineupSlot player={blueLineup[lane]} mvpId={mvp?.playerId} />
+                  <LineupSlot player={redLineup[lane]} mvpId={mvp?.playerId} align="right" />
+                </div>
+              ))}
+            </div>
+          )}
 
           {mvp && (
             <div className="mt-3 flex items-center gap-2 border-t border-line pt-3">
@@ -43,6 +61,32 @@ export function MatchCard({ match }: { match: MatchDetail }) {
         <SideBar won={match.winningSide === 'RED'} color="var(--red)" />
       </div>
     </Link>
+  );
+}
+
+/** One player in a lineup row: portrait plus nickname, mirrored for the red side. */
+function LineupSlot({ player, mvpId, align = 'left' }: {
+  player?: MatchParticipant;
+  mvpId?: string;
+  align?: 'left' | 'right';
+}) {
+  if (!player) return <span className="min-w-0 flex-1" />;
+  const isMvp = player.playerId === mvpId;
+  return (
+    <span
+      className={cn('flex min-w-0 flex-1 items-center gap-1.5', align === 'right' && 'flex-row-reverse')}
+      title={`${player.nickname}${player.championName ? ` — ${player.championName}` : ''}`}
+    >
+      <ChampionIcon
+        iconUrl={player.championIconUrl}
+        name={player.championName}
+        size={20}
+        className={cn(isMvp && 'ring-[var(--gold)]')}
+      />
+      <span className={cn('truncate text-[11px]', isMvp ? 'font-semibold text-gold' : 'text-text-lo')}>
+        {player.nickname}
+      </span>
+    </span>
   );
 }
 

@@ -7,9 +7,9 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.UUID;
-import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import pl.romcio.driperska.common.config.AppCoreProperties;
 import pl.romcio.driperska.common.error.BusinessRuleException;
 import pl.romcio.driperska.common.error.ResourceNotFoundException;
 import pl.romcio.driperska.integration.discord.DiscordClient;
@@ -29,15 +29,14 @@ public class PlannedMatchService {
     private final PlannedMatchRepository repository;
     private final PlayerRepository playerRepository;
     private final DiscordClient discordClient;
-    private final String publicUrl;
+    private final AppCoreProperties app;
 
     public PlannedMatchService(PlannedMatchRepository repository, PlayerRepository playerRepository,
-                               DiscordClient discordClient,
-                               @Value("${app.public-url:https://driperska.pl}") String publicUrl) {
+                               DiscordClient discordClient, AppCoreProperties app) {
         this.repository = repository;
         this.playerRepository = playerRepository;
         this.discordClient = discordClient;
-        this.publicUrl = publicUrl.replaceAll("/$", "");
+        this.app = app;
     }
 
     @Transactional
@@ -133,7 +132,7 @@ public class PlannedMatchService {
         if (planned.getNote() != null && !planned.getNote().isBlank()) {
             sb.append("📝 ").append(planned.getNote()).append('\n');
         }
-        sb.append("✅ Potwierdź obecność po zalogowaniu: ").append(publicUrl).append("/panel\n");
+        sb.append("✅ Potwierdź obecność po zalogowaniu: ").append(app.publicUrl()).append("/panel\n");
         sb.append("@everyone");
         return sb.toString();
     }
@@ -146,7 +145,7 @@ public class PlannedMatchService {
             sb.append("📝 ").append(planned.getNote()).append('\n');
         }
         sb.append("Kliknij przycisk poniżej — liczą się tylko głosy kont Discord połączonych z graczem.\n");
-        sb.append("Głos możesz zmienić klikając ponownie. Wyniki: ").append(publicUrl).append("/panel");
+        sb.append("Głos możesz zmienić klikając ponownie. Wyniki: ").append(app.publicUrl()).append("/panel");
         return sb.toString();
     }
 }

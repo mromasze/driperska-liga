@@ -10,6 +10,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import pl.romcio.driperska.champion.domain.Champion;
 import pl.romcio.driperska.champion.infra.ChampionRepository;
+import pl.romcio.driperska.common.config.AppCoreProperties;
 import pl.romcio.driperska.common.domain.Role;
 import pl.romcio.driperska.common.domain.Side;
 import pl.romcio.driperska.common.error.BusinessRuleException;
@@ -35,19 +36,19 @@ public class MatchShareService {
     private final ResultImageGenerator imageGenerator;
     private final DiscordClient discordClient;
     private final MatchEventRecorder eventRecorder;
-    private final String publicUrl;
+    private final AppCoreProperties app;
 
     public MatchShareService(MatchRepository matchRepository, PlayerRepository playerRepository,
                              ChampionRepository championRepository, ResultImageGenerator imageGenerator,
                              DiscordClient discordClient, MatchEventRecorder eventRecorder,
-                             @org.springframework.beans.factory.annotation.Value("${app.public-url:https://driperska.pl}") String publicUrl) {
+                             AppCoreProperties app) {
         this.matchRepository = matchRepository;
         this.playerRepository = playerRepository;
         this.championRepository = championRepository;
         this.imageGenerator = imageGenerator;
         this.discordClient = discordClient;
         this.eventRecorder = eventRecorder;
-        this.publicUrl = publicUrl.replaceAll("/$", "");
+        this.app = app;
     }
 
     @Transactional(readOnly = true)
@@ -67,7 +68,7 @@ public class MatchShareService {
         int blue = sideKills(match, Side.BLUE);
         int red = sideKills(match, Side.RED);
         String caption = "🏆 **Driperska Liga** — wynik meczu\nNiebiescy **" + blue + "** : **" + red + "** Czerwoni"
-                + "\n🔗 Szczegóły meczu: " + publicUrl + "/matches/" + matchId;
+                + "\n🔗 Szczegóły meczu: " + app.publicUrl() + "/matches/" + matchId;
         Delivery delivery = discordClient.sendResultImage(caption, png, "wynik-" + matchId + ".png");
         if (delivery.sent()) {
             eventRecorder.record(matchId, MatchEventType.DISCORD_SHARED, actor, null);

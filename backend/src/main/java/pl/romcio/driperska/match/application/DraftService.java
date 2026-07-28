@@ -9,7 +9,6 @@ import java.util.List;
 import java.util.Random;
 import java.util.Set;
 import java.util.UUID;
-import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import pl.romcio.driperska.champion.infra.ChampionRepository;
@@ -46,20 +45,25 @@ public class DraftService {
     private final PlayerRepository playerRepository;
     private final MatchEventRecorder eventRecorder;
     private final ObjectMapper objectMapper;
-    private final int stepSeconds;
+    private final DraftProperties draftProperties;
     private final Random random = new Random();
 
     public DraftService(MatchService matchService, MatchDraftRepository draftRepository,
                         ChampionRepository championRepository, PlayerRepository playerRepository,
                         MatchEventRecorder eventRecorder, ObjectMapper objectMapper,
-                        @Value("${app.draft.step-seconds:30}") int stepSeconds) {
+                        DraftProperties draftProperties) {
         this.matchService = matchService;
         this.draftRepository = draftRepository;
         this.championRepository = championRepository;
         this.playerRepository = playerRepository;
         this.eventRecorder = eventRecorder;
         this.objectMapper = objectMapper;
-        this.stepSeconds = stepSeconds;
+        this.draftProperties = draftProperties;
+    }
+
+    /** Current step length. Read per use so the admin panel can retune the clock between matches. */
+    private int stepSeconds() {
+        return draftProperties.getStepSeconds();
     }
 
     // --- lifecycle ---------------------------------------------------------
@@ -76,7 +80,7 @@ public class DraftService {
         DraftState state = new DraftState();
         state.sequence = DraftState.tournamentSequence();
         state.currentIndex = 0;
-        state.deadline = Instant.now().plusSeconds(stepSeconds);
+        state.deadline = Instant.now().plusSeconds(stepSeconds());
         // Draft order per team = random shuffle; the first in the list is the captain (on top).
         // Positions/roles play no part in the draft order — picks simply flow top→bottom.
         state.blueOrder = draftOrder(match, Side.BLUE);
@@ -108,7 +112,7 @@ public class DraftService {
         requireDrafting(matchId);
         DraftState state = load(matchId);
         if (state.paused) return;
-        long remaining = state.deadline == null ? stepSeconds
+        long remaining = state.deadline == null ? stepSeconds()
                 : Math.max(1, java.time.Duration.between(Instant.now(), state.deadline).getSeconds());
         state.pausedRemainingSeconds = (int) remaining;
         state.deadline = null; // scheduler skips null deadlines → no auto-assign while paused
@@ -121,7 +125,7 @@ public class DraftService {
         requireDrafting(matchId);
         DraftState state = load(matchId);
         if (!state.paused) return;
-        state.deadline = Instant.now().plusSeconds(state.pausedRemainingSeconds > 0 ? state.pausedRemainingSeconds : stepSeconds);
+        state.deadline = Instant.now().plusSeconds(state.pausedRemainingSeconds > 0 ? state.pausedRemainingSeconds : stepSeconds());
         state.paused = false;
         persist(matchId, state);
     }
@@ -344,7 +348,7 @@ public class DraftService {
                 List.copyOf(state.blueBans), List.copyOf(state.redBans),
                 sequence, swaps,
                 state.hoverChampionId, state.hoverPlayerId,
-                List.copyOf(state.autoResolvedSteps), stepSeconds);
+                List.copyOf(state.autoResolvedSteps), stepSeconds());
     }
 
     // --- helpers -----------------------------------------------------------
@@ -359,7 +363,7 @@ public class DraftService {
             eventRecorder.record(match.getId(), MatchEventType.DRAFT_COMPLETED, match.getCreatedBy(),
                     java.util.Map.of());
         } else {
-            state.deadline = Instant.now().plusSeconds(stepSeconds);
+            state.deadline = Instant.now().plusSeconds(stepSeconds());
         }
     }
 

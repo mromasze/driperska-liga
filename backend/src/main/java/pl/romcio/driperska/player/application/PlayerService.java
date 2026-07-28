@@ -2,7 +2,6 @@ package pl.romcio.driperska.player.application;
 
 import java.util.List;
 import java.util.UUID;
-import org.springframework.beans.factory.annotation.Value;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
@@ -11,6 +10,7 @@ import org.springframework.util.StringUtils;
 import org.springframework.web.multipart.MultipartFile;
 import pl.romcio.driperska.account.application.AccountService;
 import pl.romcio.driperska.account.application.AccountService.ProvisionedAccount;
+import pl.romcio.driperska.common.config.AppCoreProperties;
 import pl.romcio.driperska.common.domain.Role;
 import pl.romcio.driperska.common.error.BusinessRuleException;
 import pl.romcio.driperska.common.error.ResourceNotFoundException;
@@ -26,16 +26,16 @@ public class PlayerService {
     private final AvatarStorage avatarStorage;
     private final AccountService accountService;
     private final DiscordClient discordClient;
-    private final String publicUrl;
+    private final AppCoreProperties app;
 
     public PlayerService(PlayerRepository repository, AvatarStorage avatarStorage,
                          AccountService accountService, DiscordClient discordClient,
-                         @Value("${app.public-url:https://driperska.pl}") String publicUrl) {
+                         AppCoreProperties app) {
         this.repository = repository;
         this.avatarStorage = avatarStorage;
         this.accountService = accountService;
         this.discordClient = discordClient;
-        this.publicUrl = publicUrl.replaceAll("/$", "");
+        this.app = app;
     }
 
     @Transactional(readOnly = true)
@@ -103,7 +103,7 @@ public class PlayerService {
     }
 
     private CreatedPlayerResponse deliver(Player player, ProvisionedAccount provisioned) {
-        String loginUrl = publicUrl + "/login";
+        String loginUrl = app.publicUrl() + "/login";
         String template = "Siema! Twoje konto Driperskiej Ligi jest gotowe 🎮\n\n"
                 + "Strona: " + loginUrl + "\n"
                 + "Login: " + player.getNickname() + "\n"

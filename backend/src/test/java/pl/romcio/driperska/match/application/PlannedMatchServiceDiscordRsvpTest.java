@@ -12,6 +12,7 @@ import java.util.UUID;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.test.util.ReflectionTestUtils;
+import pl.romcio.driperska.common.config.AppCoreProperties;
 import pl.romcio.driperska.common.domain.Role;
 import pl.romcio.driperska.common.error.BusinessRuleException;
 import pl.romcio.driperska.integration.discord.DiscordClient;
@@ -30,7 +31,9 @@ class PlannedMatchServiceDiscordRsvpTest {
 
     @BeforeEach
     void setUp() {
-        service = new PlannedMatchService(planned, players, discord, "https://driperska.pl");
+        AppCoreProperties app = new AppCoreProperties();
+        app.setPublicUrl("https://driperska.pl");
+        service = new PlannedMatchService(planned, players, discord, app);
     }
 
     @Test

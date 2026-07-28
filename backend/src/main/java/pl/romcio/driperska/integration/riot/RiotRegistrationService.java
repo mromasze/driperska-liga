@@ -4,10 +4,10 @@ import java.nio.charset.StandardCharsets;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
 import java.util.HexFormat;
-import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.util.StringUtils;
+import pl.romcio.driperska.common.config.AppCoreProperties;
 import pl.romcio.driperska.common.error.ExternalServiceException;
 
 @Service
@@ -15,15 +15,15 @@ public class RiotRegistrationService {
     private final RiotProperties properties;
     private final RiotApiClient client;
     private final RiotTournamentRegistrationRepository repository;
-    private final String publicUrl;
+    private final AppCoreProperties app;
 
     public RiotRegistrationService(RiotProperties properties, RiotApiClient client,
                                    RiotTournamentRegistrationRepository repository,
-                                   @Value("${app.public-url:https://driperska.pl}") String publicUrl) {
+                                   AppCoreProperties app) {
         this.properties = properties;
         this.client = client;
         this.repository = repository;
-        this.publicUrl = publicUrl.replaceAll("/$", "");
+        this.app = app;
     }
 
     @Transactional
@@ -33,7 +33,7 @@ public class RiotRegistrationService {
         }
         String callbackUrl = StringUtils.hasText(properties.getCallbackUrl())
                 ? properties.getCallbackUrl()
-                : publicUrl + "/api/v1/riot/tournament/callback";
+                : app.publicUrl() + "/api/v1/riot/tournament/callback";
         String fingerprint = fingerprint(properties.getApiKey());
         return repository.findByKeyFingerprintAndPlatformAndCallbackUrl(
                         fingerprint, properties.getPlatform(), callbackUrl)

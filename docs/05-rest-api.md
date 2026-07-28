@@ -110,6 +110,26 @@ Kody: `400` (zły request), `401` (brak/nieważny token), `403` (brak roli), `40
 
 \* publiczne GET-y pokazują tylko mecze `APPROVED`; stany robocze widoczne po zalogowaniu.
 
+### Konfiguracja runtime — `/api/v1/admin/config` (ADMIN)
+Podgląd i edycja konfiguracji `.env` bez restartu. Nadpisania są trzymane w `app_setting` i odtwarzane
+na beanach `@ConfigurationProperties` przy starcie (`RuntimeConfigService`), więc reszta aplikacji
+czyta swoją konfigurację jak dotąd i nie wie o tej tabeli.
+
+| Metoda | Ścieżka | Opis |
+|--------|---------|------|
+| GET | `/` | wszystkie ustawienia w grupach; sekrety wyłącznie zamaskowane (`abc…7890`) |
+| PUT | `/` | `{values: {klucz: wartość}}` — pominięty klucz zostaje bez zmian, `null` kasuje nadpisanie |
+| POST | `/reset` | `{keys: [...]}` — przywróć wartości, z którymi wystartował proces |
+
+Ustawienia konsumowane raz przy starcie (`JWT_SECRET`, `MEDIA_DIR`, Data Dragon, konto bootstrap) są
+zwracane z `editable: false` i odrzucane przy zapisie — zmienia się je w `.env` i restartuje backend.
+
+### AI — `/api/v1/admin/ai` (ADMIN)
+| Metoda | Ścieżka | Opis |
+|--------|---------|------|
+| GET | `/models` | modele dostępne na koncie Ollama (aktywny zawsze na liście) |
+| POST | `/test` | `{model?, prompt?}` — jedno krótkie zapytanie; mierzy czas, nic nie zapisuje |
+
 ## 5.4 Przykładowe kontrakty (kluczowe)
 
 **Losowanie — odpowiedź `POST /matches/{id}/draw`:**

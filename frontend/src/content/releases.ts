@@ -11,6 +11,18 @@ export interface ReleaseNote {
  */
 export const RELEASES: ReleaseNote[] = [
   {
+    version: 'v0.4.5',
+    date: '2026-07-28',
+    title: 'Konfiguracja i AI z panelu, test draftu',
+    changes: [
+      'Klucze API, modele AI, kanały Discorda i czasy draftu zmieniasz w panelu admina — bez restartu i bez edycji .env na serwerze.',
+      'Nowa zakładka „AI”: podgląd aktywnego modelu, lista modeli z konta Ollama i przycisk „Testuj”, który sprawdza model przed przełączeniem.',
+      'Nowa zakładka „Test draftu”: pełna symulacja draftu turniejowego z botami — ta sama plansza, dźwięki i zegar, co u graczy. Nic nie jest zapisywane.',
+      'Zakładka „Mecze” w panelu admina jest teraz zwijanym menu.',
+      'Karty ostatnich wyników na stronie głównej pokazują ikony postaci i nicki obu drużyn, więc od razu widać, o który mecz chodzi.',
+    ],
+  },
+  {
     version: 'v0.4.4',
     date: '2026-07-28',
     title: 'Porównywalny PR i MVP między rolami',

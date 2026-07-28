@@ -5,7 +5,6 @@ import java.util.*;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
-import org.springframework.beans.factory.annotation.Value;
 import pl.romcio.driperska.common.domain.Side;
 import pl.romcio.driperska.common.error.*;
 import pl.romcio.driperska.match.api.DrawLobbyDtos.DraftView;
@@ -28,13 +27,13 @@ public class DrawLobbyService {
     private final PlayerRepository playerRepository;
     private final DrawRealtimeService realtime;
     private final DraftService draftService;
-    private final int autoConfirmSeconds;
+    private final DrawProperties drawProperties;
 
     public DrawLobbyService(MatchRepository matchRepository, MatchService matchService,
                             DrawService drawService, DrawVoteRepository voteRepository,
                             PlayerRepository playerRepository, DrawRealtimeService realtime,
                             DraftService draftService,
-                            @Value("${app.draw.auto-confirm-seconds:60}") int autoConfirmSeconds) {
+                            DrawProperties drawProperties) {
         this.matchRepository = matchRepository;
         this.matchService = matchService;
         this.drawService = drawService;
@@ -42,7 +41,7 @@ public class DrawLobbyService {
         this.playerRepository = playerRepository;
         this.realtime = realtime;
         this.draftService = draftService;
-        this.autoConfirmSeconds = autoConfirmSeconds;
+        this.drawProperties = drawProperties;
     }
 
     @Transactional
@@ -162,8 +161,8 @@ public class DrawLobbyService {
         List<UUID> rejected = votes.stream().filter(v -> v.getDecision() == DrawVoteDecision.REJECT)
                 .map(DrawVote::getPlayerId).toList();
         Instant voteDeadline = (match.getStatus() == MatchStatus.TEAMS_DRAWN
-                && match.getTeamsDrawnAt() != null && autoConfirmSeconds > 0)
-                ? match.getTeamsDrawnAt().plusSeconds(autoConfirmSeconds) : null;
+                && match.getTeamsDrawnAt() != null && drawProperties.getAutoConfirmSeconds() > 0)
+                ? match.getTeamsDrawnAt().plusSeconds(drawProperties.getAutoConfirmSeconds()) : null;
         return new DrawLobbyResponse(match.getId(), match.getStatus(), match.getDrawRound(),
                 REQUIRED_ACCEPTS, accepted.size(), rejected.size(), accepted, rejected,
                 slots.stream().filter(p -> p.side() == Side.BLUE).toList(),

@@ -1,7 +1,15 @@
-import type { MatchDetail, MatchParticipant, Side } from '../api/types';
+import type { MatchDetail, MatchParticipant, Role, Side } from '../api/types';
+
+/** Lane order, top to bottom — how a lineup reads on a scoreboard. */
+const ROLE_ORDER: Record<Role, number> = { TOP: 0, JUNGLE: 1, MID: 2, ADC: 3, SUPPORT: 4 };
 
 export function teamOf(match: MatchDetail, side: Side): MatchParticipant[] {
   return match.participants.filter((p) => p.side === side);
+}
+
+/** One team, sorted into lane order so both sides line up row-for-row. */
+export function lineupOf(match: MatchDetail, side: Side): MatchParticipant[] {
+  return teamOf(match, side).sort((a, b) => ROLE_ORDER[a.role] - ROLE_ORDER[b.role]);
 }
 
 export function teamKills(match: MatchDetail, side: Side): number {

@@ -22,9 +22,11 @@ const NAV: NavEntry[] = [
       { to: '/admin/approvals', label: 'Akceptacje', badge: 'approvals' },
     ],
   },
+  { to: '/admin/draft-test', label: 'Test draftu' },
   { to: '/admin/highlights', label: 'Zagrywki' },
   { to: '/admin/players', label: 'Gracze' },
   { to: '/admin/diagnostics', label: 'Diagnostyka' },
+  { to: '/admin/ai', label: 'AI' },
   { to: '/admin/settings', label: 'Ustawienia' },
 ];
 
@@ -39,10 +41,20 @@ export function AdminLayout() {
   const pending = useMatches({ status: 'RESULTS_SUBMITTED', size: 1 });
   const pendingCount = pending.data?.totalElements ?? 0;
 
+  const matches = (item: NavLeaf) =>
+    item.end ? location.pathname === item.to : location.pathname.startsWith(item.to);
+
   const activeItem = [...LEAVES]
     .sort((a, b) => b.to.length - a.to.length)
-    .find((item) => (item.end ? location.pathname === item.to : location.pathname.startsWith(item.to)));
+    .find(matches);
   const signOut = () => logout.mutate(undefined, { onSettled: () => navigate('/admin/login') });
+
+  // A group opens itself when you are inside it, and stays wherever you last put it after that.
+  const [openGroups, setOpenGroups] = useState<Record<string, boolean>>({});
+  const groupIsOpen = (entry: NavGroup) =>
+    openGroups[entry.group] ?? entry.items.some(matches);
+  const toggleGroup = (name: string, open: boolean) =>
+    setOpenGroups((current) => ({ ...current, [name]: !open }));
 
   const leaf = (item: NavLeaf, onClick?: () => void) => (
     <NavLink
@@ -66,20 +78,40 @@ export function AdminLayout() {
 
   const nav = (onClick?: () => void) => (
     <>
-      {NAV.map((entry) =>
-        isGroup(entry) ? (
-          <div key={entry.group} className="mt-3 first:mt-0">
-            <div className="px-3 pb-1 text-[11px] font-semibold uppercase tracking-wider text-text-lo/70">
-              {entry.group}
-            </div>
-            <div className="flex flex-col gap-0.5 border-l border-line pl-1.5">
-              {entry.items.map((item) => leaf(item, onClick))}
-            </div>
+      {NAV.map((entry) => {
+        if (!isGroup(entry)) return leaf(entry, onClick);
+        const open = groupIsOpen(entry);
+        // Badges inside a collapsed group would be invisible, so the header carries the count.
+        const hiddenBadge = !open && entry.items.some((i) => i.badge === 'approvals') && pendingCount > 0;
+        return (
+          <div key={entry.group} className="mt-1 first:mt-0">
+            <button
+              type="button"
+              onClick={() => toggleGroup(entry.group, open)}
+              aria-expanded={open}
+              className={cn(
+                'flex w-full items-center justify-between rounded-md px-3 py-2 text-sm font-medium transition-colors',
+                open ? 'text-text-hi' : 'text-text-lo hover:text-text',
+              )}
+            >
+              <span>{entry.group}</span>
+              <span className="flex items-center gap-2">
+                {hiddenBadge && (
+                  <span className="num rounded-full bg-pending px-2 text-xs font-bold text-[#1a1205]">
+                    {pendingCount}
+                  </span>
+                )}
+                <span className={cn('text-xs text-text-lo transition-transform', open && 'rotate-180')}>▾</span>
+              </span>
+            </button>
+            {open && (
+              <div className="flex flex-col gap-0.5 border-l border-line pl-1.5">
+                {entry.items.map((item) => leaf(item, onClick))}
+              </div>
+            )}
           </div>
-        ) : (
-          leaf(entry, onClick)
-        ),
-      )}
+        );
+      })}
     </>
   );
 

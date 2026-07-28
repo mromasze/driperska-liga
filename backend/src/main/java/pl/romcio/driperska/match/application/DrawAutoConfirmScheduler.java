@@ -8,7 +8,6 @@ import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.springframework.beans.factory.annotation.Value;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Component;
 import pl.romcio.driperska.match.domain.MatchStatus;
@@ -28,18 +27,19 @@ public class DrawAutoConfirmScheduler {
 
     private final MatchRepository matchRepository;
     private final DrawLobbyService drawLobbyService;
-    private final long timeoutSeconds;
+    private final DrawProperties drawProperties;
     private final Map<UUID, Integer> failures = new ConcurrentHashMap<>();
 
     public DrawAutoConfirmScheduler(MatchRepository matchRepository, DrawLobbyService drawLobbyService,
-                                    @Value("${app.draw.auto-confirm-seconds:30}") long timeoutSeconds) {
+                                    DrawProperties drawProperties) {
         this.matchRepository = matchRepository;
         this.drawLobbyService = drawLobbyService;
-        this.timeoutSeconds = timeoutSeconds;
+        this.drawProperties = drawProperties;
     }
 
     @Scheduled(fixedDelayString = "${app.draw.auto-confirm-poll-ms:5000}")
     public void confirmExpiredDraws() {
+        long timeoutSeconds = drawProperties.getAutoConfirmSeconds();
         if (timeoutSeconds <= 0) {
             return; // feature disabled
         }

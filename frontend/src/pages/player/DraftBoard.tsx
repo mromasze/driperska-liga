@@ -4,7 +4,7 @@ import {
   useDraftBan, useDraftHover, useDraftPick, useRequestSwap, useRespondSwap, useServerCountdown,
   type StreamState,
 } from '../../api/hooks/drawLobby';
-import type { Champion, DrawLobby, LobbyPlayer, Side } from '../../api/types';
+import type { Champion, DrawLobby, LobbyPlayer, Side, SwapType } from '../../api/types';
 import { Badge } from '../../components/ui/Badge';
 import { Button } from '../../components/ui/Button';
 import { ChampionIcon } from '../../components/champion/ChampionIcon';
@@ -31,6 +31,38 @@ export const useCountdown = (deadline: string | null, serverNow?: string) =>
   useServerCountdown(deadline, serverNow);
 
 /**
+ * Everything the board can do to a draft. Defaults to the real endpoints; the admin "Test draftu"
+ * page swaps in a local simulation so the exact same UI (and the exact same audio cues) can be
+ * driven without a match, a lobby, or nine other people.
+ */
+export interface DraftActions {
+  ban: (championId: number) => void;
+  pick: (championId: number) => void;
+  hover: (championId: number | null) => void;
+  requestSwap: (request: { targetPlayerId: string; type: SwapType }) => void;
+  respondSwap: (request: { swapId: string; accept: boolean }) => void;
+  /** Blocks lock-in while a previous action is still in flight. */
+  busy: boolean;
+}
+
+/** The real thing: every action goes to the backend. */
+function useApiDraftActions(matchId: string): DraftActions {
+  const ban = useDraftBan(matchId);
+  const pick = useDraftPick(matchId);
+  const hover = useDraftHover(matchId);
+  const requestSwap = useRequestSwap(matchId);
+  const respondSwap = useRespondSwap(matchId);
+  return {
+    ban: (championId) => ban.mutate(championId),
+    pick: (championId) => pick.mutate(championId),
+    hover: (championId) => hover.mutate(championId),
+    requestSwap: (request) => requestSwap.mutate(request),
+    respondSwap: (request) => respondSwap.mutate(request),
+    busy: ban.isPending || pick.isPending,
+  };
+}
+
+/**
  * Tournament draft board.
  *
  * Laid out as a full-viewport stage: both teams, both ban strips, the timer and the champion pool are
@@ -38,20 +70,19 @@ export const useCountdown = (deadline: string | null, serverNow?: string) =>
  * on-clock player's pre-selection ("hover") is pushed to the server and rendered for everyone on both
  * teams, and a slot filled in by the expiring timer is labelled as such rather than left blank.
  */
-export function DraftBoard({ lobby, myPlayerId, streamState, onCollapse, fullscreen = true }: {
+export function DraftBoard({ lobby, myPlayerId, streamState, onCollapse, fullscreen = true, actions }: {
   lobby: DrawLobby;
   myPlayerId: string;
   streamState?: StreamState;
   onCollapse?: () => void;
   fullscreen?: boolean;
+  /** Overrides the API calls — see {@link DraftActions}. */
+  actions?: DraftActions;
 }) {
   const draft = lobby.draft;
   const champions = useChampions();
-  const ban = useDraftBan(lobby.matchId);
-  const pick = useDraftPick(lobby.matchId);
-  const hover = useDraftHover(lobby.matchId);
-  const requestSwap = useRequestSwap(lobby.matchId);
-  const respondSwap = useRespondSwap(lobby.matchId);
+  const apiActions = useApiDraftActions(lobby.matchId);
+  const act = actions ?? apiActions;
   const [search, setSearch] = useState('');
   const [swapMenu, setSwapMenu] = useState<string | null>(null);
   const remaining = useServerCountdown(draft?.deadline ?? null, lobby.updatedAt);
@@ -93,12 +124,12 @@ export function DraftBoard({ lobby, myPlayerId, streamState, onCollapse, fullscr
   const selectedChamp = selected != null ? champById.get(selected) : undefined;
   const preselect = (championId: number) => {
     if (!myTurn || draft.paused) return;
-    hover.mutate(championId === selected ? null : championId);
+    act.hover(championId === selected ? null : championId);
   };
   const lockIn = () => {
     if (selected == null || draft.paused) return;
-    if (myTurnBan) ban.mutate(selected);
-    else if (myTurnPick) pick.mutate(selected);
+    if (myTurnBan) act.ban(selected);
+    else if (myTurnPick) act.pick(selected);
     setSearch('');
   };
 
@@ -109,8 +140,8 @@ export function DraftBoard({ lobby, myPlayerId, streamState, onCollapse, fullscr
 
   const teamProps = {
     champById, draft, myPlayerId, isDone, mySide, swapMenu, setSwapMenu,
-    onSwap: (target: string, type: 'POSITION' | 'CHAMPION') => {
-      requestSwap.mutate({ targetPlayerId: target, type });
+    onSwap: (target: string, type: SwapType) => {
+      act.requestSwap({ targetPlayerId: target, type });
       setSwapMenu(null);
     },
   };
@@ -218,7 +249,7 @@ export function DraftBoard({ lobby, myPlayerId, streamState, onCollapse, fullscr
                   )}
                 </div>
                 <Button variant={myTurnBan ? 'danger' : 'gold'}
-                  disabled={selected == null || ban.isPending || pick.isPending || draft.paused}
+                  disabled={selected == null || act.busy || draft.paused}
                   onClick={lockIn}>
                   {myTurnBan ? '🚫 Zbanuj' : '✅ Lock in'}
                 </Button>
@@ -247,10 +278,10 @@ export function DraftBoard({ lobby, myPlayerId, streamState, onCollapse, fullscr
                     <div className="flex gap-2">
                       {incoming && (
                         <Button variant="gold" size="sm"
-                          onClick={() => respondSwap.mutate({ swapId: s.id, accept: true })}>Akceptuj</Button>
+                          onClick={() => act.respondSwap({ swapId: s.id, accept: true })}>Akceptuj</Button>
                       )}
                       <Button variant="danger" size="sm"
-                        onClick={() => respondSwap.mutate({ swapId: s.id, accept: false })}>
+                        onClick={() => act.respondSwap({ swapId: s.id, accept: false })}>
                         {incoming ? 'Odrzuć' : 'Anuluj'}
                       </Button>
                     </div>
@@ -364,7 +395,7 @@ function DraftTeam({ title, side, color, players, bans, champById, draft, myPlay
   champById: Map<number, Champion>; draft: NonNullable<DrawLobby['draft']>; myPlayerId: string;
   isDone: boolean; mySide: Side | null;
   swapMenu: string | null; setSwapMenu: (id: string | null) => void;
-  onSwap: (targetPlayerId: string, type: 'POSITION' | 'CHAMPION') => void;
+  onSwap: (targetPlayerId: string, type: SwapType) => void;
 }) {
   const active = draft.currentSide === side && draft.status !== 'DONE';
   return (
