@@ -124,7 +124,65 @@ class ScoringTest {
     }
 
     @Test
-    void historyGraduallyBecomesRoleReference() {
+    void bestAndPerfectKdaBonusesStack() {
+        ParticipantInput perfect = new ParticipantInput(
+                UUID.randomUUID(), UUID.randomUUID(), Side.BLUE, Role.MID,
+                10, 0, 5, 200, 12000, 22000, 20, 2);
+        ParticipantInput other = new ParticipantInput(
+                UUID.randomUUID(), UUID.randomUUID(), Side.RED, Role.MID,
+                8, 2, 4, 180, 11000, 20000, 18, 1);
+        ParticipantInput zeroParticipation = new ParticipantInput(
+                UUID.randomUUID(), UUID.randomUUID(), Side.RED, Role.SUPPORT,
+                0, 0, 0, 20, 5000, 1000, 10, 1);
+        MatchStatsContext ctx = new MatchStatsContext(
+                Side.BLUE, 1800, List.of(perfect, other, zeroParticipation));
+        Map<UUID, Double> ratings = Map.of(
+                perfect.participantId(), 50.0,
+                other.participantId(), 60.0,
+                zeroParticipation.participantId(), 40.0);
+
+        Map<UUID, PointsBreakdown> result = points.computeLeaguePoints(ctx, ratings, cfg);
+
+        assertThat(result.get(perfect.participantId()).bestKda()).isTrue();
+        assertThat(result.get(perfect.participantId()).perfectKda()).isTrue();
+        assertThat(result.get(perfect.participantId()).lp())
+                .isEqualTo(cfg.lpWin() + cfg.lpBestKdaBonus() + cfg.lpPerfectKdaBonus());
+        assertThat(result.get(zeroParticipation.participantId()).perfectKda()).isFalse();
+    }
+
+    @Test
+    void currentMatchStillDifferentiatesPlayersAfterHistoryIsFull() {
+        PerformanceHistory fullHistory = new PerformanceHistory();
+        for (int match = 0; match < 10; match++) {
+            ParticipantInput historicalBlue = new ParticipantInput(
+                    UUID.randomUUID(), UUID.randomUUID(), Side.BLUE, Role.MID,
+                    1, 5, 1, 80, 7000, 4000, 8, 1);
+            ParticipantInput historicalRed = new ParticipantInput(
+                    UUID.randomUUID(), UUID.randomUUID(), Side.RED, Role.MID,
+                    1, 5, 1, 80, 7000, 4000, 8, 1);
+            fullHistory.add(new MatchStatsContext(
+                    Side.BLUE, 1800, List.of(historicalBlue, historicalRed)));
+        }
+
+        ParticipantInput dominant = new ParticipantInput(
+                UUID.randomUUID(), UUID.randomUUID(), Side.BLUE, Role.MID,
+                10, 2, 10, 250, 13000, 25000, 30, 2);
+        ParticipantInput merelyAboveHistory = new ParticipantInput(
+                UUID.randomUUID(), UUID.randomUUID(), Side.RED, Role.MID,
+                5, 5, 5, 150, 10000, 12000, 15, 1);
+        MatchStatsContext current = new MatchStatsContext(
+                Side.BLUE, 1800, List.of(dominant, merelyAboveHistory));
+
+        Map<UUID, Double> result = rating.computePerformance(current, cfg, fullHistory);
+
+        // Both players beat every historical sample, so a 100% historical percentile would tie
+        // them. The direct matchup must still recognize the stronger current performance.
+        assertThat(result.get(dominant.participantId()))
+                .isGreaterThan(result.get(merelyAboveHistory.participantId()));
+    }
+
+    @Test
+    void historyGraduallyStabilizesRoleReference() {
         MatchStatsContext ctx = sampleMatch();
         PerformanceHistory roleHistory = new PerformanceHistory();
         for (int i = 0; i < 10; i++) {

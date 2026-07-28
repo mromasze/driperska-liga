@@ -76,6 +76,7 @@ public class PlayerStatsController {
                     p.getKills(), p.getDeaths(), p.getAssists(),
                     Math.round(p.kda() * 100.0) / 100.0,
                     p.getPerformanceRating(), p.getLpAwarded(), p.isMvp(), p.isAce(),
+                    hasBestKda(p), hasPerfectKda(p),
                     p.getMatch().getStartedAt(), p.getMatch().getCompletedAt()));
         }
         return entries;
@@ -113,6 +114,19 @@ public class PlayerStatsController {
         return championId == null ? null : championRepository.findById(championId).orElse(null);
     }
 
+    private static boolean hasBestKda(MatchParticipant participant) {
+        double bestKda = participant.getMatch().getParticipants().stream()
+                .mapToDouble(MatchParticipant::kda)
+                .max()
+                .orElse(-1.0);
+        return Math.abs(participant.kda() - bestKda) <= 0.01;
+    }
+
+    private static boolean hasPerfectKda(MatchParticipant participant) {
+        return participant.getDeaths() == 0
+                && participant.getKills() + participant.getAssists() > 0;
+    }
+
     private UUID safeCurrentSeason() {
         try {
             return seasonService.current().getId();
@@ -138,6 +152,7 @@ public class PlayerStatsController {
                                    Integer championId, String championName, String championIconUrl,
                                    int kills, int deaths, int assists, double kda,
                                    Double performanceRating, Integer lpAwarded, boolean mvp, boolean ace,
+                                   boolean bestKda, boolean perfectKda,
                                    Instant startedAt, Instant completedAt) {
     }
 }

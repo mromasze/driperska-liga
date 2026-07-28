@@ -47,6 +47,7 @@ function PlayerPoints({ participant: p }: { participant: MatchParticipant }) {
           style={{ background: p.side === 'BLUE' ? 'var(--blue)' : 'var(--red)' }} />
         <span className="min-w-0 flex-1 truncate font-medium text-text-hi">
           {p.nickname}{p.mvp && ' 👑'}{p.ace && ' 🛡️'}
+          {p.bestKda && ' 🎯'}{p.perfectKda && ' ✨'}
         </span>
         <span className="num shrink-0 font-display text-lg font-bold text-gold">
           {breakdown.total} LP
@@ -80,8 +81,8 @@ function PlayerPoints({ participant: p }: { participant: MatchParticipant }) {
                   <tr className="text-left text-text-lo">
                     <th className="py-1 pr-2 font-medium">Metryka</th>
                     <th className="py-1 pr-2 text-right font-medium">Ty</th>
-                    <th className="py-1 pr-2 text-right font-medium">Punkt odniesienia</th>
-                    <th className="py-1 pr-2 text-right font-medium">Norma</th>
+                    <th className="py-1 pr-2 text-right font-medium">Baza porównania</th>
+                    <th className="py-1 pr-2 text-right font-medium">Wynik 0–1</th>
                     <th className="py-1 pr-2 text-right font-medium">Waga</th>
                     <th className="py-1 text-right font-medium">Pkt PR</th>
                   </tr>
@@ -100,9 +101,11 @@ function PlayerPoints({ participant: p }: { participant: MatchParticipant }) {
               </table>
             </div>
             <p className="mt-1.5 text-xs text-text-lo">
-              PR v2 porównuje występ z wcześniejszymi graczami na tej samej pozycji (percentyl);
-              podczas zbierania pierwszych 20 próbek łączy historię z bezpośrednim porównaniem w meczu.
-              Pkt PR = norma × waga pozycji × 100. Wagi KDA pozostały bez zmian.
+              PR v2 łączy historyczny percentyl pozycji z bezpośrednim porównaniem rywali tej roli.
+              Historia dochodzi maksymalnie do 50% wagi, więc bieżący mecz zawsze stanowi co najmniej
+              połowę oceny. Baza porównania orientacyjnie łączy medianę historii i średnią rywali;
+              kolumna „Wynik 0–1” pokazuje dokładny rezultat połączenia obu ocen.
+              Pkt PR = wynik × waga pozycji × 100. Wagi KDA pozostały bez zmian.
             </p>
           </div>
         )}

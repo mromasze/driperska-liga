@@ -11,6 +11,19 @@ export interface ReleaseNote {
  */
 export const RELEASES: ReleaseNote[] = [
   {
+    version: 'v0.4.3',
+    date: '2026-07-28',
+    title: 'Aktywność i bonusy za KDA',
+    changes: [
+      'MVP mocniej odzwierciedla ten konkretny mecz: historia pozycji ma maksymalnie 50% wpływu na PR, a bezpośrednie porównanie rywali tej roli zawsze co najmniej 50%.',
+      'Każdy rozegrany mecz dodaje +0,10 do wyniku rankingowego, maksymalnie +2,00 po 20 meczach — dalsza gra poprawia pozycję, ale jakość występów nadal jest najważniejsza.',
+      'Najlepsze KDA w meczu daje +1 LP; remis oznacza współdzielony bonus.',
+      'Perfect KDA daje +1 LP za 0 śmierci i co najmniej jedno zabójstwo lub asystę. Wynik 0/0/0 nie dostaje bonusu.',
+      'Bonusy za najlepsze KDA i perfect KDA stackują się ze sobą oraz z MVP albo ACE.',
+      'Historyczne sezony zostaną automatycznie przeliczone po wdrożeniu.',
+    ],
+  },
+  {
     version: 'v0.4.2',
     date: '2026-07-28',
     title: 'Naprawione widoki meczów gracza',

@@ -52,7 +52,8 @@ public class RankingController {
                     s.getTotalLp(), s.getGames(), s.getWins(), s.getLosses(),
                     s.winRate(), s.avgPerformanceRating(), s.getMmr(),
                     s.getMvpCount(), s.getAceCount(), s.getPentaCount(),
-                    entry.rankingScore(), entry.qualified());
+                    entry.baseScore(), entry.activityBonus(), entry.rankingScore(),
+                    entry.qualified());
         }).toList();
     }
 
@@ -82,6 +83,8 @@ public class RankingController {
             int mvpCount,
             int aceCount,
             int pentaCount,
+            double baseScore,
+            double activityBonus,
             double rankingScore,
             boolean qualified) {
     }

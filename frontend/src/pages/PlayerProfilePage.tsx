@@ -140,6 +140,8 @@ export function PlayerProfilePage() {
                       </span>
                       {m.mvp && <span title="MVP">👑</span>}
                       {m.ace && <span title="ACE przegranych">🛡️</span>}
+                      {m.bestKda && <span title="Najlepsze KDA w meczu">🎯</span>}
+                      {m.perfectKda && <span title="Perfect KDA — bez śmierci">✨</span>}
                       <span className="kicker">{roleLabel(m.role)}</span>
                     </div>
                     <div className="num text-xs text-text-lo">

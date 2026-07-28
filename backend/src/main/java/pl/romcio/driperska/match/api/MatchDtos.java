@@ -116,6 +116,8 @@ public final class MatchDtos {
             Integer lpAwarded,
             boolean mvp,
             boolean ace,
+            boolean bestKda,
+            boolean perfectKda,
             LpBreakdown lpBreakdown) {
     }
 

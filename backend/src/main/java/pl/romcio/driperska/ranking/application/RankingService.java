@@ -93,7 +93,7 @@ public class RankingService {
         for (MatchParticipant p : match.getParticipants()) {
             double rating = pr.getOrDefault(p.getId(), 0.0);
             PointsBreakdown breakdown = points.getOrDefault(
-                    p.getId(), new PointsBreakdown(0, false, false));
+                    p.getId(), new PointsBreakdown(0, false, false, false, false));
             p.applyComputed(rating, breakdown.lp(), 0.0, breakdown.mvp(), breakdown.ace());
         }
     }
@@ -116,7 +116,8 @@ public class RankingService {
         statsRepository.saveAll(statsByPlayer.values());
     }
 
-    public record RankingEntry(PlayerSeasonStats stats, double rankingScore, boolean qualified) {
+    public record RankingEntry(PlayerSeasonStats stats, double baseScore, double activityBonus,
+                               double rankingScore, boolean qualified) {
     }
 
     @Transactional(readOnly = true)
@@ -126,12 +127,15 @@ public class RankingService {
         int games = rows.stream().mapToInt(PlayerSeasonStats::getGames).sum();
         int points = rows.stream().mapToInt(PlayerSeasonStats::getTotalLp).sum();
         double leagueAverage = games == 0 ? cfg.rankingPriorPoints() : points / (double) games;
-        List<RankingEntry> ranking = rows.stream()
-                .map(stats -> new RankingEntry(stats,
-                        round2((stats.getTotalLp() + cfg.rankingPriorGames() * leagueAverage)
-                                / (stats.getGames() + (double) cfg.rankingPriorGames())),
-                        stats.getGames() >= cfg.rankingMinGames()))
-                .toList();
+        List<RankingEntry> ranking = rows.stream().map(stats -> {
+            double baseScore = (stats.getTotalLp() + cfg.rankingPriorGames() * leagueAverage)
+                    / (stats.getGames() + (double) cfg.rankingPriorGames());
+            double activityBonus = Math.min(stats.getGames(), cfg.rankingActivityMaxGames())
+                    * cfg.rankingActivityPointsPerGame();
+            return new RankingEntry(stats, round2(baseScore), round2(activityBonus),
+                    round2(baseScore + activityBonus),
+                    stats.getGames() >= cfg.rankingMinGames());
+        }).toList();
         return ranking.stream()
                 .sorted(Comparator.comparing(RankingEntry::qualified).reversed()
                         .thenComparing(Comparator.comparingDouble(
@@ -163,7 +167,7 @@ public class RankingService {
         for (MatchParticipant p : match.getParticipants()) {
             double rating = pr.getOrDefault(p.getId(), 0.0);
             PointsBreakdown breakdown = points.getOrDefault(
-                    p.getId(), new PointsBreakdown(0, false, false));
+                    p.getId(), new PointsBreakdown(0, false, false, false, false));
             double delta = mmrDelta.getOrDefault(p.getId(), 0.0);
             boolean won = p.getSide() == match.getWinningSide();
             boolean penta = p.getLargestMultiKill() >= 5;

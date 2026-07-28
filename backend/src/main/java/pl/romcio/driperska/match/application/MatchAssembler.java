@@ -23,6 +23,7 @@ import pl.romcio.driperska.ranking.application.PerformanceHistoryService;
 import pl.romcio.driperska.ranking.application.ScoringConfigProvider;
 import pl.romcio.driperska.ranking.domain.PerformanceRatingV2Calculator;
 import pl.romcio.driperska.ranking.domain.PointsEngine;
+import pl.romcio.driperska.ranking.domain.PointsEngine.PointsBreakdown;
 import pl.romcio.driperska.ranking.domain.RatingCalculator;
 import pl.romcio.driperska.ranking.domain.ScoringConfig;
 import java.util.ArrayList;
@@ -46,6 +47,7 @@ public class MatchAssembler {
     private final ScoringConfigProvider scoringConfigProvider;
     private final PerformanceRatingV2Calculator ratingCalculator;
     private final PerformanceHistoryService historyService;
+    private final PointsEngine pointsEngine;
 
     public MatchAssembler(MatchRepository matchRepository,
                           PlayerRepository playerRepository,
@@ -53,7 +55,8 @@ public class MatchAssembler {
                           MatchApprovalRepository approvalRepository,
                           ScoringConfigProvider scoringConfigProvider,
                           PerformanceRatingV2Calculator ratingCalculator,
-                          PerformanceHistoryService historyService) {
+                          PerformanceHistoryService historyService,
+                          PointsEngine pointsEngine) {
         this.matchRepository = matchRepository;
         this.playerRepository = playerRepository;
         this.championRepository = championRepository;
@@ -61,6 +64,7 @@ public class MatchAssembler {
         this.scoringConfigProvider = scoringConfigProvider;
         this.ratingCalculator = ratingCalculator;
         this.historyService = historyService;
+        this.pointsEngine = pointsEngine;
     }
 
     /** Reloads the match inside this read-only transaction so lazy collections resolve safely. */
@@ -70,7 +74,7 @@ public class MatchAssembler {
                 .orElseThrow(() -> ResourceNotFoundException.of("Match", detached.getId()));
         Map<UUID, Player> players = playersFor(match);
         Map<Integer, Champion> champions = championsFor(match);
-        Map<UUID, LpBreakdown> breakdowns = lpBreakdowns(match);
+        Map<UUID, ParticipantScoring> breakdowns = participantScoring(match);
         List<ParticipantResponse> participants = match.getParticipants().stream()
                 .map(p -> toParticipant(p, players, champions, breakdowns.get(p.getPlayerId())))
                 .toList();
@@ -97,7 +101,7 @@ public class MatchAssembler {
     }
 
     private ParticipantResponse toParticipant(MatchParticipant p, Map<UUID, Player> players,
-                                              Map<Integer, Champion> champions, LpBreakdown lpBreakdown) {
+                                              Map<Integer, Champion> champions, ParticipantScoring scoring) {
         Player player = players.get(p.getPlayerId());
         Champion champion = p.getChampionId() == null ? null : champions.get(p.getChampionId());
         return new ParticipantResponse(
@@ -110,29 +114,42 @@ public class MatchAssembler {
                 p.getKills(), p.getDeaths(), p.getAssists(), round2(p.kda()),
                 p.getCs(), p.getGold(), p.getDamageToChampions(), p.getVisionScore(),
                 p.getLargestMultiKill(), p.getPerformanceRating(), p.getLpAwarded(), p.isMvp(), p.isAce(),
-                lpBreakdown);
+                scoring != null && scoring.bestKda(), scoring != null && scoring.perfectKda(),
+                scoring != null ? scoring.lpBreakdown() : null);
     }
 
     /**
      * Explains each player's LP for a scored match — mirrors {@link pl.romcio.driperska.ranking.domain.PointsEngine}
      * so the total matches the awarded LP. Empty until the match has a winning side + ratings.
      */
-    private Map<UUID, LpBreakdown> lpBreakdowns(Match match) {
+    private Map<UUID, ParticipantScoring> participantScoring(Match match) {
         Side winning = match.getWinningSide();
         if (winning == null) return Map.of();
         ScoringConfig cfg = scoringConfigProvider.forSeason(match.getSeasonId());
+        var context = toContext(match);
         Map<UUID, RatingCalculator.PrDetail> prDetails =
-                ratingCalculator.computeDetailed(toContext(match), cfg, historyService.before(match));
-        Map<UUID, LpBreakdown> out = new HashMap<>();
+                ratingCalculator.computeDetailed(context, cfg, historyService.before(match));
+        Map<UUID, Double> ratings = new HashMap<>();
+        for (MatchParticipant participant : match.getParticipants()) {
+            ratings.put(participant.getId(), participant.getPerformanceRating() == null
+                    ? 0.0 : participant.getPerformanceRating());
+        }
+        Map<UUID, PointsBreakdown> points = pointsEngine.computeLeaguePoints(context, ratings, cfg);
+        Map<UUID, ParticipantScoring> out = new HashMap<>();
         for (MatchParticipant p : match.getParticipants()) {
             if (p.getPerformanceRating() == null && p.getLpAwarded() == null) continue;
-            out.put(p.getPlayerId(), lpBreakdownFor(p, winning, cfg, prDetails.get(p.getId())));
+            PointsBreakdown breakdown = points.getOrDefault(
+                    p.getId(), new PointsBreakdown(0, false, false, false, false));
+            out.put(p.getPlayerId(), new ParticipantScoring(
+                    lpBreakdownFor(p, winning, cfg, prDetails.get(p.getId()), breakdown),
+                    breakdown.bestKda(), breakdown.perfectKda()));
         }
         return out;
     }
 
     private static LpBreakdown lpBreakdownFor(MatchParticipant p, Side winning, ScoringConfig cfg,
-                                              RatingCalculator.PrDetail prDetail) {
+                                              RatingCalculator.PrDetail prDetail,
+                                              PointsBreakdown breakdown) {
         boolean won = p.getSide() == winning;
         double pr = p.getPerformanceRating() == null ? 0.0 : p.getPerformanceRating();
         List<LpComponent> c = new ArrayList<>();
@@ -145,12 +162,20 @@ public class MatchAssembler {
                     ? "ACE (tytuł — bonus zawarty w MVP)"
                     : "ACE przegranej drużyny", p.isMvp() ? 0 : cfg.lpAceBonus()));
         }
+        if (breakdown.bestKda()) {
+            c.add(new LpComponent("Najlepsze KDA w meczu", cfg.lpBestKdaBonus()));
+        }
+        if (breakdown.perfectKda()) {
+            c.add(new LpComponent("Perfect KDA (0 śmierci)", cfg.lpPerfectKdaBonus()));
+        }
         int total = Math.max(0, c.stream().mapToInt(LpComponent::points).sum());
         String formula = "Baza: +" + cfg.lpWin() + " za wygraną / +" + cfg.lpLoss()
                 + " za przegraną. Występ: PR <35: -2, 35–44: -1, 45–54: 0, "
                 + "55–64: +1, 65–74: +2, 75+: +3. MVP +" + cfg.lpMvpBonus()
                 + ", ACE od PR " + Math.round(cfg.lpAceMinPr()) + ": +" + cfg.lpAceBonus()
-                + "; bonusy nie łączą się. Penta, quadra i flawless są osiągnięciami bez LP.";
+                + " (te dwa bonusy nie łączą się). Najlepsze KDA +" + cfg.lpBestKdaBonus()
+                + ", perfect KDA +" + cfg.lpPerfectKdaBonus()
+                + "; bonusy KDA łączą się z pozostałymi.";
         List<PrMetric> prMetrics = prDetail == null ? List.of()
                 : prDetail.metrics().stream()
                 .map(m -> new PrMetric(m.key(), m.value(), m.average(), m.normalized(),
@@ -159,8 +184,12 @@ public class MatchAssembler {
         return new LpBreakdown(c, total, formula, prMetrics);
     }
 
+    private record ParticipantScoring(LpBreakdown lpBreakdown, boolean bestKda,
+                                      boolean perfectKda) {}
+
     private Map<UUID, Player> playersFor(Match match) {
         List<UUID> ids = match.getParticipants().stream().map(MatchParticipant::getPlayerId).toList();
+
         Map<UUID, Player> map = new HashMap<>();
         playerRepository.findByIdIn(ids).forEach(p -> map.put(p.getId(), p));
         return map;

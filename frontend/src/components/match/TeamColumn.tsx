@@ -61,6 +61,8 @@ export function TeamColumn({ side, players, won, teamKills }: TeamColumnProps) {
                 {p.nickname}
                 {p.mvp && <span title="MVP meczu">👑</span>}
                 {p.ace && <span title="ACE przegranej drużyny">🛡️</span>}
+                {p.bestKda && <span title="Najlepsze KDA w meczu">🎯</span>}
+                {p.perfectKda && <span title="Perfect KDA — bez śmierci">✨</span>}
               </Link>
               <div className="kicker mt-0.5" style={{ letterSpacing: '0.14em' }}>
                 {roleLabel(p.role)} · {p.championName ?? '—'}

@@ -12,7 +12,7 @@ import pl.romcio.driperska.common.settings.AppSettingRepository;
 import pl.romcio.driperska.season.infra.SeasonRepository;
 
 /**
- * Rebuilds stored PR/LP/ACE aggregates once after deploying ranking v2. The marker makes the
+ * Rebuilds stored ranking aggregates after a scoring schema change. The marker makes each
  * migration idempotent; subsequent starts do not touch historical standings.
  */
 @Component
@@ -21,7 +21,7 @@ public class RankingV2MigrationRunner implements ApplicationRunner {
 
     private static final Logger log = LoggerFactory.getLogger(RankingV2MigrationRunner.class);
     private static final String KEY = "ranking.schema.version";
-    private static final String VERSION = "2";
+    private static final String VERSION = "3";
 
     private final AppSettingRepository settings;
     private final SeasonRepository seasons;
@@ -39,11 +39,11 @@ public class RankingV2MigrationRunner implements ApplicationRunner {
         if (settings.findById(KEY).map(AppSetting::getValue).filter(VERSION::equals).isPresent()) {
             return;
         }
-        log.info("Recalculating all seasons with ranking v2");
+        log.info("Recalculating all seasons with ranking schema {}", VERSION);
         seasons.findAll().forEach(season -> rankingService.recalculateSeason(season.getId()));
         AppSetting marker = settings.findById(KEY).orElseGet(() -> new AppSetting(KEY, VERSION));
         marker.setValue(VERSION);
         settings.save(marker);
-        log.info("Ranking v2 recalculation completed");
+        log.info("Ranking schema {} recalculation completed", VERSION);
     }
 }

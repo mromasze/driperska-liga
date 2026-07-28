@@ -3,6 +3,16 @@
 Wszystkie istotne zmiany Driperskiej Ligi są opisywane tutaj oraz w
 `frontend/src/content/releases.ts`, który zasila patch notes na stronie głównej.
 
+## v0.4.3 — 2026-07-28
+
+- **Poprawiono wybór MVP przez PR v2.** Historia pozycji nie może już przejąć 100% oceny po 20 próbkach. Jej udział rośnie maksymalnie do 50%, a co najmniej połowa PR zawsze wynika z bezpośredniego porównania graczy tej samej roli w bieżącym meczu. Widoczny punkt odniesienia pokazuje teraz połączenie średniej z meczu i mediany historii.
+- **Aktywność ma znaczenie w klasyfikacji.** Do stabilizowanej średniej dochodzi +0,10 punktu rankingowego za każdy rozegrany mecz, maksymalnie +2,00 po 20 meczach. Dobra średnia pozostaje najważniejsza, ale dalsza gra realnie poprawia pozycję i ogranicza opłacalność „zamrożenia” wyniku.
+- **Najlepsze KDA w meczu daje +1 LP.** Przy identycznym najlepszym wyniku bonus jest współdzielony.
+- **Perfect KDA daje +1 LP** za mecz bez śmierci, o ile gracz ma przynajmniej jedno zabójstwo lub asystę; wynik 0/0/0 nie kwalifikuje się.
+- Oba bonusy KDA łączą się ze sobą oraz z MVP albo ACE. Samo MVP i ACE nadal nie stackują się dla tej samej osoby.
+- Rozpiska meczu, historia gracza i scoreboard pokazują nowe wyróżnienia, a tabela rozdziela bazowy wynik od bonusu aktywności.
+- Wszystkie historyczne sezony zostaną automatycznie i jednokrotnie przeliczone do nowych zasad po wdrożeniu.
+
 ## v0.4.2 — 2026-07-28
 
 - Naprawiono błąd 500 w widokach gracza korzystających z meczów zapisanych w jego puli (m.in. aktywne lobby i mecze do oceny). PostgreSQL odrzucał wygenerowane zapytanie `SELECT DISTINCT` z sortowaniem po `coalesce(started_at, created_at)`, ponieważ wyrażenie sortujące nie występowało w liście `SELECT`.

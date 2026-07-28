@@ -13,9 +13,13 @@ public record ScoringConfig(
         int lpMvpBonus,
         int lpAceBonus,
         double lpAceMinPr,
+        int lpBestKdaBonus,
+        int lpPerfectKdaBonus,
         int rankingPriorGames,
         double rankingPriorPoints,
         int rankingMinGames,
+        double rankingActivityPointsPerGame,
+        int rankingActivityMaxGames,
         double mmrK,
         double mmrKRookie,
         int mmrRookieGames,
@@ -30,7 +34,8 @@ public record ScoringConfig(
         return new ScoringConfig(
                 10, 4,
                 3, 2, 60.0,
-                5, 7.0, 5,
+                1, 1,
+                5, 7.0, 5, 0.10, 20,
                 32, 48, 10, 1000.0,
                 Map.of(
                         Role.TOP, new RoleWeights(0.25, 0.15, 0.15, 0.25, 0.10, 0.10),

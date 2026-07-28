@@ -18,15 +18,16 @@ import pl.romcio.driperska.ranking.domain.RatingCalculator.PrMetricDetail;
 import pl.romcio.driperska.ranking.domain.ScoringConfig.RoleWeights;
 
 /**
- * PR v2. During the first role samples it blends the in-match lane comparison with the historical
- * percentile for that role. After 20 samples the historical role distribution becomes the full
- * reference. The configured KDA weights are intentionally preserved.
+ * PR v2. Blends the in-match lane comparison with the historical percentile for that role.
+ * History stabilizes the score as samples accumulate, but is capped at 50% so the current
+ * matchup always remains at least half of the rating. The configured KDA weights are preserved.
  */
 @Component
 public class PerformanceRatingV2Calculator {
 
     private static final int FULL_HISTORY_SAMPLES = 20;
     private static final int MAX_HISTORY_SAMPLES_PER_ROLE = 60;
+    private static final double MAX_HISTORY_WEIGHT = 0.50;
 
     public Map<UUID, Double> computePerformance(MatchStatsContext ctx, ScoringConfig cfg,
                                                 PerformanceHistory history) {
@@ -51,14 +52,13 @@ public class PerformanceRatingV2Calculator {
                     ? roleAverage.getOrDefault(participant.role(), overallAverage)
                     : overallAverage;
             HistoricalReference historical = history.reference(participant.role(), value);
-            double historyWeight = Math.min(1.0,
+            double historyWeight = MAX_HISTORY_WEIGHT * Math.min(1.0,
                     historical.samples() / (double) FULL_HISTORY_SAMPLES);
 
             Metrics matchScore = normalize(value, matchReference);
             Metrics score = blend(matchScore, historical.percentiles(), historyWeight);
-            Metrics displayedReference = historyWeight > 0
-                    ? historical.medians()
-                    : matchReference;
+            Metrics displayedReference = blend(
+                    matchReference, historical.medians(), historyWeight);
             RoleWeights weights = cfg.weightsFor(participant.role());
 
             List<PrMetricDetail> metrics = List.of(

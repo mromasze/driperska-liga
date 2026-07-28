@@ -22,9 +22,10 @@ export function ScoringInfo({ defaultOpen = false }: { defaultOpen?: boolean }) 
           <p className="mt-1">
             Ocena gry bez bezpośredniego bonusu za zwycięstwo, liczona ze statystyk z wagami
             zależnymi od roli. PR v2 porównuje wynik z wcześniejszymi występami na tej samej pozycji.
-            Podczas pierwszych 20 próbek roli historyczny percentyl jest stopniowo łączony z
-            bezpośrednim porównaniem w danym meczu. Składniki: KDA, udział w zabójstwach (KP),
-            CS/min, obrażenia/min, efektywność obrażenia/złoto i vision/min.
+            Historyczny percentyl jest stopniowo łączony z bezpośrednim porównaniem rywali na tej
+            samej pozycji, ale historia ma maksymalnie 50% wagi — bieżący mecz zawsze stanowi co
+            najmniej połowę oceny. Składniki: KDA, udział w zabójstwach (KP), CS/min,
+            obrażenia/min, efektywność obrażenia/złoto i vision/min.
             <strong> Wagi KDA pozostały wysokie i zależne od pozycji.</strong>
           </p>
           <p className="mt-1 text-text-lo">Przeciętnie ≈ 50, dobra gra 65–80, dominacja 80+.</p>
@@ -39,10 +40,13 @@ export function ScoringInfo({ defaultOpen = false }: { defaultOpen?: boolean }) 
             <li>• MVP meczu (najwyższy PR) <strong>+3</strong></li>
             <li>• ACE przegranych: najwyższy PR po przegranej stronie, wymagane PR ≥60, <strong>+2</strong></li>
             <li>• Jeżeli przegrany jest jednocześnie MVP i ACE, widzi oba tytuły, ale dostaje tylko bonus MVP</li>
-            <li>• Remis PR oznacza współdzielony tytuł; penta, quadra i flawless są osiągnięciami bez LP</li>
+            <li>• Najlepsze KDA w meczu <strong>+1</strong>; przy remisie bonus dostaje każdy z najlepszym wynikiem</li>
+            <li>• Perfect KDA (0 śmierci i co najmniej kill lub asysta) <strong>+1</strong></li>
+            <li>• Bonusy KDA łączą się ze sobą oraz z MVP/ACE; penta i quadra są osiągnięciami bez LP</li>
           </ul>
           <p className="mt-2 text-text-lo">
-            Przykład: przeciętna wygrana = 10 LP, dobry ACE z PR 70 = 8 LP, słaba przegrana z PR 30 = 2 LP.
+            Przykład: przeciętna wygrana = 10 LP. Dobry ACE z PR 70 i najlepszym KDA = 9 LP,
+            a perfect KDA będące zarazem najlepszym KDA daje dodatkowo łącznie +2 LP.
           </p>
         </div>
 
@@ -58,10 +62,11 @@ export function ScoringInfo({ defaultOpen = false }: { defaultOpen?: boolean }) 
         <div>
           <div className="kicker">Kolejność w tabeli sezonu</div>
           <p className="mt-1 text-text-lo">
-            Główny wynik to skorygowana średnia punktów na mecz:
-            <strong> (suma LP + 5 × średnia ligi) ÷ (mecze + 5)</strong>.
+            Główny wynik to skorygowana średnia punktów na mecz
+            <strong> (suma LP + 5 × średnia ligi) ÷ (mecze + 5)</strong> oraz bonus aktywności:
+            <strong> +0,10 za każdy mecz</strong>, maksymalnie +2,00 za 20 meczów.
             Do pełnej klasyfikacji potrzeba 5 meczów; wcześniej wynik jest oznaczony jako prowizoryczny.
-            Suma LP zostaje widoczna jako licznik aktywności, ale nie ustala kolejności tabeli.
+            Dzięki temu dobra średnia nadal jest najważniejsza, ale dalsza gra realnie poprawia pozycję.
           </p>
         </div>
       </div>

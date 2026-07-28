@@ -42,12 +42,15 @@ zasobów, a nie samo przejęcie dużej części złota.
 Każda metryka otrzymuje wynik 0–1 jako percentyl wśród wcześniejszych występów na tej samej roli.
 Wartość `0.50` oznacza medianę roli, `0.80` wynik lepszy od 80% próbek.
 
-### Krok 3 — bezpieczny start sezonu
-Dopóki rola nie ma 20 próbek, percentyl historyczny jest płynnie łączony z bezpośrednim porównaniem
-dwóch graczy tej roli w bieżącym meczu:
+### Krok 3 — hybryda historii i bieżącego meczu
+Percentyl historyczny jest płynnie łączony z bezpośrednim porównaniem dwóch graczy tej roli
+w bieżącym meczu:
 
 `norm = historyWeight × percentileHistory + (1-historyWeight) × comparisonInMatch`,
-gdzie `historyWeight = min(1, liczbaPróbek / 20)`.
+gdzie `historyWeight = 0,50 × min(1, liczbaPróbek / 20)`.
+
+Historia dochodzi maksymalnie do 50% wagi. Nawet po zebraniu pełnej próby bezpośredni występ
+w bieżącym meczu nadal stanowi co najmniej połowę PR i nie pozwala słabej bazie roli rozstrzygnąć MVP.
 
 ### Krok 4 — wagi ról
 Profile wag (sumują się do 1.0 w każdej roli):
@@ -77,7 +80,7 @@ Wynik 0–100. Około 50 oznacza typowy występ dla roli, 65–74 dobry, 75+ wyr
 To, co widać w tabeli i wyłania mistrza sezonu. Naliczane **przy akceptacji meczu**.
 
 ```
-LP(gracz) = LP_bazowe(wynik) + próg_występu(PR) + nagroda_indywidualna
+LP(gracz) = LP_bazowe(wynik) + próg_występu(PR) + nagrody_indywidualne
 ```
 
 | Składnik | Wartość |
@@ -91,17 +94,26 @@ LP(gracz) = LP_bazowe(wynik) + próg_występu(PR) + nagroda_indywidualna
 | **PR ≥75** | +3 |
 | **MVP meczu** | +3 (najwyższy PR w meczu) |
 | **ACE przegranych** | +2 (najwyższy PR przegranych, wymagane PR ≥60) |
+| **Najlepsze KDA w meczu** | +1 (remis oznacza współdzielony bonus) |
+| **Perfect KDA** | +1 (0 śmierci oraz co najmniej 1 kill lub asysta) |
 
 MVP i ACE mogą być współdzielone przy remisie PR. Jeśli przegrany jest jednocześnie MVP i ACE,
-widzi oba tytuły, ale dostaje tylko bonus MVP. Penta, quadra i flawless pozostają osiągnięciami bez LP.
+widzi oba tytuły, ale dostaje tylko bonus MVP. Bonusy za najlepsze KDA i perfect KDA łączą się
+ze sobą oraz z MVP/ACE. Penta i quadra pozostają osiągnięciami bez LP.
 
 ### Tabela sezonu
-Suma LP jest licznikiem aktywności. Kolejność wyznacza skorygowana średnia:
+Kolejność wyznacza skorygowana średnia powiększona o ograniczony bonus aktywności:
 
-`rankingScore = (totalLp + 5 × leagueAveragePoints) / (games + 5)`.
+`baseScore = (totalLp + 5 × leagueAveragePoints) / (games + 5)`
+
+`activityBonus = min(games, 20) × 0,10`
+
+`rankingScore = baseScore + activityBonus`
 
 Pięć wirtualnych meczów na poziomie średniej ligi stabilizuje małą próbkę. Do pełnej klasyfikacji
 potrzeba 5 rozegranych meczów; wcześniej wynik jest oznaczony jako prowizoryczny i sortowany niżej.
+Bonus aktywności rośnie do maksymalnie +2,00 po 20 meczach: zachęca do dalszej gry, ale nie jest
+w stanie przykryć dużej różnicy jakości występów.
 
 ---
 
@@ -153,7 +165,7 @@ interface RatingCalculator {
 }
 
 interface PointsEngine {
-    /** LP per uczestnik: baza + próg PR + niestackujące MVP/ACE. */
+    /** LP: baza + próg PR + MVP/ACE + stackujące bonusy KDA. */
     Map<ParticipantId, Integer> computeLeaguePoints(MatchStatsContext ctx,
                                                      Map<ParticipantId, Double> pr,
                                                      ScoringConfig cfg);
@@ -172,6 +184,7 @@ Testy jednostkowe: znane wejście → oczekiwane PR/LP/ΔMMR (m.in. przykład z 
 
 ## 4.7 Prezentacja w UI
 
-- **Ranking sezonu:** miejsce, gracz, LP, W-L, win%, avg PR, (MVP×n), trend MMR opcjonalnie.
+- **Ranking sezonu:** miejsce, gracz, wynik (średnia + aktywność), LP, W-L, win%, avg PR, MVP i ACE.
 - **Profil gracza:** wykres PR w czasie, rozkład championów, najlepsze/najgorsze mecze, seria zwycięstw.
-- **Scoreboard meczu:** PR obok KDA, znaczniki MVP/ACE/Penta, „przewidywana szansa" z losowania vs wynik.
+- **Scoreboard meczu:** PR obok KDA, znaczniki MVP/ACE/najlepszego KDA/perfect KDA/Penta,
+  „przewidywana szansa" z losowania vs wynik.

@@ -67,7 +67,8 @@ export interface PlayerMatchEntry {
   matchId: string; side: Side; role: Role; won: boolean; championId: number | null;
   championName: string | null; championIconUrl: string | null; kills: number; deaths: number;
   assists: number; kda: number; performanceRating: number | null; lpAwarded: number | null;
-  mvp: boolean; ace: boolean; startedAt: string | null; completedAt: string | null;
+  mvp: boolean; ace: boolean; bestKda: boolean; perfectKda: boolean;
+  startedAt: string | null; completedAt: string | null;
 }
 
 export interface Season { id: string; name: string; startDate: string | null; endDate: string | null; status: SeasonStatus; }
@@ -76,6 +77,7 @@ export interface RankingRow {
   games: number; wins: number; losses: number; winRate: number; avgPerformanceRating: number;
   mmr: number; mvpCount: number; aceCount: number; pentaCount: number;
   rankingScore: number; qualified: boolean;
+  baseScore: number; activityBonus: number;
 }
 
 export interface LpComponent { label: string; points: number; }
@@ -92,6 +94,7 @@ export interface MatchParticipant {
   damageToChampions: number; visionScore: number; largestMultiKill: number;
   performanceRating: number | null; lpAwarded: number | null; mvp: boolean; ace: boolean;
   lpBreakdown: LpBreakdown | null;
+  bestKda: boolean; perfectKda: boolean;
 }
 export interface Approval {
   decision: ApprovalDecision; submittedBy: string | null; submittedAt: string | null;

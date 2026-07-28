@@ -48,7 +48,12 @@ export function RankingTable({ rows }: { rows: RankingRow[] }) {
                   </span>
                 </Link>
               </td>
-              <td className="num px-3 py-3 text-right text-base font-bold text-gold">{r.rankingScore.toFixed(2)}</td>
+              <td className="px-3 py-3 text-right">
+                <div className="num text-base font-bold text-gold">{r.rankingScore.toFixed(2)}</div>
+                <div className="num text-[10px] text-text-lo" title="Wynik bazowy + bonus za rozegrane mecze">
+                  {r.baseScore.toFixed(2)} + akt. {r.activityBonus.toFixed(2)}
+                </div>
+              </td>
               <td className="num px-3 py-3 text-right text-text-lo">{r.totalLp}</td>
               <td className="num px-3 py-3 text-center text-text-lo">
                 <span className="text-win">{r.wins}</span>
