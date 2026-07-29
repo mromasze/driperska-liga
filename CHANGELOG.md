@@ -3,6 +3,15 @@
 Wszystkie istotne zmiany Driperskiej Ligi są opisywane tutaj oraz w
 `frontend/src/content/releases.ts`, który zasila patch notes na stronie głównej.
 
+## v0.4.10 — 2026-07-29
+
+- **Reklamy usunięte.** AdSense wypada w całości: `AdSlot`, konfiguracja slotów, panel zgody z 0.4.8, magazyn zgody, `ads.txt` oraz wszystkie trzy miejsca reklamowe na stronie głównej i w panelu gracza. Powód jest rachunkowy, nie ideologiczny — przy zamkniętej grupie kilkunastu graczy przychód byłby groszowy, a cena stała: rozluźniony CSP, trzeci podmiot w przepływie danych, panel zgody do utrzymania i wymóg certyfikowanego CMP, którego własnym kodem nie da się spełnić.
+- **CSP wrócił do stanu sprzed 0.4.7.** `script-src` to znów `'self'` plus Cloudflare Turnstile — `'unsafe-inline'` i hosty reklamowe Google zniknęły, więc skryptowa połowa ochrony przed XSS jest odzyskana. To była najdroższa część monetyzacji i jej wycofanie jest największą korzyścią z tej zmiany.
+- Zostaje refaktor nagłówków do `nginx-security-headers.conf` i naprawa `/assets/` oraz `/media/`, które wcześniej gubiły **wszystkie** nagłówki bezpieczeństwa, bo deklarowały własny `add_header`. To były usprawnienia niezależne od reklam. Konfiguracja ponownie zweryfikowana `nginx -t`.
+- **Polityka prywatności zostaje i jest teraz krótsza oraz mocniejsza.** Serwis nie ustawia już żadnych plików cookie — nie ma reklam, analityki ani narzędzi śledzących, i dokument mówi to wprost. Pozostali odbiorcy bez zmian: Riot Games, Discord, Cloudflare, Google Fonts oraz Ollama (`OLLAMA_BASE_URL` domyślnie `https://ollama.com`, więc zrzuty ekranu z pseudonimami trafiają poza EOG).
+- Nadal opisane są dwie rzeczy będące realnym ryzykiem dla użytkownika: opcja „Zapamiętaj mnie” zapisująca login i hasło w pamięci przeglądarki oraz hasło wysyłane jawnie w wiadomości prywatnej na Discordzie.
+- Bez zmian pozostaje wszystko z 0.4.7: jedno logo `Hex` na wszystkich powierzchniach, archiwum meczów pod `/matches` i ekran ładowania z buforowaniem klipów.
+
 ## v0.4.9 — 2026-07-29
 
 - **Polityka prywatności** pod `/privacy`, linkowana ze stopki oraz z etykiety każdego bloku reklamowego (panel gracza nie ma stopki, więc bez tego byłaby nieosiągalna spod logowania). Napisana pod to, co kod faktycznie robi, a nie z szablonu — każdy wymieniony odbiorca odpowiada realnej integracji w repozytorium.

@@ -4,7 +4,6 @@ import { AppProviders } from './providers';
 import { AppRoutes } from './router';
 import { ServerGate } from '../components/system/ServerGate';
 import { SplashGate } from '../components/system/SplashGate';
-import { ConsentBanner } from '../components/consent/ConsentBanner';
 import { sound } from '../lib/sound';
 
 export function App() {
@@ -19,7 +18,6 @@ export function App() {
           <ServerGate>
             <AppRoutes />
           </ServerGate>
-          <ConsentBanner />
         </SplashGate>
       </BrowserRouter>
     </AppProviders>

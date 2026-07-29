@@ -2,7 +2,6 @@ import { useState } from 'react';
 import { NavLink, Outlet, Link, useLocation } from 'react-router-dom';
 import { cn } from '../lib/cn';
 import { LogoHex } from '../components/brand/Logo';
-import { ConsentSettingsButton } from '../components/consent/ConsentBanner';
 import { useAuthStore } from '../store/auth';
 import { APP_VERSION } from '../version';
 
@@ -93,7 +92,6 @@ export function PublicLayout() {
             </span>
             <span aria-hidden="true">·</span>
             <Link to="/privacy" className="text-gold hover:underline">Polityka prywatności</Link>
-            <ConsentSettingsButton />
           </div>
         </div>
       </footer>

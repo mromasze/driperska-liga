@@ -11,12 +11,21 @@ export interface ReleaseNote {
  */
 export const RELEASES: ReleaseNote[] = [
   {
+    version: 'v0.4.10',
+    date: '2026-07-29',
+    title: 'Bez reklam',
+    changes: [
+      'Reklamy zostały usunięte razem z panelem zgody. Strona nie ustawia żadnych plików cookie i nie ma analityki ani narzędzi śledzących.',
+      'Dzięki temu wróciła surowa polityka bezpieczeństwa treści, którą trzeba było rozluźnić na potrzeby skryptu reklamowego.',
+      'Polityka prywatności zostaje — opisuje, jakie dane zbieramy, komu je przekazujemy (Riot, Discord, Cloudflare, Google Fonts) i jak zażądać ich usunięcia.',
+    ],
+  },
+  {
     version: 'v0.4.9',
     date: '2026-07-29',
     title: 'Polityka prywatności',
     changes: [
       'Nowa strona „Polityka prywatności” — opisuje dokładnie, jakie dane zbieramy, komu je przekazujemy (Riot, Discord, Cloudflare, Google) i jak zażądać ich usunięcia. Link w stopce.',
-      'Panel zgody na reklamy przechodzi na certyfikowane rozwiązanie Google, żeby reklamy mogły się wyświetlać także dla ruchu z Unii Europejskiej.',
       'Uwaga opisana w polityce: opcja „Zapamiętaj mnie” zapisuje Twoje hasło w pamięci przeglądarki. Nie używaj jej na współdzielonym komputerze.',
     ],
   },

@@ -9,7 +9,6 @@ import { StatTile } from '../components/ui/StatTile';
 import { Button } from '../components/ui/Button';
 import { CardGridSkeleton, EmptyState, ErrorState, TableSkeleton } from '../components/ui/States';
 import { ScoringInfo } from '../components/ScoringInfo';
-import { AdSlot } from '../components/ads/AdSlot';
 import { LogoHex } from '../components/brand/Logo';
 import { HeroVideoBackground } from '../components/highlight/HeroVideoBackground';
 import { RELEASES } from '../content/releases';
@@ -69,9 +68,6 @@ export function HomePage() {
           : <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">{recent.map((match) => <MatchCard key={match.id} match={match} />)}</div>}
       </section>
 
-      {/* Below the results, never above the fold: the first screen stays league content only. */}
-      <AdSlot name="homeFeed" />
-
       <section>
         <div className="mb-4 flex items-end justify-between">
           <h2 className="font-display text-2xl">Czołówka</h2>
@@ -90,8 +86,6 @@ export function HomePage() {
         </div>
         <ScoringInfo />
       </section>
-
-      <AdSlot name="homeFooter" />
 
       <section id="changelog" className="scroll-mt-24">
         <div className="mb-4 flex items-end justify-between">

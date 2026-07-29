@@ -5,7 +5,7 @@ import type { ReactNode } from 'react';
  *
  * Written against what the code actually does, not from a template: every recipient listed below
  * corresponds to a real integration in this repository (Riot API, Discord bot, the Ollama vision
- * model behind the screenshot reader, Cloudflare Turnstile, Google Fonts, AdSense). Two items are
+ * model behind the screenshot reader, Cloudflare Turnstile, Google Fonts). Two items are
  * disclosed because they are genuine risks to the user rather than because a template asked for
  * them — the "remember me" credential storage and the password sent over Discord DM.
  *
@@ -153,10 +153,6 @@ export function PrivacyPolicyPage() {
                   'Art. 6 ust. 1 lit. b — obsługa udziału w rozgrywkach.',
                 ],
                 [
-                  'Wyświetlanie reklam i korzystanie z plików cookie w tym celu.',
-                  'Art. 6 ust. 1 lit. a — Twoja zgoda, którą możesz wycofać w każdej chwili.',
-                ],
-                [
                   'Opcjonalne pola profilu (imię i nazwisko, opis, zdjęcie, OP.GG).',
                   'Art. 6 ust. 1 lit. a — zgoda wyrażona przez samo ich wypełnienie; możesz je usunąć.',
                 ],
@@ -173,12 +169,7 @@ export function PrivacyPolicyPage() {
               head={['Podmiot', 'Co dostaje', 'Po co']}
               rows={[
                 [
-                  <>Google Ireland Ltd. / Google LLC <span className="text-text-lo">(AdSense)</span></>,
-                  'Adres IP, identyfikatory plików cookie, informacje o przeglądarce i odwiedzanych podstronach.',
-                  'Wyświetlanie reklam. Wyłącznie po wyrażeniu zgody w panelu zgód.',
-                ],
-                [
-                  <>Google <span className="text-text-lo">(Fonts)</span></>,
+                  <>Google Ireland Ltd. / Google LLC <span className="text-text-lo">(Fonts)</span></>,
                   'Adres IP i informacje o przeglądarce, przy pobieraniu krojów pisma.',
                   'Wygląd strony. Fonty są pobierane z serwerów Google przy każdym wejściu.',
                 ],
@@ -214,8 +205,9 @@ export function PrivacyPolicyPage() {
 
           <Section id="cookies" title="5. Pliki cookie i dane w przeglądarce">
             <p>
-              Sama liga nie używa plików cookie do śledzenia. Do działania i do zapamiętania Twoich
-              wyborów wykorzystuje pamięć lokalną przeglądarki (localStorage), która nie jest
+              <strong className="text-text-hi">Serwis nie używa plików cookie.</strong> Nie ma tu
+              reklam, analityki ani narzędzi śledzących. Do działania i do zapamiętania Twoich
+              ustawień wykorzystujemy pamięć lokalną przeglądarki (localStorage), która nie jest
               wysyłana na serwer:
             </p>
             <ul className="ml-4 list-disc space-y-1.5 text-text">
@@ -224,27 +216,13 @@ export function PrivacyPolicyPage() {
                 było logować się przy każdym wejściu;
               </li>
               <li>
-                <strong className="text-text-hi">zgoda na reklamy</strong> — Twój wybór z panelu
-                zgód, żeby nie pytać ponownie;
-              </li>
-              <li>
                 <strong className="text-text-hi">ustawienia</strong> — głośność dźwięków draftu.
               </li>
             </ul>
-            <p>
-              <strong className="text-text-hi">Pliki cookie reklamowe</strong> ustawia Google po
-              wyrażeniu zgody. Służą do wyświetlania reklam, ograniczania powtarzalności i wykrywania
-              nadużyć, a przy zgodzie na personalizację również do dopasowania treści reklam. Ich
-              opis prowadzi Google:{' '}
-              <a
-                href="https://policies.google.com/technologies/partner-sites"
-                target="_blank"
-                rel="noopener noreferrer"
-                className="text-gold hover:underline"
-              >
-                jak Google wykorzystuje dane z witryn partnerskich
-              </a>
-              . Zgodę możesz zmienić lub wycofać w każdej chwili linkiem w stopce strony.
+            <p className="text-text-lo">
+              Kroje pisma pobieramy z serwerów Google, a grafiki bohaterów z serwerów Riot. Te
+              zapytania nie ustawiają plików cookie, ale przekazują tym podmiotom Twój adres IP —
+              tak jak każde pobranie pliku z zewnętrznego serwera.
             </p>
             <p className="rounded-md border border-[color:var(--red)]/40 bg-[color:var(--red-bg)] p-3">
               <strong className="text-text-hi">Ważne, jeśli zaznaczysz „Zapamiętaj mnie”.</strong>{' '}
@@ -311,8 +289,8 @@ export function PrivacyPolicyPage() {
                 sprzeciwu wobec przetwarzania opartego na uzasadnionym interesie;
               </li>
               <li>
-                wycofania zgody w każdej chwili — dotyczy reklam oraz opcjonalnych pól profilu.
-                Wycofanie nie wpływa na zgodność z prawem przetwarzania sprzed wycofania.
+                wycofania zgody w każdej chwili — dotyczy opcjonalnych pól profilu. Wycofanie nie
+                wpływa na zgodność z prawem przetwarzania sprzed wycofania.
               </li>
             </ul>
             <p>
