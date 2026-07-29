@@ -38,7 +38,9 @@ export function MatchControlPage() {
   const draw = useDrawTeams(id);
   const start = useStartMatch(id);
   const startManual = useStartMatchManual(id);
-  const drawState = useMatchDrawState(id, ['TEAMS_DRAWN', 'DRAFTING', 'DRAFTED'].includes(match.data?.status ?? ''));
+  // DRAFT_READY included so the vote tally stays visible while the admin waits to start the draft.
+  const drawState = useMatchDrawState(id,
+    ['TEAMS_DRAWN', 'DRAFT_READY', 'DRAFTING', 'DRAFTED'].includes(match.data?.status ?? ''));
   const riotLobby = useRiotLobbyStatus(id, match.data?.status === 'LOBBY_READY');
   const importRiot = useImportRiotResults(id);
   const replacePlayer = useReplaceMatchPlayer(id);
@@ -70,6 +72,17 @@ export function MatchControlPage() {
   const currentPlayerIds = new Set(m.participants.map((participant) => participant.playerId));
   const availablePlayers = (players.data?.content ?? []).filter((player) =>
     !currentPlayerIds.has(player.id) && player.accountProvisioned && player.riotId);
+
+  // Starting manually skips the bans and champion picks entirely, which is easy to click by accident
+  // when you actually wanted the draft — so it asks first.
+  const skipDraftAndStart = () => {
+    if (!window.confirm(
+      'Rozpocząć mecz BEZ draftu?\n\n'
+      + 'Nie będzie banów ani wyboru postaci — postacie trzeba będzie wpisać ręcznie przy wyniku.\n'
+      + 'Jeśli chcesz draft, użyj „Rozpocznij draft”.',
+    )) return;
+    startManual.mutate();
+  };
 
   const doShare = () => {
     if (!window.confirm('Wygenerować obrazek wyników i wysłać go na kanał Discord?')) return;
@@ -226,12 +239,17 @@ export function MatchControlPage() {
                   </Button>
                 )}
                 <Button variant="gold" onClick={() => confirm.mutate()} disabled={confirm.isPending}>
-                  Zatwierdź składy
+                  {confirm.isPending ? 'Zatwierdzanie…' : 'Zatwierdź składy → draft'}
                 </Button>
-                <Button variant="ghost" onClick={() => startManual.mutate()} disabled={startManual.isPending}>
-                  {startManual.isPending ? 'Uruchamianie…' : 'Rozpocznij ręcznie (bez Riot)'}
+                <Button variant="ghost" disabled={startManual.isPending} onClick={skipDraftAndStart}>
+                  {startManual.isPending ? 'Uruchamianie…' : 'Pomiń draft — rozpocznij mecz'}
                 </Button>
               </div>
+              <p className="text-xs text-text-lo">
+                Składy zatwierdzają się też same, gdy zagłosuje za nimi cała dziesiątka — wtedy ten
+                panel przełączy się na „Rozpocznij draft”. „Pomiń draft” startuje mecz od razu, bez
+                banów i wyboru postaci.
+              </p>
               {(confirm.isError || startManual.isError) && (
                 <p className="text-sm text-loss">{(confirm.error ?? startManual.error)?.message}</p>
               )}
@@ -256,11 +274,29 @@ export function MatchControlPage() {
               Daj graczom chwilę na przejście na Discorda / osobne lobby, potem rozpocznij draft.
             </p>
           </div>
+          {/* The confirmed line-up, so this panel is self-contained — an admin should not have to go
+              back a step to check who is playing before starting the draft. */}
+          <div className="grid gap-4 sm:grid-cols-2">
+            {(['BLUE', 'RED'] as const).map((side) => (
+              <div key={side} className="rounded-lg border border-line bg-[color:var(--bg)]/60 p-4">
+                <div className="mb-2 font-display font-semibold"
+                  style={{ color: side === 'BLUE' ? 'var(--blue)' : 'var(--red)' }}>
+                  {side === 'BLUE' ? 'Niebiescy' : 'Czerwoni'}
+                </div>
+                {m.participants.filter((p) => p.side === side).map((p) => (
+                  <div key={p.playerId} className="flex justify-between py-1 text-sm">
+                    <span className="text-text-hi">{p.nickname}</span>
+                    <span className="kicker">{roleLabel(p.role)}</span>
+                  </div>
+                ))}
+              </div>
+            ))}
+          </div>
           <div className="flex flex-wrap gap-3">
             <Button variant="gold" disabled={startDraft.isPending} onClick={() => startDraft.mutate()}>
               {startDraft.isPending ? 'Startowanie…' : '▶ Rozpocznij draft'}
             </Button>
-            <Button variant="ghost" disabled={startManual.isPending} onClick={() => startManual.mutate()}>
+            <Button variant="ghost" disabled={startManual.isPending} onClick={skipDraftAndStart}>
               {startManual.isPending ? 'Uruchamianie…' : 'Pomiń draft — rozpocznij mecz'}
             </Button>
           </div>

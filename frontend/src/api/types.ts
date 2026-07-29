@@ -147,7 +147,10 @@ export interface OcrRow {
 export interface OcrLogEntry { stage: string; message: string; }
 export interface OcrDraft {
   winningSide: Side | null; durationSeconds: number | null;
-  rows: OcrRow[]; unmatched: string[]; missing: string[]; logs: OcrLogEntry[];
+  rows: OcrRow[]; unmatched: string[]; missing: string[];
+  /** Champion names the model returned that mapped to no champion in the database. */
+  unmatchedChampions: string[];
+  logs: OcrLogEntry[];
 }
 
 export interface FeedbackComment { tone: 'POSITIVE' | 'NEGATIVE'; note: string; }

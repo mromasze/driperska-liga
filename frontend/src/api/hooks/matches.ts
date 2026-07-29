@@ -7,6 +7,7 @@ import type {
   DrawResult,
   MatchDetail,
   MatchEvent,
+  MatchStatus,
   MatchSummary,
   MatchesQuery,
   PageResponse,
@@ -34,14 +35,36 @@ export function useMatches(query?: MatchesQuery) {
   });
 }
 
-/** GET /matches/{id} — full detail + scoreboard. */
+/**
+ * Statuses the backend can leave without this client asking it to: the players' own accept votes
+ * confirm a draw, the auto-confirm scheduler does it on a timeout, and the draft advances itself as
+ * ten people pick. A match parked in one of these has to be polled.
+ */
+const SELF_ADVANCING_STATUSES: MatchStatus[] = [
+  'TEAMS_DRAWN', 'DRAFT_READY', 'DRAFTING', 'DRAFTED', 'LOBBY_READY', 'LIVE',
+];
+
+/**
+ * GET /matches/{id} — full detail + scoreboard.
+ *
+ * Only LIVE used to be polled, which broke the admin control panel: it lays itself out from the
+ * match status, so once the players accepted the squad (backend: TEAMS_DRAWN → DRAFT_READY) the page
+ * kept showing the pre-confirm panel — no "Rozpocznij draft" button anywhere — and "Zatwierdź składy"
+ * then failed against a match that had already moved on. The only way out was to leave the page and
+ * come back, which remounted the query.
+ */
 export function useMatch(id: string | undefined) {
   return useQuery({
     queryKey: queryKeys.match(id ?? ''),
     queryFn: () => api.get<MatchDetail>(`/matches/${id}`),
     enabled: Boolean(id),
-    refetchInterval: (query) =>
-      query.state.data?.status === 'LIVE' ? 10_000 : false,
+    refetchInterval: (query) => {
+      const status = query.state.data?.status;
+      if (!status) return false;
+      if (status === 'LIVE') return 10_000;
+      return SELF_ADVANCING_STATUSES.includes(status) ? 3_000 : false;
+    },
+    refetchOnWindowFocus: true,
   });
 }
 
@@ -86,7 +109,13 @@ export function useConfirmDraw(matchId: string) {
   const qc = useQueryClient();
   return useMutation({
     mutationFn: () => api.post<MatchDetail>(`/matches/${matchId}/draw/confirm`),
-    onSuccess: () => qc.invalidateQueries({ queryKey: queryKeys.match(matchId) }),
+    // The response already carries the new status; seed it so the panel switches on the spot rather
+    // than after the refetch lands.
+    onSuccess: (match) => {
+      qc.setQueryData(queryKeys.match(matchId), match);
+      void qc.invalidateQueries({ queryKey: queryKeys.match(matchId) });
+      void qc.invalidateQueries({ queryKey: ['matches'] });
+    },
   });
 }
 
@@ -148,9 +177,10 @@ export function useStartMatch(matchId: string) {
   const qc = useQueryClient();
   return useMutation({
     mutationFn: () => api.post<MatchDetail>(`/matches/${matchId}/start`),
-    onSuccess: () => {
-      qc.invalidateQueries({ queryKey: queryKeys.match(matchId) });
-      qc.invalidateQueries({ queryKey: ['matches'] });
+    onSuccess: (match) => {
+      qc.setQueryData(queryKeys.match(matchId), match);
+      void qc.invalidateQueries({ queryKey: queryKeys.match(matchId) });
+      void qc.invalidateQueries({ queryKey: ['matches'] });
     },
   });
 }
@@ -160,9 +190,10 @@ export function useStartMatchManual(matchId: string) {
   const qc = useQueryClient();
   return useMutation({
     mutationFn: () => api.post<MatchDetail>(`/matches/${matchId}/start/manual`),
-    onSuccess: () => {
-      qc.invalidateQueries({ queryKey: queryKeys.match(matchId) });
-      qc.invalidateQueries({ queryKey: ['matches'] });
+    onSuccess: (match) => {
+      qc.setQueryData(queryKeys.match(matchId), match);
+      void qc.invalidateQueries({ queryKey: queryKeys.match(matchId) });
+      void qc.invalidateQueries({ queryKey: ['matches'] });
     },
   });
 }

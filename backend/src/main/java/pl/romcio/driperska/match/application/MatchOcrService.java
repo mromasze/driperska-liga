@@ -19,6 +19,7 @@ import javax.imageio.ImageIO;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.multipart.MultipartFile;
+import pl.romcio.driperska.champion.application.ChampionNameResolver;
 import pl.romcio.driperska.champion.domain.Champion;
 import pl.romcio.driperska.champion.infra.ChampionRepository;
 import pl.romcio.driperska.common.domain.Side;
@@ -104,13 +105,26 @@ public class MatchOcrService {
                 : ChampionReferenceAtlasService.Atlas.empty();
         List<String> modelImages = new ArrayList<>(screenshots);
         modelImages.addAll(atlas.images());
+        boolean drafted = match.getParticipants().stream().allMatch(p -> p.getChampionId() != null)
+                && !match.getParticipants().isEmpty();
         if (atlas.images().isEmpty()) {
-            trace.add(new OcrLogEntry("CONTEXT", "Atlas portretów niedostępny; używam listy nazw championów."));
+            // Worth flagging loudly: without the atlas a manually recorded match has nothing to
+            // identify champions from, and the column will come back empty.
+            trace.add(new OcrLogEntry("CONTEXT", drafted
+                    ? "Atlas portretów niedostępny, ale postacie są znane z draftu."
+                    : "Atlas portretów niedostępny (Data Dragon?) — bez niego model nie rozpozna "
+                        + "postaci w meczu wpisywanym ręcznie."));
         } else {
+            String completeness = atlas.portraitCount() >= champions.size()
+                    ? "pełny"
+                    : "NIEPEŁNY — brakuje " + (champions.size() - atlas.portraitCount());
             trace.add(new OcrLogEntry("CONTEXT", "Dołączono " + atlas.images().size()
-                    + " atlas(y) z " + atlas.portraitCount() + " portretami championów ("
-                    + atlas.version() + ")."));
+                    + " atlas(y) z " + atlas.portraitCount() + "/" + champions.size()
+                    + " portretami championów (" + completeness + ", " + atlas.version() + ")."));
         }
+        trace.add(new OcrLogEntry("CHAMPIONS", drafted
+                ? "Mecz przeszedł przez draft — postacie znane, model ich nie zgaduje."
+                : "Mecz wpisywany ręcznie — postacie rozpoznawane przez porównanie portretów z atlasem."));
 
         trace.add(new OcrLogEntry("REQUEST", "Wysyłam " + modelImages.size() + " obraz(y) do modelu "
                 + "(screenshoty: " + screenshots.size() + ", referencje: " + atlas.images().size() + ")."));
@@ -134,14 +148,20 @@ public class MatchOcrService {
         }
         Map<UUID, Side> sideByPlayer = new HashMap<>();
         Map<UUID, String> nickById = new HashMap<>();
-        for (MatchParticipant mp : match.getParticipants()) sideByPlayer.put(mp.getPlayerId(), mp.getSide());
+        Map<UUID, Integer> draftedChampionByPlayer = new HashMap<>();
+        for (MatchParticipant mp : match.getParticipants()) {
+            sideByPlayer.put(mp.getPlayerId(), mp.getSide());
+            if (mp.getChampionId() != null) draftedChampionByPlayer.put(mp.getPlayerId(), mp.getChampionId());
+        }
         for (Player p : players) nickById.put(p.getId(), p.getNickname());
 
-        Map<String, Integer> champByName = new HashMap<>();
-        for (Champion c : champions) champByName.putIfAbsent(norm(c.getName()), c.getId());
+        // Fuzzy on purpose: the model reads a 32px portrait and often writes a shorthand ("Nunu") or
+        // slips a character. An exact-match-only lookup dropped all of those on the floor.
+        ChampionNameResolver championResolver = ChampionNameResolver.of(champions);
 
         List<OcrRow> rows = new ArrayList<>();
         List<String> unmatched = new ArrayList<>();
+        List<String> unmatchedChampions = new ArrayList<>();
         Map<Side, Integer> winsBySide = new HashMap<>();
         java.util.Set<UUID> used = new java.util.HashSet<>();
 
@@ -154,7 +174,16 @@ public class MatchOcrService {
             }
             used.add(playerId);
             String champName = pl.path("champion").asText(null);
-            Integer champId = champName == null ? null : champByName.get(norm(champName));
+            Integer champId = championResolver.resolve(champName);
+            if (champId == null && champName != null && !champName.isBlank()) {
+                unmatchedChampions.add(champName.strip());
+            }
+            // The draft is authoritative: if it locked a champion for this player, the model reading a
+            // portrait cannot beat it. This is also the safety net when the model reads nothing at all.
+            Integer drafted = draftedChampionByPlayer.get(playerId);
+            if (drafted != null) {
+                champId = drafted;
+            }
             rows.add(new OcrRow(playerId, nickById.get(playerId), mapRole(pl.path("role").asText(null)),
                     champId, champName,
                     pl.path("kills").asInt(0), pl.path("deaths").asInt(0), pl.path("assists").asInt(0),
@@ -177,9 +206,18 @@ public class MatchOcrService {
         for (Player p : players) {
             if (rows.stream().noneMatch(r -> r.playerId().equals(p.getId()))) missing.add(p.getNickname());
         }
+        long withChampion = rows.stream().filter(r -> r.championId() != null).count();
         trace.add(new OcrLogEntry("RESULT", "Rozpoznano i dopasowano " + rows.size() + "/"
-                + players.size() + " graczy."));
-        return new OcrDraft(winningSide, duration, rows, unmatched, missing, List.copyOf(trace));
+                + players.size() + " graczy; postacie: " + withChampion + "/" + rows.size() + "."));
+        if (!unmatchedChampions.isEmpty()) {
+            // Worth saying out loud: it tells the admin whether the model failed to *read* the portrait
+            // or merely wrote a name this backend could not map.
+            trace.add(new OcrLogEntry("CHAMPIONS",
+                    "Model podał postacie, których nie udało się dopasować: "
+                            + String.join(", ", unmatchedChampions) + "."));
+        }
+        return new OcrDraft(winningSide, duration, rows, unmatched, missing,
+                List.copyOf(unmatchedChampions), List.copyOf(trace));
     }
 
     private static UUID resolve(Map<String, UUID> byName, String rawName, java.util.Set<UUID> used) {
@@ -275,8 +313,21 @@ public class MatchOcrService {
                 EXTRACTION RULES:
                 - Return exactly one player object for each player visible in the match screenshots.
                 - Copy summoner names from the screenshot; remove a trailing #TAG only when clearly visible.
-                - For champion, compare the row portrait with the reference atlas and return the exact
-                  canonical champion name printed below the matching portrait.
+
+                CHAMPION IDENTIFICATION (the scoreboard never writes champion names — it only shows a
+                small portrait, so this is a visual comparison and you must actually perform it):
+                - For each player row, look at that row's champion portrait.
+                - Find the portrait in the reference atlases that depicts the same champion. Compare the
+                  whole picture: face and skin colour, hair, helmet or horns, weapon, armour colour, and
+                  the background tint. Portraits in a row of the scoreboard are cropped and small; the
+                  atlas portrait is the same artwork at higher resolution.
+                - Return the canonical champion name printed under the matching atlas portrait, spelled
+                  exactly as printed, including punctuation and spaces.
+                - Atlas sheets are alphabetical, continuing across sheets, so a name you half-recognise
+                  can be confirmed by looking near its expected position.
+                - Give your single best visual match for every row. Only omit champion when the portrait
+                  is missing or unreadable — a best guess is more useful here than a blank.
+                - Never derive the champion from the summoner name, the role, or the statistics.
                 - K/D/A, CS, gold, champion damage, vision score, and largest multikill are different fields.
                   Use labels and tab context; never shift a value into the neighbouring column.
                 - Determine team and winning side from BLUE/RED layout plus Victory/Defeat indicators.
@@ -292,19 +343,42 @@ public class MatchOcrService {
                                  int screenshotCount, int atlasCount) {
         Map<UUID, Player> playerById = new HashMap<>();
         for (Player player : players) playerById.put(player.getId(), player);
+        Map<Integer, String> championNameById = new HashMap<>();
+        for (Champion champion : champions) championNameById.put(champion.getId(), champion.getName());
+
         StringBuilder roster = new StringBuilder();
+        List<String> draftedNames = new ArrayList<>();
+        int participantCount = 0;
         for (MatchParticipant participant : match.getParticipants()) {
             Player player = playerById.get(participant.getPlayerId());
             if (player == null) continue;
+            participantCount++;
             roster.append("- ").append(participant.getSide()).append(": ")
                     .append(player.getNickname());
             String gameName = riotGameName(player.getRiotId());
             if (gameName != null && !gameName.equalsIgnoreCase(player.getNickname())) {
                 roster.append(" (Riot game name: ").append(gameName).append(')');
             }
+            // A match that went through the internal draft already knows who locked what. Telling the
+            // model narrows champion identification from ~170 candidates to this player's one, which is
+            // the difference between reading a 32px portrait and confirming it.
+            String drafted = championNameById.get(participant.getChampionId());
+            if (drafted != null) {
+                roster.append(" — drafted champion: ").append(drafted);
+                draftedNames.add(drafted);
+            }
             roster.append('\n');
         }
-        String championNames = String.join(", ", champions.stream().map(Champion::getName).toList());
+
+        // Only the drafted ten when the draft filled every slot; otherwise the whole roster, and then
+        // the atlas comparison is the only thing that can fill the champion column.
+        boolean fullyDrafted = participantCount > 0 && draftedNames.size() == participantCount;
+        String championNames = fullyDrafted
+                ? String.join(", ", draftedNames)
+                    + "\n(These ten are the ONLY champions in this match — every row must use one of them.)"
+                : String.join(", ", champions.stream().map(Champion::getName).toList())
+                    + "\n(This match was recorded manually, so no champion list narrows it down: identify"
+                    + " each champion by comparing its row portrait against the reference atlases.)";
         String references = atlasCount == 0
                 ? "No visual atlas is attached; use the canonical name list below."
                 : "Images " + (screenshotCount + 1) + "-" + (screenshotCount + atlasCount)
@@ -382,6 +456,12 @@ public class MatchOcrService {
 
     public record OcrLogEntry(String stage, String message) {}
 
+    /**
+     * @param unmatched          summoner names read from the screenshot that matched no roster player
+     * @param missing            roster players no screenshot row could be found for
+     * @param unmatchedChampions champion names the model returned that mapped to no champion
+     */
     public record OcrDraft(String winningSide, Integer durationSeconds, List<OcrRow> rows,
-                           List<String> unmatched, List<String> missing, List<OcrLogEntry> logs) {}
+                           List<String> unmatched, List<String> missing,
+                           List<String> unmatchedChampions, List<OcrLogEntry> logs) {}
 }

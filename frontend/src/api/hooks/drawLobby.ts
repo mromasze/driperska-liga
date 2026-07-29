@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { API_BASE, api } from '../client';
+import { queryKeys } from '../queryKeys';
 import type { DrawLobby, DrawVoteDecision } from '../types';
 import { useAuthStore } from '../../store/auth';
 
@@ -117,6 +118,26 @@ function useRefreshLobby() {
   );
 }
 
+/**
+ * Same, plus the match itself.
+ *
+ * Draft endpoints move the match through its statuses (DRAFT_READY → DRAFTING → DRAFTED), and the
+ * admin control panel switches its whole layout on that status. Refreshing only the draw lobby left
+ * that page showing the previous step — after "Rozpocznij draft" it stayed on the pre-draft panel —
+ * until the admin navigated away and back.
+ */
+function useRefreshLobbyAndMatch(matchId: string) {
+  const queryClient = useQueryClient();
+  return useCallback(
+    () => {
+      void queryClient.invalidateQueries({ queryKey: DRAW_KEY });
+      void queryClient.invalidateQueries({ queryKey: queryKeys.match(matchId) });
+      void queryClient.invalidateQueries({ queryKey: ['matches', matchId, 'draw-state'] });
+    },
+    [queryClient, matchId],
+  );
+}
+
 export function useVoteOnDraw() {
   const queryClient = useQueryClient();
   return useMutation({
@@ -184,7 +205,7 @@ export function useRespondSwap(matchId: string) {
 }
 
 export function useResetDraft(matchId: string) {
-  const refresh = useRefreshLobby();
+  const refresh = useRefreshLobbyAndMatch(matchId);
   return useMutation({
     mutationFn: () => api.post<void>(`/draft/${matchId}/reset`),
     onSettled: refresh,
@@ -192,7 +213,7 @@ export function useResetDraft(matchId: string) {
 }
 
 export function useStartDraft(matchId: string) {
-  const refresh = useRefreshLobby();
+  const refresh = useRefreshLobbyAndMatch(matchId);
   return useMutation({
     mutationFn: () => api.post<void>(`/draft/${matchId}/start`),
     onSettled: refresh,
@@ -200,7 +221,7 @@ export function useStartDraft(matchId: string) {
 }
 
 export function usePauseDraft(matchId: string) {
-  const refresh = useRefreshLobby();
+  const refresh = useRefreshLobbyAndMatch(matchId);
   return useMutation({
     mutationFn: (paused: boolean) => api.post<void>(`/draft/${matchId}/${paused ? 'pause' : 'resume'}`),
     onSettled: refresh,

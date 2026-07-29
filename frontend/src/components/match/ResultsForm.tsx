@@ -137,9 +137,16 @@ export function ResultsForm({
       }
       return next;
     });
+    const withChampion = draft.rows.filter((r) => r.championId != null).length;
     const parts: string[] = [`Uzupełniono ${draft.rows.length}/${match.participants.length} graczy.`];
+    parts.push(`Postacie: ${withChampion}/${draft.rows.length}.`);
     if (draft.missing.length) parts.push(`Bez danych: ${draft.missing.join(', ')}.`);
     if (draft.unmatched.length) parts.push(`Niedopasowani ze screena: ${draft.unmatched.join(', ')}.`);
+    // Without this the model's champion guesses vanished silently and it looked like it had read
+    // nothing at all, when in fact the name just did not map to a champion in the database.
+    if (draft.unmatchedChampions?.length) {
+      parts.push(`Nierozpoznane postacie: ${draft.unmatchedChampions.join(', ')}.`);
+    }
     parts.push('Sprawdź i popraw ręcznie przed wysłaniem.');
     setOcrNote(parts.join(' '));
   };
