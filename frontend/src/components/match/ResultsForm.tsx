@@ -46,6 +46,71 @@ const NUM_FIELDS: { key: keyof Row; label: string; desc: string }[] = [
   { key: 'largestMultiKill', label: 'Multi', desc: 'Największy multi-kill (2=double … 5=pentakill) — bonusy LP za pentę/quadrę' },
 ];
 
+/* ============================================================
+   Field locks.
+
+   Every screenshot upload re-sends the whole set of images and the model answers with a fresh read
+   of all ten rows, so a value corrected by hand used to be silently clobbered by the next upload.
+   A lock pins a field: the OCR merge skips it, and the input goes read-only so it can't be nudged
+   by accident either. Locks live only for as long as the form is open — they are a scratch pad for
+   one sitting of data entry, not a stored preference.
+   ============================================================ */
+
+/** Every field the OCR pass writes, and therefore every field worth locking. */
+const LOCKABLE_KEYS: (keyof Row)[] = ['role', 'championId', ...NUM_FIELDS.map((f) => f.key)];
+
+/** `patch` is absent — the model never returns it, so a lock there would be decoration. */
+const MATCH_LOCK = { winningSide: 'match:winningSide', duration: 'match:duration' } as const;
+
+const rowLockKey = (playerId: string, key: keyof Row) => `${playerId}:${key}`;
+
+function PadlockIcon({ open }: { open: boolean }) {
+  return (
+    <svg viewBox="0 0 12 12" width="9" height="9" aria-hidden="true" focusable="false">
+      {/* A closed padlock brings the shackle's right leg back down onto the body; an open one doesn't. */}
+      <path
+        d={open ? 'M4,5.4 V3.9 a2,2 0 0 1 4,0' : 'M4,5.4 V3.9 a2,2 0 0 1 4,0 V5.4'}
+        fill="none"
+        stroke="currentColor"
+        strokeWidth="1.3"
+        strokeLinecap="round"
+      />
+      <rect x="2.4" y="5.4" width="7.2" height="5.1" rx="1.1" fill="currentColor" />
+    </svg>
+  );
+}
+
+/**
+ * Tiny padlock riding the top-right corner of a field. Ten of these visible across a table row
+ * would drown the numbers, so an unlocked one stays transparent until its cell is hovered or the
+ * button itself is focused. A locked one is always gold and always visible — that's the whole point.
+ *
+ * Must be rendered inside an element carrying `group/field relative`.
+ */
+function LockToggle({ locked, onToggle, label }: { locked: boolean; onToggle: () => void; label: string }) {
+  return (
+    <button
+      type="button"
+      onClick={onToggle}
+      aria-pressed={locked}
+      aria-label={locked ? `Odblokuj: ${label}` : `Zablokuj: ${label}`}
+      title={
+        locked
+          ? `${label}\nZablokowane — AI tego nie nadpisze. Kliknij, aby odblokować.`
+          : `${label}\nKliknij, aby zablokować przed nadpisaniem przy kolejnym wgraniu screenów.`
+      }
+      className={cn(
+        'absolute -right-1.5 -top-1.5 z-10 grid h-4 w-4 place-items-center rounded-full border transition',
+        locked
+          ? 'border-[color:var(--gold)] bg-gold text-[#1a1205]'
+          : 'border-line bg-bg-2 text-text-lo opacity-0 group-hover/field:opacity-70 hover:!opacity-100 focus-visible:opacity-100',
+      )}
+    >
+      <PadlockIcon open={!locked} />
+    </button>
+  );
+}
+
 export function ResultsForm({
   match,
   submitting,
@@ -89,6 +154,23 @@ export function ResultsForm({
     setRows((prev) => ({ ...prev, [playerId]: { ...prev[playerId], [key]: value } }));
   };
 
+  const [locks, setLocks] = useState<ReadonlySet<string>>(() => new Set());
+
+  const toggleLock = (key: string) => {
+    setLocks((prev) => {
+      const next = new Set(prev);
+      if (!next.delete(key)) next.add(key);
+      return next;
+    });
+  };
+
+  const lockEverything = () => {
+    setLocks(new Set([
+      ...Object.values(MATCH_LOCK),
+      ...match.participants.flatMap((p) => LOCKABLE_KEYS.map((key) => rowLockKey(p.playerId, key))),
+    ]));
+  };
+
   const ocr = useOcrResults(match.id);
   const shotInput = useRef<HTMLInputElement>(null);
   const [ocrNote, setOcrNote] = useState<string | null>(null);
@@ -121,22 +203,39 @@ export function ResultsForm({
   }, []);
 
   const applyDraft = (draft: OcrDraft) => {
-    if (draft.winningSide) setWinningSide(draft.winningSide);
-    if (draft.durationSeconds && draft.durationSeconds > 0) setDuration(draft.durationSeconds);
+    const sideLocked = locks.has(MATCH_LOCK.winningSide);
+    const durationLocked = locks.has(MATCH_LOCK.duration);
+    if (draft.winningSide && !sideLocked) setWinningSide(draft.winningSide);
+    if (draft.durationSeconds && draft.durationSeconds > 0 && !durationLocked) setDuration(draft.durationSeconds);
     setRows((prev) => {
       const next = { ...prev };
       for (const r of draft.rows) {
-        if (!next[r.playerId]) continue;
+        const current = next[r.playerId];
+        if (!current) continue;
+        // A locked field keeps what's already in the form; everything else takes the model's read.
+        const keep = (key: keyof Row) => locks.has(rowLockKey(r.playerId, key));
         next[r.playerId] = {
-          role: r.role ?? next[r.playerId].role,
-          championId: r.championId ?? next[r.playerId].championId,
-          kills: r.kills, deaths: r.deaths, assists: r.assists, cs: r.cs, gold: r.gold,
-          damageToChampions: r.damageToChampions, visionScore: r.visionScore,
-          largestMultiKill: r.largestMultiKill,
+          role: keep('role') ? current.role : r.role ?? current.role,
+          championId: keep('championId') ? current.championId : r.championId ?? current.championId,
+          kills: keep('kills') ? current.kills : r.kills,
+          deaths: keep('deaths') ? current.deaths : r.deaths,
+          assists: keep('assists') ? current.assists : r.assists,
+          cs: keep('cs') ? current.cs : r.cs,
+          gold: keep('gold') ? current.gold : r.gold,
+          damageToChampions: keep('damageToChampions') ? current.damageToChampions : r.damageToChampions,
+          visionScore: keep('visionScore') ? current.visionScore : r.visionScore,
+          largestMultiKill: keep('largestMultiKill') ? current.largestMultiKill : r.largestMultiKill,
         };
       }
       return next;
     });
+    // Counted outside the updater above: React may run that callback more than once (it does in
+    // StrictMode), which would double the tally.
+    const skipped = draft.rows.reduce(
+      (sum, r) => sum + LOCKABLE_KEYS.filter((key) => locks.has(rowLockKey(r.playerId, key))).length,
+      (sideLocked && draft.winningSide ? 1 : 0)
+        + (durationLocked && draft.durationSeconds ? 1 : 0),
+    );
     const withChampion = draft.rows.filter((r) => r.championId != null).length;
     const parts: string[] = [`Uzupełniono ${draft.rows.length}/${match.participants.length} graczy.`];
     parts.push(`Postacie: ${withChampion}/${draft.rows.length}.`);
@@ -147,6 +246,7 @@ export function ResultsForm({
     if (draft.unmatchedChampions?.length) {
       parts.push(`Nierozpoznane postacie: ${draft.unmatchedChampions.join(', ')}.`);
     }
+    if (skipped > 0) parts.push(`Zachowano ${skipped} zablokowanych pól.`);
     parts.push('Sprawdź i popraw ręcznie przed wysłaniem.');
     setOcrNote(parts.join(' '));
   };
@@ -232,6 +332,32 @@ export function ResultsForm({
           </div>
         </div>
         {ocrNote && <p className="mt-2 text-sm text-text">{ocrNote}</p>}
+
+        <div className="mt-3 flex flex-wrap items-center gap-x-3 gap-y-2 border-t border-line pt-3 text-xs text-text-lo">
+          <span className="inline-flex items-center gap-1.5">
+            <span className="grid h-4 w-4 shrink-0 place-items-center rounded-full border border-[color:var(--gold)] bg-gold text-[#1a1205]">
+              <PadlockIcon open={false} />
+            </span>
+            Kłódka przy polu chroni jego wartość przed nadpisaniem przy kolejnym wgraniu screenów.
+          </span>
+          {locks.size > 0 && (
+            <span className="chip border-[color:var(--gold)]/30 text-gold">{locks.size} zablokowanych</span>
+          )}
+          <span className="ml-auto flex items-center gap-2">
+            <button type="button" onClick={lockEverything} className="rounded border border-line px-2 py-1 hover:text-text-hi">
+              Zablokuj wszystko
+            </button>
+            <button
+              type="button"
+              onClick={() => setLocks(new Set())}
+              disabled={locks.size === 0}
+              className="rounded border border-line px-2 py-1 hover:text-text-hi disabled:opacity-40"
+            >
+              Odblokuj wszystko
+            </button>
+          </span>
+        </div>
+
         {ocrLogs.length > 0 && (
           <div className="mt-3 overflow-hidden rounded-md border border-line bg-bg-0/80">
             <div className="flex items-center justify-between border-b border-line px-3 py-2">
@@ -260,18 +386,19 @@ export function ResultsForm({
       </div>
 
       <div className="panel flex flex-wrap items-end gap-4 p-4">
-        <div>
+        <div className="group/field relative">
           <span className="kicker">Zwycięska strona</span>
           <div className="mt-1 flex gap-2">
             {(['BLUE', 'RED'] as Side[]).map((s) => (
               <button
                 key={s}
                 onClick={() => setWinningSide(s)}
+                disabled={locks.has(MATCH_LOCK.winningSide)}
                 className={cn(
-                  'h-10 rounded-md border px-4 text-sm font-semibold',
+                  'h-10 rounded-md border px-4 text-sm font-semibold disabled:cursor-not-allowed',
                   winningSide === s
                     ? 'text-text-hi'
-                    : 'border-line text-text-lo hover:text-text',
+                    : 'border-line text-text-lo hover:text-text disabled:hover:text-text-lo',
                 )}
                 style={
                   winningSide === s
@@ -286,16 +413,36 @@ export function ResultsForm({
               </button>
             ))}
           </div>
-        </div>
-        <label>
-          <span className="kicker">Czas gry (s)</span>
-          <input
-            type="number"
-            value={duration}
-            onChange={(e) => setDuration(Number(e.target.value))}
-            className="mt-1 h-10 w-28 rounded-md border border-line bg-bg-1 px-3 text-text-hi"
+          <LockToggle
+            locked={locks.has(MATCH_LOCK.winningSide)}
+            onToggle={() => toggleLock(MATCH_LOCK.winningSide)}
+            label="Zwycięska strona"
           />
-        </label>
+        </div>
+        {/* The lock sits outside the <label> on purpose — nested inside, clicking it would also
+            activate the label and steal focus into the input. */}
+        <div className="group/field relative">
+          <label>
+            <span className="kicker">Czas gry (s)</span>
+            <input
+              type="number"
+              value={duration}
+              readOnly={locks.has(MATCH_LOCK.duration)}
+              onChange={(e) => setDuration(Number(e.target.value))}
+              className={cn(
+                'mt-1 h-10 w-28 rounded-md border bg-bg-1 px-3',
+                locks.has(MATCH_LOCK.duration)
+                  ? 'border-[color:var(--gold)]/70 text-gold'
+                  : 'border-line text-text-hi',
+              )}
+            />
+          </label>
+          <LockToggle
+            locked={locks.has(MATCH_LOCK.duration)}
+            onToggle={() => toggleLock(MATCH_LOCK.duration)}
+            label="Czas gry"
+          />
+        </div>
         <label>
           <span className="kicker">Patch</span>
           <input
@@ -338,44 +485,85 @@ export function ResultsForm({
                     <tr key={p.playerId} className="border-t border-line">
                       <td className="px-2 py-1.5">
                         <div className="font-medium text-text-hi">{p.nickname}</div>
-                        <select
-                          value={r.role}
-                          onChange={(e) => setRows((prev) => ({
-                            ...prev, [p.playerId]: { ...prev[p.playerId], role: e.target.value as Role },
-                          }))}
-                          title="Pozycja, na której gracz faktycznie grał w tym meczu"
-                          className="mt-0.5 h-7 rounded border border-line bg-bg-1 px-1 text-xs text-text-lo"
-                        >
-                          {ROLES.map((role) => <option key={role} value={role}>{roleLabel(role)}</option>)}
-                        </select>
+                        <div className="group/field relative mt-0.5 inline-block">
+                          <select
+                            value={r.role}
+                            disabled={locks.has(rowLockKey(p.playerId, 'role'))}
+                            onChange={(e) => setRows((prev) => ({
+                              ...prev, [p.playerId]: { ...prev[p.playerId], role: e.target.value as Role },
+                            }))}
+                            title="Pozycja, na której gracz faktycznie grał w tym meczu"
+                            className={cn(
+                              'h-7 rounded border bg-bg-1 px-1 text-xs disabled:opacity-100',
+                              locks.has(rowLockKey(p.playerId, 'role'))
+                                ? 'border-[color:var(--gold)]/70 text-gold'
+                                : 'border-line text-text-lo',
+                            )}
+                          >
+                            {ROLES.map((role) => <option key={role} value={role}>{roleLabel(role)}</option>)}
+                          </select>
+                          <LockToggle
+                            locked={locks.has(rowLockKey(p.playerId, 'role'))}
+                            onToggle={() => toggleLock(rowLockKey(p.playerId, 'role'))}
+                            label={`${p.nickname} — pozycja`}
+                          />
+                        </div>
                       </td>
                       <td className="px-2 py-1.5">
-                        <select
-                          value={r.championId}
-                          onChange={(e) =>
-                            setField(p.playerId, 'championId', e.target.value ? Number(e.target.value) : '')
-                          }
-                          className="h-8 w-36 rounded border border-line bg-bg-1 px-2 text-text-hi"
-                        >
-                          <option value="">—</option>
-                          {championOptions.map((c) => (
-                            <option key={c.id} value={c.id}>
-                              {c.name}
-                            </option>
-                          ))}
-                        </select>
-                      </td>
-                      {NUM_FIELDS.map((f) => (
-                        <td key={f.key} className="px-1 py-1.5">
-                          <input
-                            type="number"
-                            min={0}
-                            value={r[f.key] as number}
-                            onChange={(e) => setField(p.playerId, f.key, Math.max(0, Number(e.target.value)))}
-                            className="num h-8 w-16 rounded border border-line bg-bg-1 px-2 text-center text-text-hi"
+                        <div className="group/field relative inline-block">
+                          <select
+                            value={r.championId}
+                            disabled={locks.has(rowLockKey(p.playerId, 'championId'))}
+                            onChange={(e) =>
+                              setField(p.playerId, 'championId', e.target.value ? Number(e.target.value) : '')
+                            }
+                            className={cn(
+                              'h-8 w-36 rounded border bg-bg-1 px-2 disabled:opacity-100',
+                              locks.has(rowLockKey(p.playerId, 'championId'))
+                                ? 'border-[color:var(--gold)]/70 text-gold'
+                                : 'border-line text-text-hi',
+                            )}
+                          >
+                            <option value="">—</option>
+                            {championOptions.map((c) => (
+                              <option key={c.id} value={c.id}>
+                                {c.name}
+                              </option>
+                            ))}
+                          </select>
+                          <LockToggle
+                            locked={locks.has(rowLockKey(p.playerId, 'championId'))}
+                            onToggle={() => toggleLock(rowLockKey(p.playerId, 'championId'))}
+                            label={`${p.nickname} — champion`}
                           />
-                        </td>
-                      ))}
+                        </div>
+                      </td>
+                      {NUM_FIELDS.map((f) => {
+                        const lockKey = rowLockKey(p.playerId, f.key);
+                        const locked = locks.has(lockKey);
+                        return (
+                          <td key={f.key} className="px-1 py-1.5">
+                            <div className="group/field relative inline-block">
+                              <input
+                                type="number"
+                                min={0}
+                                value={r[f.key] as number}
+                                readOnly={locked}
+                                onChange={(e) => setField(p.playerId, f.key, Math.max(0, Number(e.target.value)))}
+                                className={cn(
+                                  'num h-8 w-16 rounded border bg-bg-1 px-2 text-center',
+                                  locked ? 'border-[color:var(--gold)]/70 text-gold' : 'border-line text-text-hi',
+                                )}
+                              />
+                              <LockToggle
+                                locked={locked}
+                                onToggle={() => toggleLock(lockKey)}
+                                label={`${p.nickname} — ${f.desc}`}
+                              />
+                            </div>
+                          </td>
+                        );
+                      })}
                     </tr>
                   );
                 })}
@@ -396,7 +584,9 @@ export function ResultsForm({
       </div>
 
       <p className="text-xs text-text-lo">
-        Najedź na nagłówki kolumn (K / D / A / CS / …), aby zobaczyć, co oznaczają. Poniżej wyjaśnienie punktacji.
+        Najedź na nagłówki kolumn (K / D / A / CS / …), aby zobaczyć, co oznaczają. Najedź na pole,
+        aby odsłonić kłódkę — zablokowanego pola AI nie nadpisze przy kolejnym wgraniu screenów.
+        Poniżej wyjaśnienie punktacji.
       </p>
       <ScoringInfo />
     </div>
