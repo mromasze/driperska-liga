@@ -1,0 +1,36 @@
+<!-- Driperska Liga — horizontal lockup (crest + wordmark). For og:image, stream overlays and
+     anywhere the mark needs the name spelled out.
+
+     The wordmark is live <text> in Chakra Petch. That resolves on the site (the font is loaded in
+     index.html) but NOT in a standalone viewer or when rasterised on a machine without the font —
+     convert the two <text> nodes to outlines before shipping this file anywhere external. -->
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 760 200" width="760" height="200">
+  <defs>
+    <linearGradient id="gold" x1="0" y1="0" x2="0.3" y2="1">
+      <stop offset="0" stop-color="#ffe4a3"/>
+      <stop offset="0.5" stop-color="#f2c14e"/>
+      <stop offset="1" stop-color="#b98a2e"/>
+    </linearGradient>
+    <linearGradient id="goldText" x1="0" y1="0" x2="0.2" y2="1">
+      <stop offset="0" stop-color="#ffe4a3"/>
+      <stop offset="0.55" stop-color="#f2c14e"/>
+      <stop offset="1" stop-color="#b98a2e"/>
+    </linearGradient>
+  </defs>
+
+  <g transform="translate(16,20) scale(0.625)">
+    <path fill="none" stroke="url(#gold)" stroke-width="7" d="M128,14 L242,128 L128,242 L14,128 Z"/>
+    <path fill="none" stroke="#35e0e0" stroke-opacity="0.45" stroke-width="1.5" d="M128,30 L226,128 L128,226 L30,128 Z"/>
+    <g transform="translate(128,128) scale(0.58) translate(-128,-128)">
+      <path fill="url(#gold)" fill-rule="evenodd"
+            d="M40,68 H104 L130,94 V162 L104,188 H40 Z
+               M68,96 H92 L102,106 V150 L92,160 H68 Z"/>
+      <path fill="url(#gold)" d="M150,68 H178 V160 H216 V188 H150 Z"/>
+    </g>
+  </g>
+
+  <text x="200" y="112" font-family="Chakra Petch, Inter, sans-serif" font-weight="700"
+        font-size="58" letter-spacing="1.5" fill="#f3f6ff">DRIPERSKA <tspan fill="url(#goldText)">LIGA</tspan></text>
+  <text x="203" y="142" font-family="Chakra Petch, Inter, sans-serif" font-weight="600"
+        font-size="14" letter-spacing="3.1" fill="#6a7690">INHOUSE LEAGUE OF LEGENDS</text>
+</svg>

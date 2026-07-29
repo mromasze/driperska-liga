@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { NavLink, Outlet, Link, useLocation } from 'react-router-dom';
 import { cn } from '../lib/cn';
+import { LogoHex, LogoMono } from '../components/brand/Logo';
 import { useAuthStore } from '../store/auth';
 import { APP_VERSION } from '../version';
 
@@ -23,9 +24,8 @@ export function PublicLayout() {
       <header className="sticky top-0 z-40 border-b border-line bg-[color:var(--bg)]/70 backdrop-blur-xl">
         <div className="mx-auto flex h-16 max-w-content items-center justify-between px-4 sm:px-6">
           <Link to="/" className="group flex min-w-0 items-center gap-2.5">
-            <span className="grid h-9 w-9 shrink-0 place-items-center rounded-md bg-gradient-to-b from-gold-soft to-gold text-[#1a1205] shadow-glow-gold">
-              <span className="font-display text-lg font-bold">D</span>
-            </span>
+            {/* The hex carries its own cyan bloom, so no shadow-glow-gold here. */}
+            <LogoHex size={38} className="shrink-0" />
             <span className="truncate font-display text-base font-bold tracking-wide text-text-hi sm:text-lg">
               DRIPERSKA <span className="text-gradient-gold">LIGA</span>
             </span>
@@ -81,6 +81,7 @@ export function PublicLayout() {
       <main className="mx-auto w-full max-w-content flex-1 px-4 py-8 sm:px-6 sm:py-10"><Outlet /></main>
       <footer className="border-t border-line py-8 text-center text-xs text-text-lo">
         <div className="mx-auto max-w-content space-y-1 px-4">
+          <LogoMono size={22} className="mx-auto mb-3 opacity-35" />
           <div>Driperska Liga {APP_VERSION} · inhouse League of Legends</div>
           <div>
             Stworzone przez{' '}

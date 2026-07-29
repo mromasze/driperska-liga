@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { useLogin, usePublicConfig } from '../../api/hooks/auth';
 import { Turnstile } from '../../components/Turnstile';
+import { LogoCrest } from '../../components/brand/Logo';
 import { Button } from '../../components/ui/Button';
 import { ApiError } from '../../api/client';
 import { useAuthStore } from '../../store/auth';
@@ -49,9 +50,7 @@ export function LoginPage() {
     <div className="grid min-h-screen place-items-center p-4">
       <div className="glass grid-tex w-full max-w-sm p-8">
         <div className="mb-6 text-center">
-          <div className="mx-auto mb-3 grid h-12 w-12 place-items-center rounded-lg bg-gradient-to-b from-gold-soft to-gold text-[#1a1205] shadow-glow-gold">
-            <span className="font-display text-2xl font-bold">D</span>
-          </div>
+          <LogoCrest size={76} className="mx-auto mb-3" title="Driperska Liga" />
           <h1 className="font-display text-2xl">Logowanie</h1>
           <p className="mt-1 text-sm text-text-lo">Panel gracza i administracji · Driperska Liga</p>
         </div>

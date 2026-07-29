@@ -1,0 +1,24 @@
+<!-- Driperska Liga — Crest mark. Main logo; evolution of the pre-0.4.6 rhombus favicon.
+     Keep in sync with LogoCrest in src/components/brand/Logo.tsx. -->
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 256 256" width="256" height="256">
+  <defs>
+    <linearGradient id="gold" x1="0" y1="0" x2="0.3" y2="1">
+      <stop offset="0" stop-color="#ffe4a3"/>
+      <stop offset="0.5" stop-color="#f2c14e"/>
+      <stop offset="1" stop-color="#b98a2e"/>
+    </linearGradient>
+    <radialGradient id="amb" cx="0.5" cy="0.5" r="0.5">
+      <stop offset="0" stop-color="#9b8cff" stop-opacity="0.22"/>
+      <stop offset="1" stop-color="#9b8cff" stop-opacity="0"/>
+    </radialGradient>
+  </defs>
+  <circle cx="128" cy="128" r="120" fill="url(#amb)"/>
+  <path fill="none" stroke="url(#gold)" stroke-width="7" d="M128,14 L242,128 L128,242 L14,128 Z"/>
+  <path fill="none" stroke="#35e0e0" stroke-opacity="0.45" stroke-width="1.5" d="M128,30 L226,128 L128,226 L30,128 Z"/>
+  <g transform="translate(128,128) scale(0.58) translate(-128,-128)">
+    <path fill="url(#gold)" fill-rule="evenodd"
+          d="M40,68 H104 L130,94 V162 L104,188 H40 Z
+             M68,96 H92 L102,106 V150 L92,160 H68 Z"/>
+    <path fill="url(#gold)" d="M150,68 H178 V160 H216 V188 H150 Z"/>
+  </g>
+</svg>

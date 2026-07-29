@@ -1,0 +1,38 @@
+<!-- Driperska Liga — Hex mark. Used in every navbar.
+     Standalone copy: the interior is hard-coded #0d1120 instead of var(--bg-1), because a
+     standalone SVG has no theme to read from. Keep the geometry in sync with LogoHex in
+     src/components/brand/Logo.tsx. -->
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 256 256" width="256" height="256">
+  <defs>
+    <linearGradient id="gold" x1="0" y1="0" x2="0.3" y2="1">
+      <stop offset="0" stop-color="#ffe4a3"/>
+      <stop offset="0.5" stop-color="#f2c14e"/>
+      <stop offset="1" stop-color="#b98a2e"/>
+    </linearGradient>
+    <pattern id="grid" width="18" height="18" patternUnits="userSpaceOnUse">
+      <path d="M18,0 V18 M0,18 H18" fill="none" stroke="#ffffff" stroke-opacity="0.06" stroke-width="1"/>
+    </pattern>
+    <clipPath id="hexclip">
+      <path d="M128,20 L221,74 L221,182 L128,236 L35,182 L35,74 Z"/>
+    </clipPath>
+    <filter id="cyanglow" x="-50%" y="-50%" width="200%" height="200%">
+      <feGaussianBlur stdDeviation="5"/>
+    </filter>
+  </defs>
+  <g clip-path="url(#hexclip)">
+    <rect width="256" height="256" fill="#0d1120"/>
+    <rect width="256" height="256" fill="url(#grid)"/>
+  </g>
+  <path fill="none" stroke="#35e0e0" stroke-opacity="0.5" stroke-width="4" filter="url(#cyanglow)"
+        d="M128,20 L221,74 L221,182 L128,236 L35,182 L35,74 Z"/>
+  <path fill="none" stroke="url(#gold)" stroke-width="6"
+        d="M128,20 L221,74 L221,182 L128,236 L35,182 L35,74 Z"/>
+  <path fill="none" stroke="#35e0e0" stroke-width="3" stroke-linecap="square"
+        d="M112,29 L128,38 L144,29 M112,227 L128,218 L144,227"/>
+  <g transform="translate(128,128) scale(0.6) translate(-128,-128)">
+    <path fill="url(#gold)" fill-rule="evenodd"
+          d="M40,68 H104 L130,94 V162 L104,188 H40 Z
+             M68,96 H92 L102,106 V150 L92,160 H68 Z"/>
+    <path fill="url(#gold)" d="M150,68 H178 V160 H216 V188 H150 Z"/>
+  </g>
+</svg>

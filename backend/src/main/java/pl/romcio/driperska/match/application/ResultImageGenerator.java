@@ -17,6 +17,7 @@ import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 import javax.imageio.ImageIO;
 import org.springframework.stereotype.Component;
+import pl.romcio.driperska.common.image.BrandMark;
 
 /**
  * Renders a match scoreboard to a PNG designed to mirror the web scoreboard: dark rounded team
@@ -87,6 +88,11 @@ public class ResultImageGenerator {
     private void drawHeader(Graphics2D g, Card card) {
         int cx = W / 2;
         Color dim = new Color(0xC9, 0xCC, 0xD4);
+
+        // Brand mark in the top-left corner, like a broadcast bug. Drawn in this card's own GOLD
+        // rather than BrandMark.GOLD so it matches the MVP crown alongside it — the card palette is
+        // deliberately a shade off the web tokens.
+        BrandMark.draw(g, PAD, 18f, 22f, GOLD);
 
         // title at the very top, centred and dim
         g.setFont(font(Font.BOLD, 12));

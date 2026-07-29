@@ -1,5 +1,6 @@
 import { Link, NavLink, Outlet, useNavigate } from 'react-router-dom';
 import { useLogout } from '../api/hooks/auth';
+import { LogoHex } from '../components/brand/Logo';
 import { useAuthStore } from '../store/auth';
 
 export function PlayerLayout() {
@@ -12,7 +13,7 @@ export function PlayerLayout() {
       <header className="sticky top-0 z-40 border-b border-line bg-[color:var(--bg)]/80 backdrop-blur-xl">
         <div className="mx-auto flex h-16 max-w-content items-center justify-between px-4 sm:px-6">
           <Link to="/panel" className="flex items-center gap-2.5">
-            <span className="grid h-9 w-9 place-items-center rounded-md bg-gradient-to-b from-gold-soft to-gold font-display font-bold text-[#1a1205]">D</span>
+            <LogoHex size={36} className="shrink-0" />
             <span className="font-display font-bold text-text-hi">STREFA GRACZA</span>
           </Link>
           <nav className="flex items-center gap-2 text-sm">

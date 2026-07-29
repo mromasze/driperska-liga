@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { NavLink, Outlet, Link, useNavigate, useLocation } from 'react-router-dom';
 import { cn } from '../lib/cn';
+import { LogoHex } from '../components/brand/Logo';
 import { useAuthStore } from '../store/auth';
 import { useLogout } from '../api/hooks/auth';
 import { useMatches } from '../api/hooks/matches';
@@ -119,9 +120,7 @@ export function AdminLayout() {
     <div className="flex min-h-screen">
       <aside className="hidden w-60 shrink-0 flex-col border-r border-line bg-[color:var(--bg-1)]/60 p-4 md:flex">
         <Link to="/" className="mb-8 flex items-center gap-2.5 px-2">
-          <span className="grid h-9 w-9 place-items-center rounded-md bg-gradient-to-b from-gold-soft to-gold text-[#1a1205]">
-            <span className="font-display text-lg font-bold">D</span>
-          </span>
+          <LogoHex size={36} className="shrink-0" />
           <span className="font-display font-bold text-text-hi">Panel</span>
         </Link>
         <nav className="flex flex-1 flex-col gap-1">{nav()}</nav>
@@ -140,9 +139,7 @@ export function AdminLayout() {
       <div className="min-w-0 flex-1">
         <header className="sticky top-0 z-30 flex items-center justify-between border-b border-line bg-[color:var(--bg-1)]/95 px-4 py-3 backdrop-blur md:hidden">
           <Link to="/" className="flex items-center gap-2">
-            <span className="grid h-8 w-8 place-items-center rounded-md bg-gradient-to-b from-gold-soft to-gold text-[#1a1205]">
-              <span className="font-display text-base font-bold">D</span>
-            </span>
+            <LogoHex size={32} className="shrink-0" />
             <span className="font-display font-bold text-text-hi">{activeItem?.label ?? 'Panel'}</span>
           </Link>
           <button

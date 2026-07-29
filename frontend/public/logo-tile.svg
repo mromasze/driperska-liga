@@ -1,0 +1,20 @@
+<!-- Driperska Liga — Tile mark. Solid gold rhombus, letters knocked out in navy.
+     This is the variant to export to PNG for the Discord bot avatar and the server icon:
+       1024×1024 for the bot/server icon, 512×512 for the PWA icon.
+     The knockout is hard-coded #070912 (not a CSS var) so it survives export. -->
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 256 256" width="256" height="256">
+  <defs>
+    <linearGradient id="gold" x1="0" y1="0" x2="0.3" y2="1">
+      <stop offset="0" stop-color="#ffe4a3"/>
+      <stop offset="0.5" stop-color="#f2c14e"/>
+      <stop offset="1" stop-color="#b98a2e"/>
+    </linearGradient>
+  </defs>
+  <rect x="46" y="46" width="164" height="164" rx="26" fill="url(#gold)" transform="rotate(45 128 128)"/>
+  <g transform="translate(128,128) scale(0.58) translate(-128,-128)">
+    <path fill="#070912" fill-rule="evenodd"
+          d="M40,68 H104 L130,94 V162 L104,188 H40 Z
+             M68,96 H92 L102,106 V150 L92,160 H68 Z"/>
+    <path fill="#070912" d="M150,68 H178 V160 H216 V188 H150 Z"/>
+  </g>
+</svg>

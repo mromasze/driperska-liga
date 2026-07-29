@@ -9,6 +9,7 @@ import { StatTile } from '../components/ui/StatTile';
 import { Button } from '../components/ui/Button';
 import { CardGridSkeleton, EmptyState, ErrorState, TableSkeleton } from '../components/ui/States';
 import { ScoringInfo } from '../components/ScoringInfo';
+import { LogoCrest } from '../components/brand/Logo';
 import { HeroVideoBackground } from '../components/highlight/HeroVideoBackground';
 import { RELEASES } from '../content/releases';
 import { APP_VERSION } from '../version';
@@ -31,6 +32,7 @@ export function HomePage() {
       <section className="glass grid-tex relative min-h-[24rem] overflow-hidden px-6 py-12 sm:px-12 sm:py-16">
         <HeroVideoBackground />
         <div className="relative z-10 max-w-2xl animate-rise">
+          <LogoCrest size={72} className="mb-4" title="Driperska Liga" />
           <div className="mb-3 flex items-center gap-3">
             <span className="kicker text-gold">{season.data?.name ?? 'Inhouse League of Legends'}</span>
             <span className="chip border-[color:var(--gold)]/30 text-gold">{APP_VERSION}</span>

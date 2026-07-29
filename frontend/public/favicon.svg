@@ -1,5 +1,8 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32">
-  <rect width="32" height="32" rx="6" fill="#0A0E1A" />
-  <path d="M16 5 L27 16 L16 27 L5 16 Z" fill="none" stroke="#C8A24B" stroke-width="2" />
-  <path d="M16 11 L21 16 L16 21 L11 16 Z" fill="#C8A24B" />
+<!-- Driperska Liga — Mono mark. Flat gold, no frame: the only variant that stays legible at 16px.
+     Keep in sync with LogoMono in src/components/brand/Logo.tsx. -->
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 256 256">
+  <path fill="#f2c14e" fill-rule="evenodd"
+        d="M40,68 H104 L130,94 V162 L104,188 H40 Z
+           M68,96 H92 L102,106 V150 L92,160 H68 Z"/>
+  <path fill="#f2c14e" d="M150,68 H178 V160 H216 V188 H150 Z"/>
 </svg>

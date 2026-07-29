@@ -14,6 +14,7 @@ import java.util.ArrayList;
 import java.util.List;
 import javax.imageio.ImageIO;
 import org.springframework.stereotype.Component;
+import pl.romcio.driperska.common.image.BrandMark;
 
 /** Renders a patch-notes card (version, title, bullet list) as a PNG, styled like the result card. */
 @Component
@@ -67,10 +68,13 @@ public class PatchNotesImageGenerator {
         g.setStroke(new BasicStroke(2f));
         g.drawRoundRect(PAD / 2, PAD / 2, W - PAD, height - PAD, 28, 28);
 
-        // Brand row + version pill
+        // Brand row: mark, then wordmark, then the version pill on the right.
+        float markHeight = 20f;
+        BrandMark.draw(g, PAD, PAD + 3f, markHeight, GOLD);
+        int brandX = PAD + Math.round(BrandMark.widthFor(markHeight)) + 12;
         g.setFont(brandFont);
         g.setColor(GOLD);
-        g.drawString("DRIPERSKA LIGA · PATCH NOTES", PAD, PAD + 20);
+        g.drawString("DRIPERSKA LIGA · PATCH NOTES", brandX, PAD + 20);
         g.setFont(metaFont);
         FontMetrics mfm = g.getFontMetrics();
         String pill = version;
