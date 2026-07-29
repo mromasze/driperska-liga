@@ -30,3 +30,15 @@ export const AD_SLOTS: Record<AdSlotName, string | null> = {
 
 /** True once at least one unit is configured — used to skip loading the script entirely. */
 export const ADS_CONFIGURED = Object.values(AD_SLOTS).some(Boolean);
+
+export const ADSENSE_SCRIPT_ID = 'adsense-loader';
+
+/**
+ * Whether Google's script is already in the document.
+ *
+ * Consent withdrawal needs this: a script that has run cannot be unrun, so downgrading consent
+ * mid-visit only takes real effect after a reload.
+ */
+export function adsenseLoaderPresent(): boolean {
+  return document.getElementById(ADSENSE_SCRIPT_ID) !== null;
+}

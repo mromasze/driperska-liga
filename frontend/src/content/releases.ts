@@ -11,6 +11,17 @@ export interface ReleaseNote {
  */
 export const RELEASES: ReleaseNote[] = [
   {
+    version: 'v0.4.8',
+    date: '2026-07-29',
+    title: 'Zgoda na reklamy',
+    changes: [
+      'Przy pierwszym wejściu pojawia się panel zgody na reklamy: pełna zgoda, tylko niespersonalizowane albo brak reklam. Bez odpowiedzi skrypt reklamowy nie jest w ogóle pobierany.',
+      'Odmowa jest jednym kliknięciem i wygląda tak samo jak zgoda — panel nie zasłania też strony, więc ranking, mecze i draft działają identycznie w każdym wariancie.',
+      'Decyzję zmienisz w każdej chwili linkiem „Prywatność i reklamy” w stopce albo „Ustawienia” przy dowolnym bloku reklamowym.',
+      'Pytamy tylko o reklamy — strona nie ma analityki ani wtyczek społecznościowych, więc nie ma o co więcej pytać.',
+    ],
+  },
+  {
     version: 'v0.4.7',
     date: '2026-07-29',
     title: 'Archiwum meczów, ekran ładowania i logo w jednej wersji',

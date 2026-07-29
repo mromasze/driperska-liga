@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { NavLink, Outlet, Link, useLocation } from 'react-router-dom';
 import { cn } from '../lib/cn';
 import { LogoHex } from '../components/brand/Logo';
+import { ConsentSettingsButton } from '../components/consent/ConsentBanner';
 import { useAuthStore } from '../store/auth';
 import { APP_VERSION } from '../version';
 
@@ -84,10 +85,14 @@ export function PublicLayout() {
         <div className="mx-auto max-w-content space-y-1 px-4">
           <LogoHex size={30} className="mx-auto mb-3 opacity-70" />
           <div>Driperska Liga {APP_VERSION} · inhouse League of Legends</div>
-          <div>
-            Stworzone przez{' '}
-            <a href="https://mromasze.github.io/" target="_blank" rel="noopener noreferrer"
-              className="text-gold hover:underline">mromasze</a>
+          <div className="flex flex-wrap items-center justify-center gap-x-3 gap-y-1">
+            <span>
+              Stworzone przez{' '}
+              <a href="https://mromasze.github.io/" target="_blank" rel="noopener noreferrer"
+                className="text-gold hover:underline">mromasze</a>
+            </span>
+            <span aria-hidden="true">·</span>
+            <ConsentSettingsButton />
           </div>
         </div>
       </footer>
