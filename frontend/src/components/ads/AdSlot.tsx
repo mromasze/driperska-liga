@@ -1,8 +1,10 @@
 import { useEffect, useRef } from 'react';
+import { Link } from 'react-router-dom';
 import {
   ADSENSE_CLIENT,
   ADSENSE_SCRIPT_ID,
   AD_SLOTS,
+  CMP_MODE,
   type AdSlotName,
 } from '../../lib/ads';
 import { adsAllowed, personalizedAdsAllowed, useConsentStore } from '../../store/consent';
@@ -56,8 +58,11 @@ export function AdSlot({
   const slot = AD_SLOTS[name];
   const decision = useConsentStore((s) => s.decision);
   const reopen = useConsentStore((s) => s.reopen);
-  const allowed = adsAllowed(decision);
-  const personalized = personalizedAdsAllowed(decision);
+  const googleCmp = CMP_MODE === 'google';
+  // Under Google's CMP the loader carries the consent dialog, so it must run before an answer
+  // exists and Google — not this component — decides what kind of ad is served.
+  const allowed = googleCmp || adsAllowed(decision);
+  const personalized = googleCmp || personalizedAdsAllowed(decision);
   const pushed = useRef(false);
 
   useEffect(() => {
@@ -107,15 +112,25 @@ export function AdSlot({
         <div className="kicker text-[0.6rem] opacity-70">
           Reklama{!personalized && ' · niespersonalizowana'}
         </div>
-        {/* Wherever an ad appears, the way to change your mind appears with it. The player panel has
-            no footer, so without this the decision would be unreachable from behind the login. */}
-        <button
-          type="button"
-          onClick={reopen}
-          className="text-[0.6rem] text-text-lo underline decoration-dotted underline-offset-2 hover:text-text"
-        >
-          Ustawienia
-        </button>
+        {/* Wherever an ad appears, so does the way to understand or change it. The player panel has
+            no footer, so without this both would be unreachable from behind the login. Under
+            Google's CMP the panel is Google's to reopen, so this points at the policy instead. */}
+        {googleCmp ? (
+          <Link
+            to="/privacy"
+            className="text-[0.6rem] text-text-lo underline decoration-dotted underline-offset-2 hover:text-text"
+          >
+            Prywatność
+          </Link>
+        ) : (
+          <button
+            type="button"
+            onClick={reopen}
+            className="text-[0.6rem] text-text-lo underline decoration-dotted underline-offset-2 hover:text-text"
+          >
+            Ustawienia
+          </button>
+        )}
       </div>
       <ins
         className="adsbygoogle block"

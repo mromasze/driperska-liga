@@ -6,7 +6,7 @@ import {
   useConsentStore,
   type ConsentDecision,
 } from '../../store/consent';
-import { adsenseLoaderPresent } from '../../lib/ads';
+import { adsenseLoaderPresent, CMP_MODE } from '../../lib/ads';
 import { Button } from '../ui/Button';
 import { LogoHex } from '../brand/Logo';
 
@@ -32,7 +32,9 @@ export function ConsentBanner() {
   const close = useConsentStore((s) => s.close);
   const [details, setDetails] = useState(false);
 
-  const open = decision === null || reopened;
+  // Google's CMP owns the dialog on that path. Two consent panels on one page is a terrible
+  // experience and grounds for rejecting the site, so this one stands down entirely.
+  const open = CMP_MODE === 'own' && (decision === null || reopened);
 
   // Mirror a restored decision into Consent Mode on load, so the declared state matches the stored
   // one even when the user never interacts this visit.
@@ -153,12 +155,16 @@ export function ConsentBanner() {
   );
 }
 
-/** Footer entry point, so a decision can always be revisited. Required, not a nicety. */
+/**
+ * Footer entry point for the consent decision. Renders nothing under Google's CMP, which brings its
+ * own way back into the dialog — there the footer carries the privacy policy link instead.
+ */
 export function ConsentSettingsButton() {
   const reopen = useConsentStore((s) => s.reopen);
+  if (CMP_MODE !== 'own') return null;
   return (
     <button type="button" onClick={reopen} className="text-gold hover:underline">
-      Prywatność i reklamy
+      Ustawienia reklam
     </button>
   );
 }

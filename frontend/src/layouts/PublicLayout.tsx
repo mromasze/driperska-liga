@@ -92,6 +92,7 @@ export function PublicLayout() {
                 className="text-gold hover:underline">mromasze</a>
             </span>
             <span aria-hidden="true">·</span>
+            <Link to="/privacy" className="text-gold hover:underline">Polityka prywatności</Link>
             <ConsentSettingsButton />
           </div>
         </div>

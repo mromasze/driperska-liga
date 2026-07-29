@@ -3,6 +3,15 @@
 Wszystkie istotne zmiany Driperskiej Ligi są opisywane tutaj oraz w
 `frontend/src/content/releases.ts`, który zasila patch notes na stronie głównej.
 
+## v0.4.9 — 2026-07-29
+
+- **Polityka prywatności** pod `/privacy`, linkowana ze stopki oraz z etykiety każdego bloku reklamowego (panel gracza nie ma stopki, więc bez tego byłaby nieosiągalna spod logowania). Napisana pod to, co kod faktycznie robi, a nie z szablonu — każdy wymieniony odbiorca odpowiada realnej integracji w repozytorium.
+- Ujawnia pełną listę odbiorców, która jest znacznie dłuższa niż sam AdSense: **Riot Games** (Riot ID, PUUID, dane meczów), **Discord** (identyfikator konta, treść wiadomości, kliknięcia obecności), **Cloudflare** (Turnstile i ruch), **Google Fonts** (adres IP przy każdym wejściu, bo kroje pisma lecą z CDN Google) oraz **Ollama** — `OLLAMA_BASE_URL` domyślnie wskazuje `https://ollama.com`, więc zrzuty ekranu z pseudonimami graczy trafiają do zewnętrznego modelu poza EOG. Bez sprawdzenia kodu ta ostatnia pozycja nie trafiłaby do dokumentu.
+- Opisuje też dwie rzeczy, które są realnym ryzykiem dla użytkownika, a nie wymogiem szablonu: opcja **„Zapamiętaj mnie” zapisuje login i hasło w pamięci lokalnej przeglądarki** (sesje wygasają przy każdym restarcie backendu, więc to jedyny sposób ich odtworzenia), oraz **bot Discord wysyła wygenerowane hasło jawnie w wiadomości prywatnej**, gdzie zostaje w historii rozmowy.
+- Administrator jest wskazany pseudonimem `mromasze`, a pełne dane identyfikacyjne udostępniane na żądanie. To kompromis: RODO oczekuje tożsamości administratora, więc nie jest to podręcznikowa zgodność — dla serwisu hobbystycznego prowadzonego dla zamkniętej grupy jest to jednak obronne i nie blokuje weryfikacji w AdSense.
+- **Przełączenie na certyfikowany CMP Google.** Nowa stała `CMP_MODE` w `lib/ads.ts` rozstrzyga, kto zarządza zgodą. Przy `'google'` własny banner nie renderuje się w ogóle, a loader AdSense ładuje się **przed** uzyskaniem zgody — to konieczne, bo Google dostarcza swój panel zgody właśnie przez `adsbygoogle.js`, więc bramkowanie skryptu oznaczałoby, że dialog nigdy się nie pojawi. Dwa panele zgody na jednej stronie to zła obsługa i podstawa do odrzucenia witryny.
+- Przy `'google'` pomijamy też własne sygnały Consent Mode — jeden system ma być właścicielem zgody, a drugi zapisujący te same sygnały mógłby tylko zamazać obraz. Banner z 0.4.8 zostaje w repozytorium jako działający wariant `'own'`; przełączenie to zmiana jednej stałej.
+
 ## v0.4.8 — 2026-07-29
 
 - **Panel zgody na reklamy.** Do tej pory sloty AdSense pobierałyby skrypt Google przy pierwszym wejściu, bez pytania nikogo o zgodę. Teraz nic nie leci na zewnątrz, dopóki nie ma odpowiedzi: trzy warianty — „Zaakceptuj wszystko” (reklamy spersonalizowane), „Tylko niezbędne” (reklamy niespersonalizowane) i „Bez reklam” (skrypt nie jest pobierany w ogóle).
