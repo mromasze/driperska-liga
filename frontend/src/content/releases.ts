@@ -11,6 +11,17 @@ export interface ReleaseNote {
  */
 export const RELEASES: ReleaseNote[] = [
   {
+    version: 'v0.4.6',
+    date: '2026-07-29',
+    title: 'Logo ligi i blokady pól przy odczycie ze screenshotów',
+    changes: [
+      'Liga ma własne logo — monogram DL w czterech wariantach, w kolorach strony. Znak wchodzi na navbary, stronę główną, ekran logowania i favicon.',
+      'Karty wyników i patch notes wysyłane na Discorda są teraz podpisane logo w nagłówku.',
+      'Przy wpisywaniu wyniku każde pole ma małą kłódkę: zablokowane pole nie zostanie nadpisane, gdy dorzucisz kolejny screenshot. Kłódka odsłania się dopiero po najechaniu na pole, żeby nie zasłaniała liczb.',
+      'Blokady obejmują pozycję, championa i wszystkie statystyki każdego gracza, a także zwycięską stronę i czas gry. Do tego licznik zablokowanych pól oraz „Zablokuj / Odblokuj wszystko”.',
+    ],
+  },
+  {
     version: 'v0.4.5',
     date: '2026-07-28',
     title: 'Konfiguracja i AI z panelu, test draftu',
