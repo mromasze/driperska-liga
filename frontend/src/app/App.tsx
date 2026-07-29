@@ -3,6 +3,7 @@ import { BrowserRouter } from 'react-router-dom';
 import { AppProviders } from './providers';
 import { AppRoutes } from './router';
 import { ServerGate } from '../components/system/ServerGate';
+import { SplashGate } from '../components/system/SplashGate';
 import { sound } from '../lib/sound';
 
 export function App() {
@@ -13,9 +14,11 @@ export function App() {
   return (
     <AppProviders>
       <BrowserRouter>
-        <ServerGate>
-          <AppRoutes />
-        </ServerGate>
+        <SplashGate>
+          <ServerGate>
+            <AppRoutes />
+          </ServerGate>
+        </SplashGate>
       </BrowserRouter>
     </AppProviders>
   );

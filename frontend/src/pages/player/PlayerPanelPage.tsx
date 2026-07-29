@@ -10,6 +10,7 @@ import { useMyPlayer, useUpdateMyPlayer, useUploadMyAvatar } from '../../api/hoo
 import type { DrawLobby, LobbyPlayer, PlannedMatch, Role } from '../../api/types';
 import type { StreamState } from '../../api/hooks/drawLobby';
 import { Avatar } from '../../components/ui/Avatar';
+import { AdSlot } from '../../components/ads/AdSlot';
 import { Badge } from '../../components/ui/Badge';
 import { Button } from '../../components/ui/Button';
 import { CardSkeleton, ErrorState, SectionSkeleton } from '../../components/ui/States';
@@ -181,6 +182,10 @@ export function PlayerPanelPage() {
           )}
 
           <UpcomingMatches />
+
+          {/* Dashboard only. The draft tab is live and time-critical — nothing competes with it,
+              and the ratings/profile tabs are short forms where an ad would dominate the page. */}
+          <AdSlot name="panelDashboard" />
         </div>
       )}
 

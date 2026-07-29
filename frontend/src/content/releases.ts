@@ -11,6 +11,17 @@ export interface ReleaseNote {
  */
 export const RELEASES: ReleaseNote[] = [
   {
+    version: 'v0.4.7',
+    date: '2026-07-29',
+    title: 'Archiwum meczów, ekran ładowania i logo w jednej wersji',
+    changes: [
+      'Nowa zakładka „Mecze” z pełnym archiwum — wcześniej widoczne było tylko sześć ostatnich wyników na stronie głównej.',
+      'Strona wita ekranem ładowania w kolorach ligi, który w tle buforuje klipy z zagrywek, żeby hero startowało od razu. Otwiera się najpóźniej po 6 sekundach, niezależnie od łącza.',
+      'Logo jest teraz jedno i to samo w każdym miejscu — ten sam znak, co w nawigacji.',
+      'Pojawiły się nieliczne, wyciszone bloki reklamowe na stronie głównej i w panelu gracza. Nie ma ich nad zgięciem strony, w drafcie ani w panelu admina.',
+    ],
+  },
+  {
     version: 'v0.4.6',
     date: '2026-07-29',
     title: 'Logo ligi i blokady pól przy odczycie ze screenshotów',

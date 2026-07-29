@@ -8,6 +8,7 @@ import { RankingPage } from '../pages/RankingPage';
 import { PlayersPage } from '../pages/PlayersPage';
 import { PlayerProfilePage } from '../pages/PlayerProfilePage';
 import { MatchPage } from '../pages/MatchPage';
+import { MatchesPage } from '../pages/MatchesPage';
 import { PatchNotesPage } from '../pages/PatchNotesPage';
 import { NotFoundPage } from '../pages/NotFoundPage';
 import { LoginPage } from '../pages/admin/LoginPage';
@@ -33,6 +34,7 @@ export function AppRoutes() {
         <Route path="/ranking" element={<RankingPage />} />
         <Route path="/players" element={<PlayersPage />} />
         <Route path="/players/:id" element={<PlayerProfilePage />} />
+        <Route path="/matches" element={<MatchesPage />} />
         <Route path="/matches/:id" element={<MatchPage />} />
         <Route path="/patch-notes" element={<PatchNotesPage />} />
       </Route>
