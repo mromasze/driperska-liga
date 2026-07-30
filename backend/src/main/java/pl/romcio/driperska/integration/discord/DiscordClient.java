@@ -142,6 +142,33 @@ public class DiscordClient {
     }
 
     /**
+     * Tells the admins that a moderator's match is waiting in the approval queue. No @everyone —
+     * this is a work item for one or two people, not an announcement for the server.
+     */
+    public Delivery sendModerationNotice(String content) {
+        if (!properties.moderationChannelConfigured()) {
+            return Delivery.failed("Brak kanału moderacji Discord (DISCORD_MODERATION_CHANNEL_ID / "
+                    + "DISCORD_ANNOUNCE_CHANNEL_ID)");
+        }
+        try {
+            client.post().uri(BASE + "/channels/" + properties.moderationChannel() + "/messages")
+                    .header("Authorization", "Bot " + properties.getBotToken())
+                    .body(new MessageRequest(content, new AllowedMentions(List.of(), List.of())))
+                    .retrieve().toBodilessEntity();
+            return Delivery.resultSent(properties.moderationChannel());
+        } catch (RestClientResponseException ex) {
+            int s = ex.getStatusCode().value();
+            String msg = (s == 401) ? "Nieprawidłowy token bota"
+                    : (s == 403) ? "Bot nie ma uprawnień do pisania na kanale moderacji"
+                    : (s == 404) ? "Kanał moderacji nie istnieje — sprawdź DISCORD_MODERATION_CHANNEL_ID"
+                    : "Discord odrzucił powiadomienie moderacji (HTTP " + s + ")";
+            return Delivery.failed(msg);
+        } catch (RestClientException ex) {
+            return Delivery.failed("Brak połączenia z Discordem");
+        }
+    }
+
+    /**
      * Posts an RSVP vote message (Tak/Nie/Może buttons) for a planned match to the vote channel.
      * The button custom_id carries the planned-match id — the gateway listener
      * ({@link DiscordRsvpGateway}) turns clicks into RSVP votes of linked players.

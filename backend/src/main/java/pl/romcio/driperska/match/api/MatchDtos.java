@@ -141,6 +141,8 @@ public final class MatchDtos {
     public record ApprovalResponse(
             ApprovalDecision decision,
             UUID submittedBy,
+            /** Login of whoever entered the results — a moderator's submission has to be attributable. */
+            String submittedByName,
             Instant submittedAt,
             UUID reviewedBy,
             Instant reviewedAt,

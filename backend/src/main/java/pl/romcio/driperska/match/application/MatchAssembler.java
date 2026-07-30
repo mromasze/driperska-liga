@@ -48,6 +48,7 @@ public class MatchAssembler {
     private final PerformanceRatingV2Calculator ratingCalculator;
     private final PerformanceHistoryService historyService;
     private final PointsEngine pointsEngine;
+    private final pl.romcio.driperska.account.application.AccountService accountService;
 
     public MatchAssembler(MatchRepository matchRepository,
                           PlayerRepository playerRepository,
@@ -56,7 +57,8 @@ public class MatchAssembler {
                           ScoringConfigProvider scoringConfigProvider,
                           PerformanceRatingV2Calculator ratingCalculator,
                           PerformanceHistoryService historyService,
-                          PointsEngine pointsEngine) {
+                          PointsEngine pointsEngine,
+                          pl.romcio.driperska.account.application.AccountService accountService) {
         this.matchRepository = matchRepository;
         this.playerRepository = playerRepository;
         this.championRepository = championRepository;
@@ -65,6 +67,7 @@ public class MatchAssembler {
         this.ratingCalculator = ratingCalculator;
         this.historyService = historyService;
         this.pointsEngine = pointsEngine;
+        this.accountService = accountService;
     }
 
     /** Reloads the match inside this read-only transaction so lazy collections resolve safely. */
@@ -79,7 +82,7 @@ public class MatchAssembler {
                 .map(p -> toParticipant(p, players, champions, breakdowns.get(p.getPlayerId())))
                 .toList();
         ApprovalResponse approval = approvalRepository.findByMatchId(match.getId())
-                .map(MatchAssembler::toApproval)
+                .map(this::toApproval)
                 .orElse(null);
         return new MatchResponse(
                 match.getId(), match.getSeasonId(), match.getStatus(), match.getDrawMode(),
@@ -205,9 +208,12 @@ public class MatchAssembler {
         return map;
     }
 
-    private static ApprovalResponse toApproval(MatchApproval a) {
-        return new ApprovalResponse(a.getDecision(), a.getSubmittedBy(), a.getSubmittedAt(),
-                a.getReviewedBy(), a.getReviewedAt(), a.isSignatureConfirmed(),
+    private ApprovalResponse toApproval(MatchApproval a) {
+        String submittedByName = accountService.find(a.getSubmittedBy())
+                .map(account -> account.getUsername())
+                .orElse(null);
+        return new ApprovalResponse(a.getDecision(), a.getSubmittedBy(), submittedByName,
+                a.getSubmittedAt(), a.getReviewedBy(), a.getReviewedAt(), a.isSignatureConfirmed(),
                 a.getSignatureName(), a.getRejectionReason());
     }
 

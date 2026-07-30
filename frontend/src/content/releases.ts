@@ -11,6 +11,69 @@ export interface ReleaseNote {
  */
 export const RELEASES: ReleaseNote[] = [
   {
+    version: 'v0.5.0',
+    date: '2026-07-30',
+    title: 'Moderatorzy',
+    changes: [
+      'Wybrani gracze mogą wprowadzać rozegrane mecze — skład, strony i role, a potem statystyki: ręcznie albo ze zrzutów ekranu przez AI. Mini panel „Wnioski” pojawia się w strefie gracza, obok draftu i profilu.',
+      'Każdy taki mecz czeka w kolejce akceptacji administratora i wchodzi do rankingu dopiero po jego podpisie. Do tego momentu moderator może poprawiać wniosek dowolnie wiele razy.',
+      'Odesłanie do poprawy wraca z powodem, a wniosek, którego nie chcesz już dosyłać, możesz wycofać. Skład podmieniasz przed wysłaniem wyników — potem trzeba poprosić admina o odesłanie wniosku.',
+      'Moderator widzi wyłącznie własne wnioski i nie ma dostępu do panelu administratora. Uprawnienie nadaje i odbiera admin w zakładce „Gracze”.',
+    ],
+  },
+  {
+    version: 'v0.4.10',
+    date: '2026-07-29',
+    title: 'Bez reklam',
+    changes: [
+      'Reklamy zostały usunięte razem z panelem zgody. Strona nie ustawia żadnych plików cookie i nie ma analityki ani narzędzi śledzących.',
+      'Dzięki temu wróciła surowa polityka bezpieczeństwa treści, którą trzeba było rozluźnić na potrzeby skryptu reklamowego.',
+      'Polityka prywatności zostaje — opisuje, jakie dane zbieramy, komu je przekazujemy (Riot, Discord, Cloudflare, Google Fonts) i jak zażądać ich usunięcia.',
+    ],
+  },
+  {
+    version: 'v0.4.9',
+    date: '2026-07-29',
+    title: 'Polityka prywatności',
+    changes: [
+      'Nowa strona „Polityka prywatności” — opisuje dokładnie, jakie dane zbieramy, komu je przekazujemy (Riot, Discord, Cloudflare, Google) i jak zażądać ich usunięcia. Link w stopce.',
+      'Uwaga opisana w polityce: opcja „Zapamiętaj mnie” zapisuje Twoje hasło w pamięci przeglądarki. Nie używaj jej na współdzielonym komputerze.',
+    ],
+  },
+  {
+    version: 'v0.4.8',
+    date: '2026-07-29',
+    title: 'Zgoda na reklamy',
+    changes: [
+      'Przy pierwszym wejściu pojawia się panel zgody na reklamy: pełna zgoda, tylko niespersonalizowane albo brak reklam. Bez odpowiedzi skrypt reklamowy nie jest w ogóle pobierany.',
+      'Odmowa jest jednym kliknięciem i wygląda tak samo jak zgoda — panel nie zasłania też strony, więc ranking, mecze i draft działają identycznie w każdym wariancie.',
+      'Decyzję zmienisz w każdej chwili linkiem „Prywatność i reklamy” w stopce albo „Ustawienia” przy dowolnym bloku reklamowym.',
+      'Pytamy tylko o reklamy — strona nie ma analityki ani wtyczek społecznościowych, więc nie ma o co więcej pytać.',
+    ],
+  },
+  {
+    version: 'v0.4.7',
+    date: '2026-07-29',
+    title: 'Archiwum meczów, ekran ładowania i logo w jednej wersji',
+    changes: [
+      'Nowa zakładka „Mecze” z pełnym archiwum — wcześniej widoczne było tylko sześć ostatnich wyników na stronie głównej.',
+      'Strona wita ekranem ładowania w kolorach ligi, który w tle buforuje klipy z zagrywek, żeby hero startowało od razu. Otwiera się najpóźniej po 6 sekundach, niezależnie od łącza.',
+      'Logo jest teraz jedno i to samo w każdym miejscu — ten sam znak, co w nawigacji.',
+      'Pojawiły się nieliczne, wyciszone bloki reklamowe na stronie głównej i w panelu gracza. Nie ma ich nad zgięciem strony, w drafcie ani w panelu admina.',
+    ],
+  },
+  {
+    version: 'v0.4.6',
+    date: '2026-07-29',
+    title: 'Logo ligi i blokady pól przy odczycie ze screenshotów',
+    changes: [
+      'Liga ma własne logo — monogram DL w czterech wariantach, w kolorach strony. Znak wchodzi na navbary, stronę główną, ekran logowania i favicon.',
+      'Karty wyników i patch notes wysyłane na Discorda są teraz podpisane logo w nagłówku.',
+      'Przy wpisywaniu wyniku każde pole ma małą kłódkę: zablokowane pole nie zostanie nadpisane, gdy dorzucisz kolejny screenshot. Kłódka odsłania się dopiero po najechaniu na pole, żeby nie zasłaniała liczb.',
+      'Blokady obejmują pozycję, championa i wszystkie statystyki każdego gracza, a także zwycięską stronę i czas gry. Do tego licznik zablokowanych pól oraz „Zablokuj / Odblokuj wszystko”.',
+    ],
+  },
+  {
     version: 'v0.4.5',
     date: '2026-07-28',
     title: 'Konfiguracja i AI z panelu, test draftu',

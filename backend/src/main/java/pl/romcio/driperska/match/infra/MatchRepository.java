@@ -67,6 +67,17 @@ public interface MatchRepository extends JpaRepository<Match, UUID> {
                                         Pageable pageable);
     long countByStatus(MatchStatus status);
 
+    /**
+     * A moderator's own submissions (see
+     * {@link pl.romcio.driperska.match.application.MatchSubmissionService}). Cancelled ones are
+     * dropped — they are withdrawn drafts, and keeping them would make the panel look like a bin.
+     */
+    @EntityGraph(attributePaths = "participants")
+    @Query("select m from Match m where m.createdBy = :accountId and m.status <> :excluded" + LIST_ORDER)
+    Page<Match> findSubmissionsByCreator(@Param("accountId") UUID accountId,
+                                         @Param("excluded") MatchStatus excluded,
+                                         Pageable pageable);
+
     // --- admin maintenance (see MatchMaintenanceService) ---
 
     @EntityGraph(attributePaths = "participants")

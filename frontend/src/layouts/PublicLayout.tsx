@@ -1,13 +1,14 @@
 import { useState } from 'react';
 import { NavLink, Outlet, Link, useLocation } from 'react-router-dom';
 import { cn } from '../lib/cn';
-import { LogoHex, LogoMono } from '../components/brand/Logo';
+import { LogoHex } from '../components/brand/Logo';
 import { useAuthStore } from '../store/auth';
 import { APP_VERSION } from '../version';
 
 const NAV = [
   { to: '/', label: 'Start', end: true },
   { to: '/ranking', label: 'Ranking', end: false },
+  { to: '/matches', label: 'Mecze', end: false },
   { to: '/players', label: 'Gracze', end: false },
   { to: '/patch-notes', label: 'Patch notes', end: false },
 ];
@@ -81,12 +82,16 @@ export function PublicLayout() {
       <main className="mx-auto w-full max-w-content flex-1 px-4 py-8 sm:px-6 sm:py-10"><Outlet /></main>
       <footer className="border-t border-line py-8 text-center text-xs text-text-lo">
         <div className="mx-auto max-w-content space-y-1 px-4">
-          <LogoMono size={22} className="mx-auto mb-3 opacity-35" />
+          <LogoHex size={30} className="mx-auto mb-3 opacity-70" />
           <div>Driperska Liga {APP_VERSION} · inhouse League of Legends</div>
-          <div>
-            Stworzone przez{' '}
-            <a href="https://mromasze.github.io/" target="_blank" rel="noopener noreferrer"
-              className="text-gold hover:underline">mromasze</a>
+          <div className="flex flex-wrap items-center justify-center gap-x-3 gap-y-1">
+            <span>
+              Stworzone przez{' '}
+              <a href="https://mromasze.github.io/" target="_blank" rel="noopener noreferrer"
+                className="text-gold hover:underline">mromasze</a>
+            </span>
+            <span aria-hidden="true">·</span>
+            <Link to="/privacy" className="text-gold hover:underline">Polityka prywatności</Link>
           </div>
         </div>
       </footer>

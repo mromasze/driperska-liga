@@ -72,6 +72,9 @@ app:
     announce-channel-id: ${DISCORD_ANNOUNCE_CHANNEL_ID:}
     patch-notes-channel-id: ${DISCORD_PATCH_CHANNEL_ID:}
     vote-channel-id: ${DISCORD_VOTE_CHANNEL_ID:}
+    # Where the bot reports matches sent to the approval queue by a moderator.
+    # Empty = falls back to the announcements channel (the message never pings @everyone).
+    moderation-channel-id: ${DISCORD_MODERATION_CHANNEL_ID:}
   turnstile:
     site-key: ${TURNSTILE_SITE_KEY:}
     secret: ${TURNSTILE_SECRET:}

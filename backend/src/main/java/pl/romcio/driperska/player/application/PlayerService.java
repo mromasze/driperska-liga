@@ -1,6 +1,7 @@
 package pl.romcio.driperska.player.application;
 
 import java.util.List;
+import java.util.Set;
 import java.util.UUID;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
@@ -59,6 +60,39 @@ public class PlayerService {
 
     @Transactional(readOnly = true)
     public List<Player> getAll(List<UUID> ids) { return repository.findByIdIn(ids); }
+
+    /** One player with the moderator permission of their linked account resolved. */
+    @Transactional(readOnly = true)
+    public PlayerResponse withModeratorFlag(Player player) {
+        return PlayerResponse.of(player, player.getAccountId() != null
+                && accountService.isModerator(player.getAccountId()));
+    }
+
+    /** Same for a page of players, resolving all accounts in a single query. */
+    @Transactional(readOnly = true)
+    public Page<PlayerResponse> withModeratorFlags(Page<Player> page) {
+        Set<UUID> moderators = accountService.moderatorsAmong(page.getContent().stream()
+                .map(Player::getAccountId)
+                .filter(java.util.Objects::nonNull)
+                .toList());
+        return page.map(player -> PlayerResponse.of(player,
+                player.getAccountId() != null && moderators.contains(player.getAccountId())));
+    }
+
+    /**
+     * Grants or revokes the moderator permission of the player's login account. Requires an account —
+     * the permission lives there, not on the player row.
+     */
+    @Transactional
+    public PlayerResponse setModerator(UUID playerId, boolean moderator) {
+        Player player = get(playerId);
+        if (player.getAccountId() == null) {
+            throw new BusinessRuleException(
+                    "Najpierw utwórz konto logowania dla tego gracza — moderatorem jest konto, nie profil");
+        }
+        accountService.setModerator(player.getAccountId(), moderator);
+        return PlayerResponse.of(player, moderator);
+    }
 
     @Transactional
     public Player create(CreatePlayerRequest req) {

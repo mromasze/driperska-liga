@@ -1,11 +1,11 @@
 import { Link } from 'react-router-dom';
-import { LogoMono } from '../components/brand/Logo';
+import { LogoHex } from '../components/brand/Logo';
 import { Button } from '../components/ui/Button';
 
 export function NotFoundPage() {
   return (
     <div className="flex min-h-[60vh] flex-col items-center justify-center gap-4 text-center">
-      <LogoMono size={72} className="opacity-20" />
+      <LogoHex size={80} className="opacity-45" />
       <div className="font-display text-7xl font-bold text-gradient-gold">404</div>
       <p className="max-w-sm text-text-lo">
         Ta strona zniknęła w mgłach Riftu. Wróć na stronę główną.

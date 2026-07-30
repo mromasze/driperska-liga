@@ -309,6 +309,58 @@
 }
 
 /* ============================================================
+   Splash curtain — the first thing anyone sees, so it carries the page's own
+   background rather than a flat colour, and it never animates for users who
+   asked for stillness.
+   ============================================================ */
+.splash-veil {
+  background-color: var(--bg);
+  background-image:
+    radial-gradient(60rem 40rem at 82% -8%, rgba(155, 140, 255, 0.18), transparent 60%),
+    radial-gradient(52rem 40rem at -8% 12%, rgba(53, 224, 224, 0.14), transparent 60%),
+    radial-gradient(70rem 50rem at 50% 120%, rgba(242, 193, 78, 0.12), transparent 60%);
+}
+
+/* The mark breathes with a gold halo, so a slow load still looks alive. */
+@keyframes splash-breathe {
+  0%, 100% {
+    transform: scale(1);
+    filter: drop-shadow(0 0 14px rgba(242, 193, 78, 0.25));
+  }
+  50% {
+    transform: scale(1.045);
+    filter: drop-shadow(0 0 30px rgba(242, 193, 78, 0.5));
+  }
+}
+.splash-mark {
+  animation: splash-breathe 2.4s ease-in-out infinite;
+}
+
+/* Progress fill: gold body with a sheen travelling along it. */
+@keyframes splash-sheen {
+  0% { background-position: -140% 0; }
+  100% { background-position: 240% 0; }
+}
+.splash-bar {
+  background-color: var(--gold);
+  background-image: linear-gradient(
+    90deg,
+    transparent 0%,
+    rgba(255, 255, 255, 0.55) 45%,
+    transparent 90%
+  );
+  background-size: 220% 100%;
+  background-repeat: no-repeat;
+  animation: splash-sheen 1.5s ease-in-out infinite;
+  transition: width 0.45s cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .splash-mark { animation: none; }
+  .splash-bar { animation: none; transition: none; }
+}
+
+/* ============================================================
    Draft board — the stage has to read from across the room.
    ============================================================ */
 

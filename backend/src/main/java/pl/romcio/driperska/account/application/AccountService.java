@@ -1,6 +1,9 @@
 package pl.romcio.driperska.account.application;
 
 import java.security.SecureRandom;
+import java.util.Collection;
+import java.util.Optional;
+import java.util.Set;
 import java.util.UUID;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
@@ -85,11 +88,47 @@ public class AccountService {
         return new ProvisionedAccount(account, password);
     }
 
+    /**
+     * Grants or revokes the moderator permission. Checked against the database on every moderation
+     * request (not carried in the access token), so a revocation takes effect on the next click
+     * rather than in twelve hours when the token expires.
+     */
+    @Transactional
+    public Account setModerator(UUID accountId, boolean moderator) {
+        Account account = get(accountId);
+        account.setModerator(moderator);
+        return account;
+    }
+
+    @Transactional(readOnly = true)
+    public boolean isModerator(UUID accountId) {
+        return repository.findById(accountId).filter(Account::isEnabled)
+                .map(Account::isModerator).orElse(false);
+    }
+
+    /** The subset of the given accounts that carry the moderator flag (one query, for listings). */
+    @Transactional(readOnly = true)
+    public Set<UUID> moderatorsAmong(Collection<UUID> accountIds) {
+        if (accountIds.isEmpty()) return Set.of();
+        return repository.findAllById(accountIds).stream()
+                .filter(Account::isModerator)
+                .map(Account::getId)
+                .collect(java.util.stream.Collectors.toSet());
+    }
+
+    @Transactional(readOnly = true)
+    public Optional<Account> find(UUID accountId) {
+        return repository.findById(accountId);
+    }
+
     @Transactional
     public Account update(UUID id, UpdateAccountRequest req) {
         Account account = get(id);
         if (req.role() != null) {
             account.setRole(req.role());
+        }
+        if (req.moderator() != null) {
+            account.setModerator(req.moderator());
         }
         if (req.enabled() != null) {
             account.setEnabled(req.enabled());

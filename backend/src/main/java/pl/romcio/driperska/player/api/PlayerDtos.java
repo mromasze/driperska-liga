@@ -17,12 +17,25 @@ public final class PlayerDtos {
             String discordName,
             Role mainRole, Role secondaryRole, String avatarUrl, String bio,
             String opggLink, List<Integer> favoriteChampionIds,
-            boolean accountProvisioned, boolean active, Instant joinedAt) {
-        public static PlayerResponse from(Player p) {
+            boolean accountProvisioned,
+            /**
+             * True when the linked account may record past matches. Only filled in on the admin
+             * listing and on {@code /players/me} — the public player list always reports false, so
+             * the site does not advertise which accounts are privileged.
+             */
+            boolean moderator,
+            boolean active, Instant joinedAt) {
+
+        public static PlayerResponse of(Player p, boolean moderator) {
             return new PlayerResponse(p.getId(), p.getNickname(), p.getRealName(), p.getRiotId(),
                     p.getDiscordName(), p.getMainRole(), p.getSecondaryRole(), p.getAvatarUrl(), p.getBio(),
                     p.getOpggLink(), List.copyOf(p.getFavoriteChampionIds()),
-                    p.getAccountId() != null, p.isActive(), p.getJoinedAt());
+                    p.getAccountId() != null, moderator, p.isActive(), p.getJoinedAt());
+        }
+
+        /** Public view — no permission details. */
+        public static PlayerResponse from(Player p) {
+            return of(p, false);
         }
     }
 
@@ -46,6 +59,9 @@ public final class PlayerDtos {
             @Size(max = 500) String bio,
             @Size(max = 500) String opggLink,
             @Size(max = 5) List<Integer> favoriteChampionIds) {}
+
+    /** Admin decision on the moderator permission of a player's login account. */
+    public record SetModeratorRequest(@NotNull Boolean moderator) {}
 
     public record LoginCredentials(
             String login, String temporaryPassword, String loginUrl, String messageTemplate) {}

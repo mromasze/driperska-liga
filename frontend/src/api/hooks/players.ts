@@ -57,6 +57,21 @@ export function useUpdatePlayer() {
     },
   });
 }
+/**
+ * PATCH /players/{id}/moderator — grants or revokes the right to record past matches into the
+ * approval queue. The permission lives on the player's login account, so it needs one.
+ */
+export function useSetPlayerModerator() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: ({ id, moderator }: { id: string; moderator: boolean }) =>
+      api.patch<Player>(`/players/${id}/moderator`, { moderator }),
+    onSuccess: (_data, variables) => {
+      qc.invalidateQueries({ queryKey: ['players'] });
+      qc.invalidateQueries({ queryKey: queryKeys.player(variables.id) });
+    },
+  });
+}
 export function useUpdateMyPlayer() {
   const qc = useQueryClient();
   return useMutation({
