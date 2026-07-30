@@ -68,7 +68,15 @@ function ApprovalItem({ matchId }: { matchId: string }) {
   return (
     <div className="space-y-4 rounded-lg border border-line p-4 sm:p-6">
       <div className="flex flex-wrap items-center justify-between gap-2">
-        <Badge tone="pending">Oczekuje na akceptację</Badge>
+        <div className="flex flex-wrap items-center gap-2">
+          <Badge tone="pending">Oczekuje na akceptację</Badge>
+          {/* Who typed this in matters now that moderators submit matches too. */}
+          {m.approval?.submittedByName && (
+            <span className="text-xs text-text-lo">
+              wprowadził: <span className="text-text-hi">{m.approval.submittedByName}</span>
+            </span>
+          )}
+        </div>
         {submittedAt && <span className="num text-xs text-text-lo">wpisano: {formatDateTime(submittedAt)}</span>}
       </div>
 

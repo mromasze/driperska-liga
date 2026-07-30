@@ -113,6 +113,10 @@ public class RuntimeConfigRegistry {
         all.add(SettingDefinition.text("discord.vote-channel-id", "DISCORD_VOTE_CHANNEL_ID", GROUP_DISCORD,
                 "Kanał głosowania", "Przyciski RSVP przy zaplanowanych meczach. Puste = kanał ogłoszeń.",
                 discord::getVoteChannelId, discord::setVoteChannelId));
+        all.add(SettingDefinition.text("discord.moderation-channel-id", "DISCORD_MODERATION_CHANNEL_ID",
+                GROUP_DISCORD, "Kanał moderacji",
+                "Zgłoszenia meczów wpisanych przez moderatorów (bez @everyone). Puste = kanał ogłoszeń.",
+                discord::getModerationChannelId, discord::setModerationChannelId));
         all.add(SettingDefinition.text("discord.patch-notes-channel-id", "DISCORD_PATCH_CHANNEL_ID", GROUP_DISCORD,
                 "Kanał patch notes", "Dedykowany kanał na zmiany w aplikacji. Bez niego wysyłka patch notes jest wyłączona.",
                 discord::getPatchNotesChannelId, discord::setPatchNotesChannelId));

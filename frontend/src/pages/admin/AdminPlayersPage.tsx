@@ -1,7 +1,7 @@
 import { useRef, useState } from 'react';
 import {
   usePlayers, useCreatePlayer, useProvisionPlayerAccount,
-  useUpdatePlayer, useUploadAvatar, useResendPlayerCredentials,
+  useUpdatePlayer, useUploadAvatar, useResendPlayerCredentials, useSetPlayerModerator,
 } from '../../api/hooks/players';
 import type { CreatedPlayerResponse, LoginCredentials, Player, Role } from '../../api/types';
 import { Avatar } from '../../components/ui/Avatar';
@@ -18,6 +18,7 @@ export function AdminPlayersPage() {
   const provision = useProvisionPlayerAccount();
   const resend = useResendPlayerCredentials();
   const update = useUpdatePlayer();
+  const setModerator = useSetPlayerModerator();
   const upload = useUploadAvatar();
   const [nickname, setNickname] = useState('');
   const [mainRole, setMainRole] = useState<Role>('MID');
@@ -85,7 +86,10 @@ export function AdminPlayersPage() {
       <div>
         <div className="kicker text-gold">Konta i dostęp</div>
         <h1 className="font-display text-3xl">Gracze</h1>
-        <p className="mt-1 text-sm text-text-lo">Dodanie gracza tworzy też konto i losowe hasło.</p>
+        <p className="mt-1 text-sm text-text-lo">
+          Dodanie gracza tworzy też konto i losowe hasło. Moderator dodatkowo wprowadza rozegrane
+          mecze — jego wnioski czekają w kolejce akceptacji.
+        </p>
       </div>
 
       <form onSubmit={submit} className="panel flex flex-wrap items-end gap-3 p-4">
@@ -109,9 +113,9 @@ export function AdminPlayersPage() {
         </Button>
       </form>
 
-      {(create.isError || provision.isError || resend.isError) && (
+      {(create.isError || provision.isError || resend.isError || setModerator.isError) && (
         <div className="rounded-lg border border-[color:var(--loss)]/40 bg-[color:var(--loss)]/10 p-4 text-sm text-loss">
-          {(create.error ?? provision.error ?? resend.error)?.message}
+          {(create.error ?? provision.error ?? resend.error ?? setModerator.error)?.message}
         </div>
       )}
 
@@ -148,6 +152,7 @@ export function AdminPlayersPage() {
                     <Badge tone={p.accountProvisioned ? 'win' : 'pending'}>
                       {p.accountProvisioned ? 'konto aktywne' : 'brak konta'}
                     </Badge>
+                    {p.moderator && <Badge tone="info">moderator</Badge>}
                   </div>
                 </div>
                 <Button size="sm" variant="ghost" onClick={() => (editingId === p.id ? setEditingId(null) : startEdit(p))}>
@@ -163,6 +168,16 @@ export function AdminPlayersPage() {
                   <Button size="sm" variant="ghost" disabled={resend.isPending}
                     onClick={() => resend.mutate(p.id, { onSuccess: showCredentials })}>
                     Wyślij dane ponownie
+                  </Button>
+                )}
+                {/* The permission sits on the login account, so it needs one to exist first. */}
+                {p.accountProvisioned && (
+                  <Button size="sm" variant="ghost" disabled={setModerator.isPending}
+                    title={p.moderator
+                      ? 'Odbierz prawo wprowadzania meczów do kolejki akceptacji'
+                      : 'Pozwól wprowadzać rozegrane mecze do kolejki akceptacji'}
+                    onClick={() => setModerator.mutate({ id: p.id, moderator: !p.moderator })}>
+                    {p.moderator ? 'Odbierz moderatora' : 'Nadaj moderatora'}
                   </Button>
                 )}
                 <input ref={(element) => { fileInputs.current[p.id] = element; }} type="file"

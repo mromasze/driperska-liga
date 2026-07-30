@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from 'react';
 import { useChampions } from '../../api/hooks/champions';
 import { useDrawLobby, useVoteOnDraw } from '../../api/hooks/drawLobby';
 import { DraftBoard, useCountdown } from './DraftBoard';
+import { ModeratorPanel } from './ModeratorPanel';
 import { GameLineup } from '../../components/match/GameLineup';
 import { usePlannedMatches, useRsvpPlannedMatch } from '../../api/hooks/planned';
 import { useRateableMatches, useSubmitFeedback } from '../../api/hooks/feedback';
@@ -18,7 +19,7 @@ import type { RsvpResponse, RateableMatch } from '../../api/types';
 
 const ROLES: Role[] = ['TOP', 'JUNGLE', 'MID', 'ADC', 'SUPPORT'];
 
-type PanelTab = 'dashboard' | 'draft' | 'ratings' | 'profile';
+type PanelTab = 'dashboard' | 'draft' | 'ratings' | 'moderation' | 'profile';
 
 /** Lobby phases that belong on the dedicated draft tab rather than the dashboard. */
 const DRAFT_STATUSES = ['DRAFT_READY', 'DRAFTING', 'DRAFTED'];
@@ -82,6 +83,8 @@ export function PlayerPanelPage() {
     { id: 'dashboard', label: 'Dashboard' },
     ...(draftActive ? [{ id: 'draft' as PanelTab, label: 'Draft' }] : []),
     { id: 'ratings', label: 'Ocena' },
+    // Only moderators get the submission panel; everyone else never sees the tab exists.
+    ...(p.moderator ? [{ id: 'moderation' as PanelTab, label: 'Wnioski' }] : []),
     { id: 'profile', label: 'Profil i ustawienia' },
   ];
 
@@ -197,6 +200,8 @@ export function PlayerPanelPage() {
           )}
         </div>
       )}
+
+      {tab === 'moderation' && p.moderator && <ModeratorPanel />}
 
       {tab === 'profile' && (
         <div className="space-y-10">

@@ -13,6 +13,7 @@ public class DiscordProperties {
     private String announceChannelId;
     private String patchNotesChannelId;
     private String voteChannelId;
+    private String moderationChannelId;
 
     public boolean configured() {
         return StringUtils.hasText(botToken) && StringUtils.hasText(guildId);
@@ -41,6 +42,17 @@ public class DiscordProperties {
     public boolean voteChannelConfigured() {
         return StringUtils.hasText(botToken) && StringUtils.hasText(voteChannel());
     }
+    /**
+     * Channel the bot pings when a moderator sends a match to the approval queue. Falls back to the
+     * announcements channel; that message never mentions @everyone, so a shared channel is bearable,
+     * but a private admin channel is the better setup.
+     */
+    public String moderationChannel() {
+        return StringUtils.hasText(moderationChannelId) ? moderationChannelId : announceChannel();
+    }
+    public boolean moderationChannelConfigured() {
+        return StringUtils.hasText(botToken) && StringUtils.hasText(moderationChannel());
+    }
     public String getBotToken() { return botToken; }
     public void setBotToken(String botToken) { this.botToken = botToken; }
     public String getGuildId() { return guildId; }
@@ -53,5 +65,9 @@ public class DiscordProperties {
     public void setPatchNotesChannelId(String patchNotesChannelId) { this.patchNotesChannelId = patchNotesChannelId; }
     public String getVoteChannelId() { return voteChannelId; }
     public void setVoteChannelId(String voteChannelId) { this.voteChannelId = voteChannelId; }
+    public String getModerationChannelId() { return moderationChannelId; }
+    public void setModerationChannelId(String moderationChannelId) {
+        this.moderationChannelId = moderationChannelId;
+    }
 }
 

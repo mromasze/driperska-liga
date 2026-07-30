@@ -1,4 +1,4 @@
-# Driperska Liga v0.3.2
+# Driperska Liga v0.5.0
 
 Aplikacja do prowadzenia amatorskiej ligi League of Legends: ranking i wyniki,
 profile graczy, panel administracyjny oraz głosowane losowanie drużyn w czasie rzeczywistym.
@@ -60,6 +60,11 @@ npm run dev
   norma, waga roli, punkty PR).
 - Listy meczów pokazują i sortują po dacie faktycznego startu gry (`startedAt`) — edycja
   lub ponowna akceptacja wyniku nie przesuwa meczu w listach.
+- Admin może nadać graczowi uprawnienie **moderatora** (zakładka „Gracze”). Moderator dostaje w swojej
+  strefie zakładkę „Wnioski”: wprowadza rozegrany mecz (skład, strony, role, data) i jego statystyki —
+  ręcznie albo ze zrzutów ekranu przez AI. Wniosek trafia do kolejki akceptacji admina, jest edytowalny
+  do momentu zatwierdzenia i nie uruchamia losowania, draftu, lobby Riot ani ogłoszeń na Discordzie.
+  Bot informuje o nowym wniosku na kanale `DISCORD_MODERATION_CHANNEL_ID` (puste = kanał ogłoszeń).
 
 Tournament API wymaga produkcyjnego klucza z przyznanym dostępem do produktu Tournament.
 Callback `RIOT_CALLBACK_URL` musi być publicznym adresem HTTPS. Sekretów nie zapisuj
@@ -71,6 +76,13 @@ w repozytorium; podawaj je wyłącznie przez plik `.env` na serwerze.
 cd backend && ./mvnw verify
 cd ../frontend && npm run lint && npm run typecheck && npm run build
 docker compose config -q
+```
+
+Testy integracyjne (klasy `*IT`) trzeba uruchomić osobno — projekt nie ma wtyczki failsafe,
+a domyślne wzorce surefire ich nie obejmują:
+
+```bash
+cd backend && ./mvnw '-Dtest=*IT' test
 ```
 
 Swagger UI: `/swagger-ui.html`, health: `/actuator/health`.

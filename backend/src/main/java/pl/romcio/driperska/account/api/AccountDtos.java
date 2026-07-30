@@ -20,13 +20,15 @@ public final class AccountDtos {
             String username,
             String email,
             AccountRole role,
+            /** Extra permission: may record past matches into the approval queue. */
+            boolean moderator,
             boolean enabled,
             Instant createdAt,
             Instant lastLoginAt) {
 
         public static AccountResponse from(Account a) {
             return new AccountResponse(a.getId(), a.getUsername(), a.getEmail(),
-                    a.getRole(), a.isEnabled(), a.getCreatedAt(), a.getLastLoginAt());
+                    a.getRole(), a.isModerator(), a.isEnabled(), a.getCreatedAt(), a.getLastLoginAt());
         }
     }
 
@@ -39,6 +41,7 @@ public final class AccountDtos {
 
     public record UpdateAccountRequest(
             AccountRole role,
+            Boolean moderator,
             Boolean enabled,
             @Size(min = 8, max = 100) String newPassword) {
     }

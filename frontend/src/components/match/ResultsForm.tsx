@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import type { MatchDetail, OcrDraft, OcrLogEntry, Role, Side, SubmitResultsRequest } from '../../api/types';
 import { useChampions } from '../../api/hooks/champions';
-import { useOcrResults } from '../../api/hooks/matches';
+import { useOcrResults, type OcrScope } from '../../api/hooks/matches';
 import { roleLabel } from '../../lib/format';
 import { cn } from '../../lib/cn';
 import { Button } from '../ui/Button';
@@ -115,10 +115,13 @@ export function ResultsForm({
   match,
   submitting,
   onSubmit,
+  ocrScope = 'admin',
 }: {
   match: MatchDetail;
   submitting?: boolean;
   onSubmit: (req: SubmitResultsRequest) => void;
+  /** Which endpoint reads the screenshots — see {@link useOcrResults}. */
+  ocrScope?: OcrScope;
 }) {
   const champions = useChampions();
   const [winningSide, setWinningSide] = useState<Side | ''>(match.winningSide ?? '');
@@ -171,7 +174,7 @@ export function ResultsForm({
     ]));
   };
 
-  const ocr = useOcrResults(match.id);
+  const ocr = useOcrResults(match.id, ocrScope);
   const shotInput = useRef<HTMLInputElement>(null);
   const [ocrNote, setOcrNote] = useState<string | null>(null);
   const [ocrLogs, setOcrLogs] = useState<OcrLogEntry[]>([]);

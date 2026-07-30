@@ -271,16 +271,25 @@ export function useShareMatchToDiscord(matchId: string) {
   });
 }
 
-/** POST /matches/{id}/results/ocr — read LoL screenshots into an editable results draft. */
-export function useOcrResults(matchId: string) {
+/**
+ * POST …/results/ocr — read LoL screenshots into an editable results draft.
+ *
+ * The same AI pass serves two callers, and they differ only in which endpoint authorises them: the
+ * admin panel goes through `/matches/{id}`, a moderator through their own `/moderation/matches/{id}`
+ * (which additionally checks that the submission is theirs).
+ */
+export function useOcrResults(matchId: string, scope: OcrScope = 'admin') {
   return useMutation({
     mutationFn: (files: File[]) => {
       const form = new FormData();
       files.forEach((f) => form.append('files', f));
-      return api.upload<OcrDraft>(`/matches/${matchId}/results/ocr`, form);
+      const base = scope === 'moderation' ? '/moderation/matches' : '/matches';
+      return api.upload<OcrDraft>(`${base}/${matchId}/results/ocr`, form);
     },
   });
 }
+
+export type OcrScope = 'admin' | 'moderation';
 
 export function useImportRiotResults(matchId: string) {
   const qc = useQueryClient();

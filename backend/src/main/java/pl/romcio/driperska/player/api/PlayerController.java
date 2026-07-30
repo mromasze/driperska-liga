@@ -19,18 +19,22 @@ public class PlayerController {
     private final PlayerService service;
     public PlayerController(PlayerService service) { this.service = service; }
 
+    /** Public listing. Admins additionally see who is a moderator, so they can grant/revoke it. */
     @GetMapping
     public PageResponse<PlayerResponse> list(
             @RequestParam(required = false) Boolean active,
             @RequestParam(required = false) Role role,
             @RequestParam(required = false) String search, Pageable pageable) {
-        return PageResponse.of(service.list(active, role, search, pageable).map(PlayerResponse::from));
+        var page = service.list(active, role, search, pageable);
+        boolean admin = CurrentAccount.optional()
+                .filter(pl.romcio.driperska.common.security.AuthenticatedAccount::isAdmin).isPresent();
+        return PageResponse.of(admin ? service.withModeratorFlags(page) : page.map(PlayerResponse::from));
     }
 
     @GetMapping("/me")
     @PreAuthorize("hasRole('PLAYER')")
     public PlayerResponse me() {
-        return PlayerResponse.from(service.getByAccountId(CurrentAccount.require().accountId()));
+        return service.withModeratorFlag(service.getByAccountId(CurrentAccount.require().accountId()));
     }
 
     @GetMapping("/{id}")
@@ -72,6 +76,14 @@ public class PlayerController {
     @PreAuthorize("hasAnyRole('ADMIN','EDITOR')")
     public PlayerResponse update(@PathVariable UUID id, @Valid @RequestBody UpdatePlayerRequest req) {
         return PlayerResponse.from(service.update(id, req));
+    }
+
+    /** Grants or revokes the right to record past matches into the approval queue. */
+    @PatchMapping("/{id}/moderator")
+    @PreAuthorize("hasRole('ADMIN')")
+    public PlayerResponse setModerator(@PathVariable UUID id,
+                                       @Valid @RequestBody SetModeratorRequest req) {
+        return service.setModerator(id, req.moderator());
     }
 
     @PostMapping(value = "/me/avatar", consumes = "multipart/form-data")

@@ -14,7 +14,10 @@ export interface PageResponse<T> { content: T[]; page: number; size: number; tot
 export interface ProblemDetail { type: string; title: string; status: number; detail?: string; instance?: string; errors?: { field: string; message: string }[]; }
 
 export interface Account {
-  id: string; username: string; email: string; role: AccountRole; enabled: boolean;
+  id: string; username: string; email: string; role: AccountRole;
+  /** Extra permission on top of the role: may record past matches into the approval queue. */
+  moderator: boolean;
+  enabled: boolean;
   createdAt: string; lastLoginAt: string | null;
 }
 export interface LoginRequest { username: string; password: string; turnstileToken?: string | null; }
@@ -32,7 +35,10 @@ export interface Player {
   id: string; nickname: string; realName: string | null; riotId: string | null;
   discordName: string;
   mainRole: Role; secondaryRole: Role | null; avatarUrl: string | null; bio: string | null;
-  opggLink: string | null; favoriteChampionIds: number[]; accountProvisioned: boolean; active: boolean; joinedAt: string;
+  opggLink: string | null; favoriteChampionIds: number[]; accountProvisioned: boolean;
+  /** Only filled in for admins and on `/players/me`; the public list always reports false. */
+  moderator: boolean;
+  active: boolean; joinedAt: string;
 }
 export interface CreatePlayerRequest {
   nickname: string; mainRole: Role; secondaryRole?: Role | null; realName?: string | null;
@@ -97,7 +103,8 @@ export interface MatchParticipant {
   bestKda: boolean; perfectKda: boolean;
 }
 export interface Approval {
-  decision: ApprovalDecision; submittedBy: string | null; submittedAt: string | null;
+  decision: ApprovalDecision; submittedBy: string | null; submittedByName: string | null;
+  submittedAt: string | null;
   reviewedBy: string | null; reviewedAt: string | null; signatureConfirmed: boolean;
   signatureName: string | null; rejectionReason: string | null;
 }
@@ -135,6 +142,20 @@ export interface MatchMaintenanceSummary {
 export interface AffectedResponse { affected: number; }
 
 export interface ManualSlot { playerId: string; side: Side; role: Role; }
+
+/**
+ * Moderator submissions — a past match recorded by hand, waiting for an admin sign-off.
+ * `status` says what is left to do: LIVE = statistics missing, RESULTS_SUBMITTED = in the queue
+ * (still editable), REJECTED = sent back with a reason, APPROVED = frozen and counted.
+ */
+export interface Submission {
+  id: string; seasonId: string; status: MatchStatus; playedAt: string | null; createdAt: string;
+  winningSide: Side | null; durationSeconds: number | null; participantCount: number;
+  statsEntered: boolean; decision: ApprovalDecision | null; submittedAt: string | null;
+  reviewedAt: string | null; rejectionReason: string | null;
+}
+export interface CreateSubmissionRequest { seasonId?: string; playedAt: string; teams: ManualSlot[]; }
+export interface UpdateSubmissionRequest { playedAt?: string; teams?: ManualSlot[]; }
 export interface CreateMatchRequest { seasonId: string; drawMode: DrawMode; playerIds: string[]; teams?: ManualSlot[]; }
 export interface DrawSlot { playerId: string; nickname: string; role: Role; mmr: number; }
 export interface ReplacePlayerRequest { removedPlayerId: string; addedPlayerId: string; }

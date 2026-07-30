@@ -11,6 +11,17 @@ export interface ReleaseNote {
  */
 export const RELEASES: ReleaseNote[] = [
   {
+    version: 'v0.5.0',
+    date: '2026-07-30',
+    title: 'Moderatorzy',
+    changes: [
+      'Wybrani gracze mogą wprowadzać rozegrane mecze — skład, strony i role, a potem statystyki: ręcznie albo ze zrzutów ekranu przez AI. Mini panel „Wnioski” pojawia się w strefie gracza, obok draftu i profilu.',
+      'Każdy taki mecz czeka w kolejce akceptacji administratora i wchodzi do rankingu dopiero po jego podpisie. Do tego momentu moderator może poprawiać wniosek dowolnie wiele razy.',
+      'Odesłanie do poprawy wraca z powodem, a wniosek, którego nie chcesz już dosyłać, możesz wycofać. Skład podmieniasz przed wysłaniem wyników — potem trzeba poprosić admina o odesłanie wniosku.',
+      'Moderator widzi wyłącznie własne wnioski i nie ma dostępu do panelu administratora. Uprawnienie nadaje i odbiera admin w zakładce „Gracze”.',
+    ],
+  },
+  {
     version: 'v0.4.10',
     date: '2026-07-29',
     title: 'Bez reklam',

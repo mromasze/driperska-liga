@@ -34,6 +34,13 @@ public class Account {
     @Column(nullable = false)
     private boolean enabled = true;
 
+    /**
+     * Extra permission on top of {@link #role}: may record past matches and send them to the admin
+     * approval queue. Deliberately a flag and not a role, so a moderator stays a full player.
+     */
+    @Column(nullable = false)
+    private boolean moderator = false;
+
     @Column(name = "created_at", nullable = false)
     private Instant createdAt = Instant.now();
 
@@ -93,6 +100,14 @@ public class Account {
 
     public void setEnabled(boolean enabled) {
         this.enabled = enabled;
+    }
+
+    public boolean isModerator() {
+        return moderator;
+    }
+
+    public void setModerator(boolean moderator) {
+        this.moderator = moderator;
     }
 
     public Instant getCreatedAt() {
