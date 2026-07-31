@@ -15,6 +15,9 @@ public interface PlayerSeasonStatsRepository extends JpaRepository<PlayerSeasonS
 
     List<PlayerSeasonStats> findBySeasonId(UUID seasonId);
 
+    /** How many people have a scored match this season — a row appears on the first one. */
+    long countBySeasonId(UUID seasonId);
+
     @Modifying(flushAutomatically = true, clearAutomatically = true)
     @Query("delete from PlayerSeasonStats stats where stats.seasonId = :seasonId")
     int deleteBySeasonId(@Param("seasonId") UUID seasonId);

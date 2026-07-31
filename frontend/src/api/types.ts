@@ -86,6 +86,22 @@ export interface RankingRow {
   baseScore: number; activityBonus: number;
 }
 
+/** Season-wide totals behind the landing-page tiles — GET /ranking/summary. */
+export interface LeagueSummary {
+  seasonId: string; matches: number; players: number; kills: number; deaths: number;
+  assists: number; cs: number; gold: number; damageToChampions: number; visionScore: number;
+  pentakills: number; playtimeSeconds: number; avgDurationSeconds: number | null;
+}
+
+/**
+ * One anonymous piece of praise for the public ticker — GET /opinions/recent. Criticism is not
+ * published here; it stays on the match page for signed-in members.
+ */
+export interface PublicOpinion {
+  matchId: string; playedAt: string | null; aboutPlayerId: string; aboutNickname: string;
+  aboutAvatarUrl: string | null; note: string; createdAt: string;
+}
+
 export interface LpComponent { label: string; points: number; }
 export interface PrMetric {
   key: string; value: number; average: number; normalized: number; weight: number; points: number;

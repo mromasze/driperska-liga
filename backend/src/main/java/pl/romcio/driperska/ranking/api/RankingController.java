@@ -13,6 +13,7 @@ import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 import pl.romcio.driperska.player.domain.Player;
 import pl.romcio.driperska.player.infra.PlayerRepository;
+import pl.romcio.driperska.ranking.application.LeagueSummaryService;
 import pl.romcio.driperska.ranking.application.RankingService;
 import pl.romcio.driperska.ranking.application.RankingService.RankingEntry;
 import pl.romcio.driperska.ranking.domain.PlayerSeasonStats;
@@ -25,12 +26,15 @@ public class RankingController {
     private final RankingService rankingService;
     private final SeasonService seasonService;
     private final PlayerRepository playerRepository;
+    private final LeagueSummaryService leagueSummaryService;
 
     public RankingController(RankingService rankingService, SeasonService seasonService,
-                             PlayerRepository playerRepository) {
+                             PlayerRepository playerRepository,
+                             LeagueSummaryService leagueSummaryService) {
         this.rankingService = rankingService;
         this.seasonService = seasonService;
         this.playerRepository = playerRepository;
+        this.leagueSummaryService = leagueSummaryService;
     }
 
     @GetMapping
@@ -55,6 +59,13 @@ public class RankingController {
                     entry.baseScore(), entry.activityBonus(), entry.rankingScore(),
                     entry.qualified());
         }).toList();
+    }
+
+    /** Season-wide totals behind the landing-page tiles. Public, like the ranking itself. */
+    @GetMapping("/summary")
+    public LeagueSummaryService.LeagueSummary summary(@RequestParam(required = false) UUID season) {
+        UUID seasonId = season != null ? season : seasonService.current().getId();
+        return leagueSummaryService.forSeason(seasonId);
     }
 
     @PostMapping("/recalculate")

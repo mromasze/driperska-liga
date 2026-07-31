@@ -3,6 +3,16 @@
 Wszystkie istotne zmiany Driperskiej Ligi są opisywane tutaj oraz w
 `frontend/src/content/releases.ts`, który zasila patch notes na stronie głównej.
 
+## v0.5.2 — 2026-07-31
+
+- **Lider sezonu dostaje baner na całą szerokość strony.** Wcześniej był kafelkiem z nickiem, który mówił kto wygrywa, ale nic o tym dlaczego. Teraz jest twarz, medal na awatarze i cała linia liczb za tą pozycją: Σ LP, mecze, bilans, win%, średni PR oraz MVP/ACE, a całość jest jednym linkiem do profilu — bo to naturalny następny klik po przeczytaniu.
+- **Kafelki są mniejsze i jest ich więcej.** `StatTile` ma wariant `sm`; trzy duże prostokąty zajmowały tyle wysokości co siatka wyników pod nimi. W ich miejsce siedem kompaktowych: aktywni gracze, rozegrane mecze, zabójstwa, śmierci, asysty, pentakille i czas gry (z średnią długością meczu w podpisie).
+- **Nowy endpoint `GET /ranking/summary`** liczy te sumy dla sezonu dwoma zapytaniami agregującymi po `match_participant` i `match_game` — `PlayerSeasonStats` tego nie wie, bo trzyma LP, bilans i MMR, a nie zabójstwa. Publiczny, tak jak sam ranking, i policzony po stronie bazy, żeby strona główna nie ściągała wszystkich meczów sezonu do przeglądarki.
+- **Animowany pasek „Głosy z ligi”.** Na stronie głównej nie było niczego, co rusza się samo, a to właśnie sprawia, że strona ligi między meczami wygląda na porzuconą. Cytat zmienia się co 6 sekund, każdy linkuje do gracza i do meczu, najechanie kursorem zatrzymuje rotację, a kropki pozwalają przeskakiwać ręcznie. `prefers-reduced-motion` dostaje trzy najnowsze naraz, bez karuzeli.
+- **Publikowane są tylko pochwały i jest to świadoma granica.** Wewnątrz aplikacji zalogowany członek ligi widzi na stronie meczu obie tony — wiedza o tym, że ktoś wystawił minus, jest częścią pętli zwrotnej. Strona główna jest otwarta na internet, więc anonimowa krytyka pod nazwiskiem tam nie idzie; idzie przegląd tego, co ludzie napisali o sobie dobrze. Nowy `PublicOpinionController` (`GET /opinions/recent`) jest osobnym kontrolerem, bo `MatchFeedbackController` jest zamknięty dla graczy i wycinanie w nim wyjątku dla anonima byłoby dziurą w bramce. Autorzy pozostają anonimowi tak samo jak dotąd, a mecz cofnięty do poprawy natychmiast wypada z kanału.
+- **Top 3 ma ramki w swoim metalu.** Wspólna paleta podium (`lib/podium.ts`) obsługuje trzy powierzchnie naraz: wiersze rankingu (lewa szyna w kolorze plus rozmycie tła), kartę lidera i profil gracza. Bez tego drugie miejsce mogło mieć srebrną ramkę na jednej stronie i szarą na innej. `RankMedal` czyta z tej samej palety, więc medal w tabeli i obwódka wokół niego są z jednego koloru.
+- **Profil gracza z podium jest ozdobiony.** Złota/srebrna/brązowa ramka nagłówka, wstążka „1. MIEJSCE” w narożniku, medal przy awatarze, nick w kolorze miejsca i plakietka „1. miejsce w sezonie”. Poza podium profil wygląda jak dotąd — dekoracja ma coś znaczyć.
+
 ## v0.5.1 — 2026-07-30
 
 - **Potwierdzanie obecności znika, kiedy termin minie.** `GET /planned-matches` zwraca tylko mecze przed terminem, więc panel gracza nie trzyma już w nieskończoność karty „Potwierdź obecność” dla meczu, który się odbył albo się nie odbył wczoraj.

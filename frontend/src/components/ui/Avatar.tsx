@@ -6,6 +6,11 @@ interface AvatarProps {
   size?: number;
   ring?: boolean;
   className?: string;
+  /**
+   * Merged over the size. Used by podium surfaces to replace the gold ring with silver or bronze —
+   * an inline box-shadow beats the ring utility class, which is a box-shadow too.
+   */
+  style?: React.CSSProperties;
 }
 
 function initials(name: string): string {
@@ -14,8 +19,7 @@ function initials(name: string): string {
   return (parts[0][0] + parts[parts.length - 1][0]).toUpperCase();
 }
 
-export function Avatar({ src, name, size = 40, ring, className }: AvatarProps) {
-  const style = { width: size, height: size } as const;
+export function Avatar({ src, name, size = 40, ring, className, style }: AvatarProps) {
   return (
     <span
       className={cn(
@@ -23,7 +27,7 @@ export function Avatar({ src, name, size = 40, ring, className }: AvatarProps) {
         ring && 'ring-2 ring-[color:var(--gold)]/60 ring-offset-2 ring-offset-[var(--bg-1)]',
         className,
       )}
-      style={style}
+      style={{ width: size, height: size, ...style }}
     >
       {src ? (
         <img src={src} alt={name} className="h-full w-full object-cover" loading="lazy" />

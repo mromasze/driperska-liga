@@ -11,6 +11,17 @@ export interface ReleaseNote {
  */
 export const RELEASES: ReleaseNote[] = [
   {
+    version: 'v0.5.2',
+    date: '2026-07-31',
+    title: 'Lider na całą szerokość, głosy z ligi',
+    changes: [
+      'Lider sezonu ma teraz baner na całą szerokość strony — z awatarem, medalem i całą linią statystyk. Kliknięcie prowadzi na jego profil.',
+      'Kafelki są mniejsze, ale jest ich więcej: gracze, mecze, zabójstwa, śmierci, asysty, pentakille i łączny czas gry.',
+      'Nowy pasek „Głosy z ligi” przewija anonimowe pochwały, które gracze wystawili sobie po meczach. Najedź kursorem, aby zatrzymać.',
+      'Top 3 rankingu ma ramki w złocie, srebrze i brązie, a profil gracza z podium dostaje wstążkę z miejscem i medal przy awatarze.',
+    ],
+  },
+  {
     version: 'v0.5.1',
     date: '2026-07-31',
     title: 'Nowe tło, bogatsze karty meczów',

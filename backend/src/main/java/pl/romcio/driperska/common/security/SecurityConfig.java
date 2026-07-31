@@ -66,6 +66,9 @@ public class SecurityConfig {
                         .requestMatchers(HttpMethod.GET,
                                 "/api/v1/highlights",
                                 "/api/v1/players/**",
+                                // Recent praise for the landing-page ticker; everything else about
+                                // post-match feedback stays behind a login (PublicOpinionController).
+                                "/api/v1/opinions/recent",
                                 "/api/v1/ranking/**",
                                 "/api/v1/champions/**",
                                 "/api/v1/seasons/**",

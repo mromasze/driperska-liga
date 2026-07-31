@@ -36,6 +36,7 @@ public class MatchFeedback {
         this.updatedAt = Instant.now();
     }
 
+    public Instant getUpdatedAt() { return updatedAt; }
     public UUID getMatchId() { return matchId; }
     public UUID getVoterPlayerId() { return voterPlayerId; }
     public UUID getUpvotePlayerId() { return upvotePlayerId; }

@@ -1,9 +1,9 @@
 import { Link } from 'react-router-dom';
 import type { RankingRow } from '../../api/types';
-import { cn } from '../../lib/cn';
 import { Avatar } from '../ui/Avatar';
 import { PrBadge } from '../ui/PrBadge';
 import { RankMedal } from '../ui/RankMedal';
+import { podiumOf } from '../../lib/podium';
 
 export function RankingTable({ rows }: { rows: RankingRow[] }) {
   return (
@@ -24,20 +24,30 @@ export function RankingTable({ rows }: { rows: RankingRow[] }) {
           </tr>
         </thead>
         <tbody>
-          {rows.map((r) => (
+          {rows.map((r) => {
+            // The top three are framed in their own metal: a left rail plus a wash of the same
+            // colour, so a podium row is recognisable from the shape of the table alone.
+            const podium = podiumOf(r.rank);
+            return (
             <tr
               key={r.playerId}
-              className={cn(
-                'border-b border-line/60 transition-colors hover:bg-[var(--glass)]',
-                r.rank <= 3 && 'bg-[color:var(--gold)]/[0.03]',
-              )}
+              className="border-b border-line/60 transition-colors hover:bg-[var(--glass)]"
+              style={podium ? {
+                background: `linear-gradient(90deg, color-mix(in srgb, ${podium.color} 12%, transparent), transparent 42%)`,
+                boxShadow: `inset 3px 0 0 0 ${podium.color}`,
+              } : undefined}
             >
               <td className="px-4 py-3">
                 <RankMedal rank={r.rank} />
               </td>
               <td className="px-4 py-3">
                 <Link to={`/players/${r.playerId}`} className="flex items-center gap-3 hover:text-gold">
-                  <Avatar src={r.avatarUrl} name={r.nickname} size={34} ring={r.rank <= 3} />
+                  <Avatar
+                    src={r.avatarUrl}
+                    name={r.nickname}
+                    size={34}
+                    style={podium ? { boxShadow: `0 0 0 2px ${podium.color}, 0 0 16px -4px ${podium.glow}` } : undefined}
+                  />
                   <span>
                     <span className="font-medium text-text-hi">{r.nickname}</span>
                     {!r.qualified && (
@@ -68,7 +78,8 @@ export function RankingTable({ rows }: { rows: RankingRow[] }) {
               <td className="num px-3 py-3 text-right">{r.aceCount || '—'}</td>
               <td className="num px-4 py-3 text-right text-text-lo">{Math.round(r.mmr)}</td>
             </tr>
-          ))}
+            );
+          })}
         </tbody>
       </table>
     </div>

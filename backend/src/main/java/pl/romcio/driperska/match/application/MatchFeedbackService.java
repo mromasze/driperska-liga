@@ -95,6 +95,42 @@ public class MatchFeedbackService {
         return new MyFeedback(upvote, downvote, feedback.getNote());
     }
 
+    /**
+     * The public opinion ticker on the landing page.
+     *
+     * <p>Praise only, and that is a deliberate line. Inside the app a signed-in member sees both
+     * tones on the match page, because knowing you were called out is part of the feedback loop.
+     * The landing page is open to the internet, so anonymous criticism of a named person does not go
+     * there — a public highlight reel of what people said well about each other does. Switching this
+     * to include negatives means widening {@link MatchFeedbackRepository#findRecentPraise} and adding
+     * the tone to the payload; the frontend needs no other change.
+     */
+    @Transactional(readOnly = true)
+    public List<pl.romcio.driperska.match.api.MatchFeedbackDtos.PublicOpinion> recentPraise(int limit) {
+        List<MatchFeedback> recent = feedbackRepository.findRecentPraise(
+                PageRequest.of(0, Math.clamp(limit, 1, 30)));
+        Map<UUID, Match> matches = new HashMap<>();
+        matchRepository.findAllById(recent.stream().map(MatchFeedback::getMatchId).distinct().toList())
+                .forEach(match -> matches.put(match.getId(), match));
+        Map<UUID, Player> players = new HashMap<>();
+        playerRepository.findByIdIn(recent.stream().map(MatchFeedback::getUpvotePlayerId).distinct().toList())
+                .forEach(player -> players.put(player.getId(), player));
+
+        List<pl.romcio.driperska.match.api.MatchFeedbackDtos.PublicOpinion> out = new ArrayList<>();
+        for (MatchFeedback fb : recent) {
+            Match match = matches.get(fb.getMatchId());
+            Player about = players.get(fb.getUpvotePlayerId());
+            // A reopened match is back under review, so its feedback stops being public until it is
+            // signed off again.
+            if (match == null || about == null || match.getStatus() != MatchStatus.APPROVED) continue;
+            out.add(new pl.romcio.driperska.match.api.MatchFeedbackDtos.PublicOpinion(
+                    fb.getMatchId(), match.getStartedAt() != null ? match.getStartedAt() : match.getCompletedAt(),
+                    about.getId(), about.getNickname(), about.getAvatarUrl(),
+                    fb.getNote().trim(), fb.getUpdatedAt()));
+        }
+        return out;
+    }
+
     /** Aggregated peer feedback for a match: per-player up/down counts + anonymous comments. */
     @Transactional(readOnly = true)
     public pl.romcio.driperska.match.api.MatchFeedbackDtos.MatchFeedbackSummary summary(UUID matchId) {

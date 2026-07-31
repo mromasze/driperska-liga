@@ -26,4 +26,12 @@ public final class MatchFeedbackDtos {
 
     /** Aggregated peer feedback for one match: per-player up/down counts + anonymous comments. */
     public record MatchFeedbackSummary(int responses, List<PlayerFeedbackSummary> players) {}
+
+    /**
+     * One anonymous piece of praise, for the public ticker on the landing page: what was said, about
+     * whom, and in which match. The author stays anonymous here exactly as on the match page.
+     */
+    public record PublicOpinion(UUID matchId, Instant playedAt, UUID aboutPlayerId,
+                                String aboutNickname, String aboutAvatarUrl,
+                                String note, Instant createdAt) {}
 }

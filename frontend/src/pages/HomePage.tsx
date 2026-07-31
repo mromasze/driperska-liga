@@ -2,9 +2,12 @@ import { Link } from 'react-router-dom';
 import { useCurrentSeason } from '../api/hooks/seasons';
 import { usePlayers } from '../api/hooks/players';
 import { useMatches, useMatchDetails } from '../api/hooks/matches';
-import { useRanking } from '../api/hooks/ranking';
+import { useLeagueSummary, useRanking } from '../api/hooks/ranking';
+import { formatDuration } from '../lib/format';
 import { MatchCard } from '../components/match/MatchCard';
+import { OpinionTicker } from '../components/match/OpinionTicker';
 import { RankingTable } from '../components/ranking/RankingTable';
+import { LeaderCard } from '../components/ranking/LeaderCard';
 import { StatTile } from '../components/ui/StatTile';
 import { Button } from '../components/ui/Button';
 import { CardGridSkeleton, EmptyState, ErrorState, TableSkeleton } from '../components/ui/States';
@@ -16,11 +19,19 @@ import { RELEASES } from '../content/releases';
 import { APP_VERSION } from '../version';
 import type { MatchDetail } from '../api/types';
 
+/** Big counters read better grouped: 12 480 rather than 12480. */
+const num = (value?: number) => (value == null ? '—' : value.toLocaleString('pl-PL'));
+
+/** Total play time is only interesting in hours; seconds would be noise at this scale. */
+const hours = (seconds?: number) =>
+  seconds == null || seconds === 0 ? '—' : `${Math.round(seconds / 3600).toLocaleString('pl-PL')} h`;
+
 export function HomePage() {
   const season = useCurrentSeason();
   const players = usePlayers({ active: true });
   const matches = useMatches({ status: 'APPROVED', size: 12 });
   const ranking = useRanking(season.data?.id);
+  const summary = useLeagueSummary(season.data?.id);
   const recentIds = (matches.data?.content ?? []).slice()
     .sort((a, b) => (b.startedAt ?? b.completedAt ?? '').localeCompare(a.startedAt ?? a.completedAt ?? ''))
     .slice(0, 6).map((match) => match.id);
@@ -52,11 +63,20 @@ export function HomePage() {
         </div>
       </section>
 
-      <section className="grid grid-cols-2 gap-4 sm:grid-cols-3">
-        <StatTile label="Aktywni gracze" value={players.data?.totalElements ?? 0} accent="cyan" />
-        <StatTile label="Rozegrane mecze" value={matches.data?.totalElements ?? 0} accent="violet" />
-        <StatTile label="Lider sezonu" value={leader?.nickname ?? '—'}
-          sub={leader ? `wynik ${leader.rankingScore.toFixed(2)}` : undefined} accent="gold" className="col-span-2 sm:col-span-1" />
+      {/* The leader gets the full width; the aggregate numbers shrink to a dense row underneath. */}
+      {leader && <LeaderCard leader={leader} seasonName={season.data?.name} />}
+
+      <section className="grid grid-cols-2 gap-3 sm:grid-cols-4 lg:grid-cols-7">
+        <StatTile size="sm" label="Aktywni gracze" value={players.data?.totalElements ?? 0} accent="cyan" />
+        <StatTile size="sm" label="Rozegrane mecze" value={matches.data?.totalElements ?? 0} accent="violet"
+          sub={summary.data?.players ? `${summary.data.players} graczy w sezonie` : undefined} />
+        <StatTile size="sm" label="Zabójstwa" value={num(summary.data?.kills)} />
+        <StatTile size="sm" label="Śmierci" value={num(summary.data?.deaths)} accent="loss" />
+        <StatTile size="sm" label="Asysty" value={num(summary.data?.assists)} />
+        <StatTile size="sm" label="Pentakille" value={num(summary.data?.pentakills)} accent="gold" />
+        <StatTile size="sm" label="Czas gry" value={hours(summary.data?.playtimeSeconds)}
+          sub={summary.data?.avgDurationSeconds ? `śr. ${formatDuration(summary.data.avgDurationSeconds)}` : undefined}
+          title="Suma czasu wszystkich zatwierdzonych meczów sezonu" />
       </section>
 
       <section>
@@ -69,6 +89,8 @@ export function HomePage() {
           ? <EmptyState title="Brak rozegranych meczów" description="Gdy pierwszy mecz zostanie zatwierdzony, pojawi się tutaj." />
           : <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">{recent.map((match) => <MatchCard key={match.id} match={match} />)}</div>}
       </section>
+
+      <OpinionTicker />
 
       <section>
         <div className="mb-4 flex items-end justify-between">

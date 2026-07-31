@@ -2,19 +2,23 @@ import { Link, useParams } from 'react-router-dom';
 import { usePlayer, usePlayerStats, usePlayerMatches } from '../api/hooks/players';
 import { useChampions } from '../api/hooks/champions';
 import { useCurrentSeason } from '../api/hooks/seasons';
+import { useRanking } from '../api/hooks/ranking';
 import { Avatar } from '../components/ui/Avatar';
 import { Badge } from '../components/ui/Badge';
 import { StatTile } from '../components/ui/StatTile';
 import { PrBadge } from '../components/ui/PrBadge';
+import { RankMedal } from '../components/ui/RankMedal';
 import { ChampionIcon } from '../components/champion/ChampionIcon';
 import { CardSkeleton, ErrorState, EmptyState, SectionSkeleton } from '../components/ui/States';
 import { championSplashUrl } from '../lib/ddragon';
 import { formatDate, roleLabel } from '../lib/format';
+import { podiumFrame, podiumOf } from '../lib/podium';
 
 export function PlayerProfilePage() {
   const { id } = useParams<{ id: string }>();
   const player = usePlayer(id);
   const season = useCurrentSeason();
+  const ranking = useRanking(season.data?.id);
   const stats = usePlayerStats(id, season.data?.id);
   const matches = usePlayerMatches(id);
   const champions = useChampions();
@@ -25,6 +29,10 @@ export function PlayerProfilePage() {
 
   const p = player.data;
   const agg = stats.data?.season;
+  // Standing in the current season, so a podium profile can wear it. Nothing is shown for anyone
+  // outside the top three — the point is that the decoration means something.
+  const myRank = ranking.data?.find((row) => row.playerId === p.id)?.rank;
+  const podium = podiumOf(myRank);
   const pool = stats.data?.championPool ?? [];
   const topChampId = pool[0]?.championId;
   const topSlug = champions.data?.find((c) => c.id === topChampId)?.slug;
@@ -35,19 +43,55 @@ export function PlayerProfilePage() {
 
   return (
     <div className="space-y-8">
-      {/* Header with optional splash backdrop */}
-      <section className="glass relative overflow-hidden">
+      {/* Header with optional splash backdrop, framed in metal for a podium player. */}
+      <section className="glass relative overflow-hidden" style={podiumFrame(myRank)}>
         {splash && (
           <>
             <img src={splash} alt="" className="absolute inset-0 h-full w-full object-cover object-top opacity-40" />
             <div className="absolute inset-0 scrim-side" />
           </>
         )}
+        {podium && (
+          // Ribbon across the top-right corner: from across the room you can tell this is a podium
+          // profile before reading a single number.
+          <div
+            className="absolute -right-16 top-6 z-20 rotate-45 px-16 py-1 text-center font-display text-xs font-bold tracking-wider"
+            style={{ background: podium.gradient, color: podium.ink, boxShadow: `0 0 24px -6px ${podium.glow}` }}
+          >
+            {podium.label.toUpperCase()}
+          </div>
+        )}
         <div className="relative z-10 flex flex-col gap-5 p-6 sm:flex-row sm:items-center sm:p-8">
-          <Avatar src={p.avatarUrl} name={p.nickname} size={96} ring />
+          <span className="relative shrink-0">
+            <Avatar
+              src={p.avatarUrl}
+              name={p.nickname}
+              size={96}
+              ring={!podium}
+              style={podium ? { boxShadow: `0 0 0 3px ${podium.color}, 0 0 34px -6px ${podium.glow}` } : undefined}
+            />
+            {podium && myRank != null && (
+              <RankMedal rank={myRank} className="absolute -bottom-1 -right-1 ring-2 ring-[color:var(--bg-1)]" />
+            )}
+          </span>
           <div className="flex-1">
-            <h1 className="font-display text-4xl">{p.nickname}</h1>
+            <h1 className="font-display text-4xl" style={podium ? { color: podium.color } : undefined}>
+              {p.nickname}
+            </h1>
             <div className="mt-2 flex flex-wrap items-center gap-2 text-sm text-text-lo">
+              {podium && (
+                <span
+                  className="chip font-semibold"
+                  style={{
+                    color: podium.color,
+                    borderColor: `color-mix(in srgb, ${podium.color} 45%, transparent)`,
+                    background: `color-mix(in srgb, ${podium.color} 14%, transparent)`,
+                  }}
+                  title={`${podium.label} w sezonie ${season.data?.name ?? ''}`.trim()}
+                >
+                  🏆 {podium.label} w sezonie
+                </span>
+              )}
               <Badge tone="gold">{roleLabel(p.mainRole)}</Badge>
               {p.secondaryRole && <Badge>{roleLabel(p.secondaryRole)}</Badge>}
               {p.riotId && <span className="num">{p.riotId}</span>}

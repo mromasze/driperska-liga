@@ -8,6 +8,8 @@ export const queryKeys = {
   playerStats: (id: string, season?: string) => ['player', id, 'stats', season ?? null] as const,
   playerMatches: (id: string, page?: number) => ['player', id, 'matches', page ?? 0] as const,
   ranking: (season?: string) => ['ranking', season ?? null] as const,
+  leagueSummary: (season?: string) => ['ranking', 'summary', season ?? null] as const,
+  recentOpinions: ['opinions', 'recent'] as const,
   seasons: ['seasons'] as const,
   currentSeason: ['season', 'current'] as const,
   seasonRanking: (id: string) => ['season', id, 'ranking'] as const,

@@ -14,4 +14,31 @@ public interface MatchParticipantRepository extends JpaRepository<MatchParticipa
             + "order by coalesce(p.match.startedAt, p.match.completedAt) desc")
     List<MatchParticipant> findByPlayerAndMatchStatus(@Param("playerId") UUID playerId,
                                                       @Param("status") MatchStatus status);
+
+    /**
+     * Season-wide totals for the landing page. Sums are {@code null} when the season has no scored
+     * matches yet — the caller substitutes zero.
+     */
+    interface SeasonTotals {
+        Long getKills();
+        Long getDeaths();
+        Long getAssists();
+        Long getCs();
+        Long getGold();
+        Long getDamage();
+        Long getVision();
+        Long getPentas();
+        Long getEntries();
+    }
+
+    @Query("""
+            select sum(p.kills) as kills, sum(p.deaths) as deaths, sum(p.assists) as assists,
+                   sum(p.cs) as cs, sum(p.gold) as gold, sum(p.damageToChampions) as damage,
+                   sum(p.visionScore) as vision,
+                   sum(case when p.largestMultiKill >= 5 then 1 else 0 end) as pentas,
+                   count(p.id) as entries
+            from MatchParticipant p
+            where p.match.status = :status and p.match.seasonId = :seasonId
+            """)
+    SeasonTotals totalsForSeason(@Param("status") MatchStatus status, @Param("seasonId") UUID seasonId);
 }

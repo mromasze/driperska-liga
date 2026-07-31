@@ -94,4 +94,15 @@ public interface MatchRepository extends JpaRepository<Match, UUID> {
             + "and m.teamsDrawnAt < :threshold")
     List<UUID> findIdsForAutoConfirm(@Param("status") MatchStatus status,
                                      @Param("threshold") java.time.Instant threshold);
+
+    /** Match count and total play time of a season, for the landing-page tiles. */
+    interface SeasonPlaytime {
+        long getMatches();
+        Long getSeconds();
+    }
+
+    @Query("select count(m) as matches, sum(m.durationSeconds) as seconds from Match m "
+            + "where m.status = :status and m.seasonId = :seasonId")
+    SeasonPlaytime playtimeForSeason(@Param("status") MatchStatus status,
+                                     @Param("seasonId") UUID seasonId);
 }
