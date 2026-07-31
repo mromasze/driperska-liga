@@ -107,6 +107,21 @@ export function OpinionTicker() {
               </span>
             </div>
           )}
+
+          {/* Time left on the current quote, along the bottom edge. `key` restarts the sweep on every
+              change — including a manual one, which is what makes the arrows feel like they reset it. */}
+          {list.length > 1 && (
+            <span aria-hidden className="pointer-events-none absolute inset-x-0 bottom-0 h-[3px]">
+              <span
+                key={index}
+                className="opinion-progress block h-full w-full"
+                style={{
+                  animationDuration: `${ROTATE_MS}ms`,
+                  animationPlayState: paused ? 'paused' : 'running',
+                }}
+              />
+            </span>
+          )}
         </>
       )}
     </section>

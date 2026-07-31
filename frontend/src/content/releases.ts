@@ -20,7 +20,7 @@ export const RELEASES: ReleaseNote[] = [
       'Nic z tego nie jest obowiązkowe: bez głosowania kapitan i kolejność są losowe, dokładnie jak dotąd.',
       'W drafcie doszedł chat: kanał ogólny i osobny kanał drużynowy. Wiadomości nie są nigdzie zapisywane i znikają po meczu.',
       'Administrator może wskazać kapitana, ustawić drużynę jako gotową, zresetować ustalenia albo wystartować draft od razu — a także napisać do lobby.',
-      'Pasek „Co mówili o sobie po meczach” zmienia cytaty szybciej i można go przewijać ręcznie strzałkami, z licznikiem, na której opinii jesteś.',
+      'Pasek „Co mówili o sobie po meczach” zmienia cytaty szybciej i można go przewijać ręcznie strzałkami, z licznikiem, na której opinii jesteś. Po dolnej krawędzi jedzie światełko odliczające do zmiany — zatrzymuje się razem z rotacją, gdy najedziesz kursorem.',
     ],
   },
   {

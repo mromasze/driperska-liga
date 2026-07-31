@@ -448,6 +448,36 @@
 }
 
 /* ============================================================
+   Opinion ticker progress light (components/match/OpinionTicker.tsx).
+
+   A quote changing every three seconds with nothing counting down reads as random: you cannot tell
+   whether you have a moment to finish reading or not. This runs along the bottom edge of the box for
+   exactly one rotation. Animated with a transform so it composites on the GPU, and paused — not
+   restarted — while the pointer is over the box, which is also when the rotation itself is paused.
+   ============================================================ */
+@keyframes opinion-progress {
+  from { transform: scaleX(0); }
+  to { transform: scaleX(1); }
+}
+
+.opinion-progress {
+  transform-origin: left center;
+  animation-name: opinion-progress;
+  animation-timing-function: linear;
+  animation-fill-mode: forwards;
+  background-image: linear-gradient(90deg,
+    color-mix(in srgb, var(--gold) 25%, transparent),
+    var(--gold) 70%,
+    var(--gold-soft));
+  box-shadow: 0 0 12px -1px color-mix(in srgb, var(--gold) 70%, transparent);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  /* The carousel does not rotate at all in this mode, so there is nothing to count down. */
+  .opinion-progress { display: none; }
+}
+
+/* ============================================================
    Draft board — the stage has to read from across the room.
    ============================================================ */
 
