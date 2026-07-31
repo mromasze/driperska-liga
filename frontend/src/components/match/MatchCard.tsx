@@ -1,16 +1,27 @@
 import { Link } from 'react-router-dom';
-import type { MatchDetail, MatchParticipant } from '../../api/types';
-import { formatDate, formatDuration } from '../../lib/format';
+import type { MatchDetail, MatchParticipant, Role } from '../../api/types';
+import { formatDate, formatDuration, roleLabel } from '../../lib/format';
 import { lineupOf, matchMvp, teamKills } from '../../lib/match';
 import { cn } from '../../lib/cn';
 import { ChampionIcon } from '../champion/ChampionIcon';
 import { PrBadge } from '../ui/PrBadge';
+
+/** Lane labels for the card's centre column — short enough to sit between two nicknames. */
+const LANE_LABEL: Record<Role, string> = {
+  TOP: 'TOP',
+  JUNGLE: 'JUNGLE',
+  MID: 'MID',
+  ADC: 'ADC',
+  SUPPORT: 'SUPP',
+};
 
 /** Rich result card built from a full match detail (used on Home / results grid). */
 export function MatchCard({ match }: { match: MatchDetail }) {
   const blueKills = teamKills(match, 'BLUE');
   const redKills = teamKills(match, 'RED');
   const mvp = matchMvp(match);
+  // Best player of the losing side — the league awards it separately from the MVP.
+  const ace = match.participants.find((p) => p.ace) ?? null;
   const blueWon = match.winningSide === 'BLUE';
   const blueLineup = lineupOf(match, 'BLUE');
   const redLineup = lineupOf(match, 'RED');
@@ -33,28 +44,39 @@ export function MatchCard({ match }: { match: MatchDetail }) {
           </div>
 
           {/*
-            Both lineups, lane against lane. A scoreline alone never told you *which* match you were
-            looking at — the portraits and nicknames do, at a glance, before the card is even clicked.
+            Both lineups, lane against lane, with the lane written between them: the two nicknames on
+            a row are the players who actually faced each other, and saying which lane that was turns
+            the block into a readable matchup instead of two lists side by side. Each side's K/D/A
+            sits on the inside edge (the red row is mirrored), so both columns of numbers end up next
+            to the lane label and read as one comparison.
           */}
           {lanes > 0 && (
             <div className="mt-3 space-y-1 border-t border-line pt-3">
-              {Array.from({ length: lanes }).map((_, lane) => (
-                <div key={lane} className="flex items-center gap-2">
-                  <LineupSlot player={blueLineup[lane]} mvpId={mvp?.playerId} />
-                  <LineupSlot player={redLineup[lane]} mvpId={mvp?.playerId} align="right" />
-                </div>
-              ))}
+              {Array.from({ length: lanes }).map((_, lane) => {
+                const blue = blueLineup[lane];
+                const red = redLineup[lane];
+                const role = blue?.role ?? red?.role;
+                return (
+                  <div key={lane} className="flex items-center gap-1">
+                    <LineupSlot player={blue} mvpId={mvp?.playerId} />
+                    <span
+                      className="w-[3.4rem] shrink-0 text-center text-[9px] font-semibold uppercase tracking-[0.06em] text-text-lo"
+                      title={role ? roleLabel(role) : undefined}
+                    >
+                      {role ? LANE_LABEL[role] : ''}
+                    </span>
+                    <LineupSlot player={red} mvpId={mvp?.playerId} align="right" />
+                  </div>
+                );
+              })}
             </div>
           )}
 
-          {mvp && (
-            <div className="mt-3 flex items-center gap-2 border-t border-line pt-3">
-              <ChampionIcon iconUrl={mvp.championIconUrl} name={mvp.championName} size={28} />
-              <span className="text-xs text-text-lo">MVP</span>
-              <span className="truncate text-sm font-medium text-text-hi">{mvp.nickname}</span>
-              <span className="ml-auto">
-                <PrBadge value={mvp.performanceRating} size="sm" />
-              </span>
+          {/* The honours line carries the ratings, which the tight lineup rows have no room for. */}
+          {(mvp || ace) && (
+            <div className="mt-3 flex items-center gap-3 border-t border-line pt-3">
+              {mvp && <Honour player={mvp} label="MVP" icon="👑" />}
+              {ace && <Honour player={ace} label="ACE" icon="🛡️" />}
             </div>
           )}
         </div>
@@ -64,18 +86,28 @@ export function MatchCard({ match }: { match: MatchDetail }) {
   );
 }
 
-/** One player in a lineup row: portrait plus nickname, mirrored for the red side. */
+/**
+ * One player in a lineup row: portrait, nickname with its honours, and K/D/A — mirrored for the red
+ * side so the numbers of both players meet in the middle of the card.
+ */
 function LineupSlot({ player, mvpId, align = 'left' }: {
   player?: MatchParticipant;
   mvpId?: string;
   align?: 'left' | 'right';
 }) {
   if (!player) return <span className="min-w-0 flex-1" />;
-  const isMvp = player.playerId === mvpId;
+  // `mvp` is set when the match is scored; the highest-PR fallback covers a card rendered before that.
+  const isMvp = player.mvp || player.playerId === mvpId;
+  const titleParts = [player.nickname];
+  if (player.championName) titleParts.push(player.championName);
+  titleParts.push(`${player.kills}/${player.deaths}/${player.assists}`);
+  if (isMvp) titleParts.push('MVP meczu');
+  if (player.ace) titleParts.push('ACE przegranej drużyny');
+
   return (
     <span
-      className={cn('flex min-w-0 flex-1 items-center gap-1.5', align === 'right' && 'flex-row-reverse')}
-      title={`${player.nickname}${player.championName ? ` — ${player.championName}` : ''}`}
+      className={cn('flex min-w-0 flex-1 items-center gap-1', align === 'right' && 'flex-row-reverse')}
+      title={titleParts.join(' — ')}
     >
       <ChampionIcon
         iconUrl={player.championIconUrl}
@@ -83,8 +115,39 @@ function LineupSlot({ player, mvpId, align = 'left' }: {
         size={20}
         className={cn(isMvp && 'ring-[var(--gold)]')}
       />
-      <span className={cn('truncate text-[11px]', isMvp ? 'font-semibold text-gold' : 'text-text-lo')}>
-        {player.nickname}
+      <span
+        className={cn(
+          'flex min-w-0 flex-1 items-center gap-0.5 text-[11px]',
+          align === 'right' && 'flex-row-reverse',
+          isMvp ? 'font-semibold text-gold' : 'text-text-lo',
+        )}
+      >
+        <span className="truncate">{player.nickname}</span>
+        {isMvp && <span aria-label="MVP meczu">👑</span>}
+        {player.ace && <span aria-label="ACE przegranej drużyny">🛡️</span>}
+      </span>
+      <span className="num shrink-0 text-[10px] text-text-lo">
+        {player.kills}<span className="opacity-50">/</span>
+        <span className="text-loss">{player.deaths}</span>
+        <span className="opacity-50">/</span>{player.assists}
+      </span>
+    </span>
+  );
+}
+
+/** One honour on the card footer: who it was, on what champion, and their rating. */
+function Honour({ player, label, icon }: { player: MatchParticipant; label: string; icon: string }) {
+  return (
+    <span className="flex min-w-0 flex-1 items-center gap-1.5">
+      <ChampionIcon iconUrl={player.championIconUrl} name={player.championName} size={26} />
+      <span className="min-w-0">
+        <span className="flex items-center gap-1 text-[10px] text-text-lo">
+          <span aria-hidden>{icon}</span>{label}
+        </span>
+        <span className="block truncate text-xs font-medium text-text-hi">{player.nickname}</span>
+      </span>
+      <span className="ml-auto shrink-0">
+        <PrBadge value={player.performanceRating} size="sm" />
       </span>
     </span>
   );

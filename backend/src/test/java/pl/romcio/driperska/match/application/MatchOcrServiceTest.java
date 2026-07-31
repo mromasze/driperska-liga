@@ -8,8 +8,17 @@ import java.awt.image.BufferedImage;
 import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
 import java.util.Base64;
+import java.util.List;
+import java.util.UUID;
 import javax.imageio.ImageIO;
 import org.junit.jupiter.api.Test;
+import org.springframework.test.util.ReflectionTestUtils;
+import pl.romcio.driperska.common.domain.Role;
+import pl.romcio.driperska.common.domain.Side;
+import pl.romcio.driperska.match.domain.DrawMode;
+import pl.romcio.driperska.match.domain.Match;
+import pl.romcio.driperska.match.domain.MatchParticipant;
+import pl.romcio.driperska.player.domain.Player;
 
 class MatchOcrServiceTest {
 
@@ -19,6 +28,47 @@ class MatchOcrServiceTest {
                 .contains("CHAMPION REFERENCE ATLASES")
                 .contains("Never treat atlas labels")
                 .contains("Output raw JSON only");
+    }
+
+    /**
+     * The scoreboard shows in-game names, the database keys on league nicknames, and the two are
+     * frequently unrelated strings — so the rule that links them has to be in the system prompt, not
+     * left for the model to infer from a roster listing.
+     */
+    @Test
+    void systemPromptExplainsTheTwoNamesEveryPlayerHas() {
+        assertThat(MatchOcrService.systemPrompt())
+                .contains("TWO NAMES PER PERSON")
+                .contains("LEAGUE NICKNAME")
+                .contains("IN-GAME NAME")
+                .contains("return the LEAGUE NICKNAME");
+    }
+
+    /** Both names are always listed as a pair, including "unknown" when there is no Riot ID. */
+    @Test
+    void rosterInThePromptPairsTheLeagueNicknameWithTheInGameName() {
+        UUID withRiotId = UUID.randomUUID();
+        UUID withoutRiotId = UUID.randomUUID();
+        Player driper = player(withRiotId, "Driper", "xXSmurfik99Xx#EUNE");
+        Player anon = player(withoutRiotId, "Bezimienny", null);
+        Match match = new Match(UUID.randomUUID(), DrawMode.MANUAL, UUID.randomUUID());
+        match.replaceParticipants(List.of(
+                new MatchParticipant(withRiotId, Side.BLUE, Role.MID),
+                new MatchParticipant(withoutRiotId, Side.RED, Role.TOP)));
+
+        String prompt = MatchOcrService.prompt(match, List.of(driper, anon), List.of(), 2, 0);
+
+        assertThat(prompt)
+                .contains("league nickname \"Driper\" | in-game name \"xXSmurfik99Xx\"")
+                .contains("league nickname \"Bezimienny\" | in-game name unknown (no Riot ID on file)")
+                .contains("report the league nickname");
+    }
+
+    private static Player player(UUID id, String nickname, String riotId) {
+        Player player = new Player(nickname, Role.MID, "disc-" + nickname);
+        ReflectionTestUtils.setField(player, "id", id); // ids are generated on persist
+        player.setRiotId(riotId);
+        return player;
     }
     @Test
     void downscalesOversizedScreenshotToTheDimensionCap() throws Exception {

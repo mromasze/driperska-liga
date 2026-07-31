@@ -4,9 +4,12 @@ import { Button } from '../../components/ui/Button';
 import { Badge } from '../../components/ui/Badge';
 import { EmptyState, ErrorState, SectionSkeleton } from '../../components/ui/States';
 import { formatDateTime } from '../../lib/format';
+import type { PlannedMatch } from '../../api/types';
 
 export function AdminSchedulePage() {
-  const planned = usePlannedMatches();
+  // Past terms are hidden from players (they cannot be confirmed any more) but stay here, so the
+  // admin still sees what was planned and can clear it off the list.
+  const planned = usePlannedMatches(true);
   const create = useCreatePlannedMatch();
   const cancel = useCancelPlannedMatch();
   const [when, setWhen] = useState('');
@@ -30,6 +33,9 @@ export function AdminSchedulePage() {
   };
 
   const list = planned.data ?? [];
+  const now = Date.now();
+  const upcoming = list.filter((p) => new Date(p.scheduledAt).getTime() >= now);
+  const past = list.filter((p) => new Date(p.scheduledAt).getTime() < now).reverse();
 
   return (
     <div className="space-y-8">
@@ -59,42 +65,82 @@ export function AdminSchedulePage() {
 
       <section>
         <h2 className="mb-3 font-display text-xl">Zaplanowane mecze</h2>
-        {planned.isError ? <ErrorState error={planned.error} /> : planned.isLoading ? <SectionSkeleton rows={3} /> : list.length === 0 ? (
+        {planned.isError ? <ErrorState error={planned.error} /> : planned.isLoading ? <SectionSkeleton rows={3} /> : upcoming.length === 0 ? (
           <EmptyState title="Brak zaplanowanych meczów" />
         ) : (
           <div className="space-y-3">
-            {list.map((p) => (
-              <article key={p.id} className="glass p-4">
-                <div className="flex flex-wrap items-center justify-between gap-3">
-                  <div>
-                    <div className="font-semibold text-text-hi">{formatDateTime(p.scheduledAt)}</div>
-                    {p.note && <div className="text-sm text-text-lo">{p.note}</div>}
-                  </div>
-                  <div className="flex items-center gap-2">
-                    <Badge tone="win">✓ {p.yes}</Badge>
-                    <Badge tone="pending">? {p.maybe}</Badge>
-                    <Badge tone="loss">✗ {p.no}</Badge>
-                    <Button variant="ghost" size="sm" disabled={cancel.isPending}
-                      onClick={() => { if (window.confirm('Anulować zaplanowany mecz?')) cancel.mutate(p.id); }}>
-                      Anuluj
-                    </Button>
-                  </div>
-                </div>
-                {p.responses.length > 0 && (
-                  <div className="mt-3 flex flex-wrap gap-2 text-xs">
-                    {p.responses.map((r) => (
-                      <span key={r.playerId}
-                        className={`rounded px-2 py-1 ${r.response === 'YES' ? 'bg-[color:var(--win)]/15 text-win' : r.response === 'NO' ? 'bg-[color:var(--loss)]/15 text-loss' : 'bg-bg-2 text-text-lo'}`}>
-                        {r.response === 'YES' ? '✓' : r.response === 'NO' ? '✗' : '?'} {r.nickname}
-                      </span>
-                    ))}
-                  </div>
-                )}
-              </article>
+            {upcoming.map((p) => (
+              <PlannedRow key={p.id} match={p} cancelling={cancel.isPending}
+                onCancel={() => cancel.mutate(p.id)} />
             ))}
           </div>
         )}
       </section>
+
+      {past.length > 0 && (
+        <section>
+          <h2 className="mb-1 font-display text-xl">Termin minął</h2>
+          <p className="mb-3 text-sm text-text-lo">
+            Gracze już tego nie widzą i nie mogą potwierdzać obecności. Zostaje tu do wglądu —
+            „Anuluj” usuwa pozycję z listy.
+          </p>
+          <div className="space-y-3">
+            {past.map((p) => (
+              <PlannedRow key={p.id} match={p} past cancelling={cancel.isPending}
+                onCancel={() => cancel.mutate(p.id)} />
+            ))}
+          </div>
+        </section>
+      )}
     </div>
+  );
+}
+
+function PlannedRow({
+  match,
+  past = false,
+  cancelling,
+  onCancel,
+}: {
+  match: PlannedMatch;
+  past?: boolean;
+  cancelling: boolean;
+  onCancel: () => void;
+}) {
+  return (
+    <article className={`glass p-4 ${past ? 'opacity-60' : ''}`}>
+      <div className="flex flex-wrap items-center justify-between gap-3">
+        <div>
+          <div className="flex flex-wrap items-center gap-2">
+            <span className="font-semibold text-text-hi">{formatDateTime(match.scheduledAt)}</span>
+            {past && <Badge>termin minął</Badge>}
+          </div>
+          {match.note && <div className="text-sm text-text-lo">{match.note}</div>}
+        </div>
+        <div className="flex items-center gap-2">
+          <Badge tone="win">✓ {match.yes}</Badge>
+          <Badge tone="pending">? {match.maybe}</Badge>
+          <Badge tone="loss">✗ {match.no}</Badge>
+          <Button variant="ghost" size="sm" disabled={cancelling}
+            onClick={() => {
+              if (window.confirm(past
+                ? 'Usunąć miniony termin z listy?'
+                : 'Anulować zaplanowany mecz?')) onCancel();
+            }}>
+            Anuluj
+          </Button>
+        </div>
+      </div>
+      {match.responses.length > 0 && (
+        <div className="mt-3 flex flex-wrap gap-2 text-xs">
+          {match.responses.map((r) => (
+            <span key={r.playerId}
+              className={`rounded px-2 py-1 ${r.response === 'YES' ? 'bg-[color:var(--win)]/15 text-win' : r.response === 'NO' ? 'bg-[color:var(--loss)]/15 text-loss' : 'bg-bg-2 text-text-lo'}`}>
+              {r.response === 'YES' ? '✓' : r.response === 'NO' ? '✗' : '?'} {r.nickname}
+            </span>
+          ))}
+        </div>
+      )}
+    </article>
   );
 }

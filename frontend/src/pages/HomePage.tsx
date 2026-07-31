@@ -11,6 +11,7 @@ import { CardGridSkeleton, EmptyState, ErrorState, TableSkeleton } from '../comp
 import { ScoringInfo } from '../components/ScoringInfo';
 import { LogoHex } from '../components/brand/Logo';
 import { HeroVideoBackground } from '../components/highlight/HeroVideoBackground';
+import { HomeBackdrop } from '../components/system/HomeBackdrop';
 import { RELEASES } from '../content/releases';
 import { APP_VERSION } from '../version';
 import type { MatchDetail } from '../api/types';
@@ -29,6 +30,7 @@ export function HomePage() {
 
   return (
     <div className="space-y-12">
+      <HomeBackdrop />
       <section className="glass grid-tex relative min-h-[24rem] overflow-hidden px-6 py-12 sm:px-12 sm:py-16">
         <HeroVideoBackground />
         <div className="relative z-10 max-w-2xl animate-rise">

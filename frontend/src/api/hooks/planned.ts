@@ -4,8 +4,19 @@ import type { CreatePlannedMatchResult, PlannedMatch, RsvpResponse } from '../ty
 
 const KEY = ['planned-matches'] as const;
 
-export function usePlannedMatches() {
-  return useQuery({ queryKey: KEY, queryFn: () => api.get<PlannedMatch[]>('/planned-matches') });
+/**
+ * GET /planned-matches — upcoming terms only; a match whose date has passed can no longer be
+ * confirmed, so the backend stops listing it. `includePast` is honoured for ADMIN/EDITOR and lets the
+ * schedule page keep the history of what was planned.
+ */
+export function usePlannedMatches(includePast = false) {
+  return useQuery({
+    queryKey: [...KEY, { includePast }] as const,
+    queryFn: () =>
+      api.get<PlannedMatch[]>('/planned-matches', {
+        query: includePast ? { includePast: true } : undefined,
+      }),
+  });
 }
 
 export function useCreatePlannedMatch() {

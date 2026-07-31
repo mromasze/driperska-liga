@@ -2,8 +2,11 @@ package pl.romcio.driperska.match.application;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
+import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyString;
+import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 import java.time.Instant;
@@ -67,6 +70,43 @@ class PlannedMatchServiceDiscordRsvpTest {
                 .isInstanceOf(BusinessRuleException.class)
                 .hasMessageContaining("nie jest połączone");
         assertThat(match.getRsvps()).isEmpty();
+    }
+
+    /**
+     * The vote message stays in the Discord channel for good, so a click on last month's
+     * announcement must not register attendance for a match that is already over.
+     */
+    @Test
+    void discordVoteAfterTheTermHasPassedIsRejected() {
+        PlannedMatch match = new PlannedMatch(Instant.now().minusSeconds(60), null, UUID.randomUUID());
+        when(planned.findById(match.getId())).thenReturn(Optional.of(match));
+
+        assertThatThrownBy(() -> service.rsvpByDiscord(match.getId(), "123456789012345678", "YES"))
+                .isInstanceOf(BusinessRuleException.class)
+                .hasMessageContaining("Termin tego meczu już minął");
+        assertThat(match.getRsvps()).isEmpty();
+    }
+
+    @Test
+    void webVoteAfterTheTermHasPassedIsRejected() {
+        PlannedMatch match = new PlannedMatch(Instant.now().minusSeconds(1), null, UUID.randomUUID());
+        when(planned.findById(match.getId())).thenReturn(Optional.of(match));
+
+        assertThatThrownBy(() -> service.rsvp(match.getId(), UUID.randomUUID(), "YES"))
+                .isInstanceOf(BusinessRuleException.class)
+                .hasMessageContaining("Termin tego meczu już minął");
+        assertThat(match.getRsvps()).isEmpty();
+    }
+
+    /** Players are only offered terms they can still confirm; the admin list keeps the history. */
+    @Test
+    void theListingForPlayersDropsTermsThatHavePassed() {
+        service.listUpcoming(null);
+        verify(planned).findByStatusAndScheduledAtGreaterThanEqualOrderByScheduledAtAsc(
+                eq(PlannedMatch.PLANNED), any(Instant.class));
+
+        service.listIncludingPast(null);
+        verify(planned).findByStatusOrderByScheduledAtAsc(PlannedMatch.PLANNED);
     }
 
     @Test

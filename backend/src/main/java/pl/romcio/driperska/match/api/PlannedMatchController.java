@@ -21,10 +21,19 @@ public class PlannedMatchController {
         this.service = service;
     }
 
+    /**
+     * Upcoming matches only — a term that has passed cannot be confirmed any more, so it stops being
+     * offered. {@code includePast=true} is honoured for the admin schedule page (and ignored for
+     * everyone else), which needs the history of what was planned.
+     */
     @GetMapping
-    public List<PlannedMatchResponse> list() {
-        UUID viewer = CurrentAccount.optional().map(a -> a.accountId()).orElse(null);
-        return service.listUpcoming(viewer);
+    public List<PlannedMatchResponse> list(@RequestParam(defaultValue = "false") boolean includePast) {
+        var current = CurrentAccount.optional();
+        UUID viewer = current.map(a -> a.accountId()).orElse(null);
+        boolean staff = current
+                .filter(a -> a.isAdmin() || "ROLE_EDITOR".equals(a.role()))
+                .isPresent();
+        return includePast && staff ? service.listIncludingPast(viewer) : service.listUpcoming(viewer);
     }
 
     @PostMapping

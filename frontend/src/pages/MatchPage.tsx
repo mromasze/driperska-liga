@@ -48,9 +48,14 @@ export function MatchPage() {
 
       <Scoreboard match={m} />
 
-      <MatchPointsBreakdown match={m} />
-
+      {/*
+        Opinions first, LP maths second. What people said about the game is the part everyone opens
+        the page for; the point breakdown is reference material you scroll down to when a number
+        looks wrong.
+      */}
       <PlayerOpinions matchId={m.id} />
+
+      <MatchPointsBreakdown match={m} />
 
       {m.approval && m.status === 'APPROVED' && (
         <div className="glass flex flex-wrap items-center gap-x-6 gap-y-1 p-4 text-sm text-text-lo">

@@ -523,7 +523,9 @@ const RSVP_OPTIONS: { value: RsvpResponse; label: string; variant: 'gold' | 'gho
 function UpcomingMatches() {
   const planned = usePlannedMatches();
   const rsvp = useRsvpPlannedMatch();
-  const list = planned.data ?? [];
+  // The backend already lists only future terms; this repeats the cut client-side so a match whose
+  // hour passes with the panel open stops offering buttons the server would now reject.
+  const list = (planned.data ?? []).filter((m) => new Date(m.scheduledAt).getTime() >= Date.now());
   if (planned.isLoading) return <SectionSkeleton title="Nadchodzące mecze" rows={2} />;
   if (list.length === 0) return null;
 

@@ -361,6 +361,93 @@
 }
 
 /* ============================================================
+   Home backdrop (see components/system/HomeBackdrop.tsx).
+
+   Everything below the hero used to sit on the bare --bg colour, which read as an empty black field.
+   These four layers are pure gradients: colour blooms drifting behind the content, a triangular
+   lattice nodding to the hex mark, two faint light beams and a warm horizon at the bottom of the
+   viewport. Fixed and behind everything, so scrolling moves the page *through* it.
+   ============================================================ */
+.home-backdrop {
+  position: fixed;
+  inset: 0;
+  /* Above the body background, below every piece of content. */
+  z-index: -1;
+  overflow: hidden;
+  pointer-events: none;
+  --hex-line: rgba(255, 255, 255, 0.075);
+}
+
+/*
+  Colour blooms. Oversized and inset past the edges so the drift never exposes a hard border. Four of
+  them on purpose: two framing the hero, one warm one mid-page and a cool one low-left, because with
+  only the top two the middle of the page (results, ranking) fell back to flat black.
+*/
+.home-backdrop::before {
+  content: '';
+  position: absolute;
+  inset: -15%;
+  background-image:
+    radial-gradient(40rem 28rem at 14% 4%, rgba(53, 224, 224, 0.24), transparent 64%),
+    radial-gradient(48rem 32rem at 88% 0%, rgba(155, 140, 255, 0.28), transparent 62%),
+    radial-gradient(42rem 30rem at 68% 44%, rgba(242, 193, 78, 0.11), transparent 68%),
+    radial-gradient(36rem 30rem at 8% 74%, rgba(76, 130, 245, 0.14), transparent 66%);
+  filter: blur(14px);
+  animation: home-drift 46s ease-in-out infinite alternate;
+}
+
+@keyframes home-drift {
+  from { transform: translate3d(-1.5%, -1%, 0) scale(1.02); }
+  to { transform: translate3d(1.5%, 2%, 0) scale(1.08); }
+}
+
+/*
+  Triangular lattice — three sets of hairlines at 0°/60°/-60°. Masked to fade out downwards, so it
+  frames the hero and then gets out of the way of the tables and cards further down the page.
+*/
+.home-lattice {
+  position: absolute;
+  inset: 0;
+  background-image:
+    repeating-linear-gradient(60deg, transparent 0 46px, var(--hex-line) 46px 47px),
+    repeating-linear-gradient(-60deg, transparent 0 46px, var(--hex-line) 46px 47px),
+    repeating-linear-gradient(0deg, transparent 0 46px, var(--hex-line) 46px 47px);
+  -webkit-mask-image: radial-gradient(125% 85% at 50% -5%, #000 0%, rgba(0, 0, 0, 0.5) 45%, transparent 82%);
+  mask-image: radial-gradient(125% 85% at 50% -5%, #000 0%, rgba(0, 0, 0, 0.5) 45%, transparent 82%);
+}
+
+/* Two off-axis light streaks — enough to break the flatness, not enough to notice consciously. */
+.home-beams {
+  position: absolute;
+  inset: 0;
+  background-image:
+    linear-gradient(104deg, transparent 43%, rgba(53, 224, 224, 0.1) 47%, transparent 52%),
+    linear-gradient(74deg, transparent 59%, rgba(155, 140, 255, 0.09) 63%, transparent 68%);
+}
+
+/* Warm glow anchored to the bottom of the viewport, so the page never ends in flat black. */
+.home-horizon {
+  position: absolute;
+  bottom: -20rem;
+  left: 50%;
+  width: min(92rem, 170%);
+  height: 36rem;
+  transform: translateX(-50%);
+  background-image: radial-gradient(50% 50% at 50% 50%, rgba(242, 193, 78, 0.22), transparent 70%);
+  filter: blur(22px);
+}
+
+:root[data-theme='light'] .home-backdrop {
+  /* Light surfaces need dark hairlines, and the blooms have to drop to a tint. */
+  --hex-line: rgba(15, 23, 42, 0.055);
+  opacity: 0.5;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .home-backdrop::before { animation: none; }
+}
+
+/* ============================================================
    Draft board — the stage has to read from across the room.
    ============================================================ */
 

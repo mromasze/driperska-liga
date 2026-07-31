@@ -58,9 +58,7 @@ public class PlannedMatchService {
         if (!RESPONSES.contains(r)) throw new BusinessRuleException("Nieprawidłowa odpowiedź");
         PlannedMatch planned = repository.findById(id)
                 .orElseThrow(() -> ResourceNotFoundException.of("PlannedMatch", id));
-        if (!PlannedMatch.PLANNED.equals(planned.getStatus())) {
-            throw new BusinessRuleException("Ten mecz nie jest już planowany");
-        }
+        requireOpenForRsvp(planned);
         Player player = playerRepository.findByAccountId(accountId)
                 .orElseThrow(() -> new BusinessRuleException("Konto nie jest połączone z graczem"));
         planned.setResponse(player.getId(), r);
@@ -77,9 +75,7 @@ public class PlannedMatchService {
         if (!RESPONSES.contains(r)) throw new BusinessRuleException("Nieprawidłowa odpowiedź");
         PlannedMatch planned = repository.findById(id)
                 .orElseThrow(() -> ResourceNotFoundException.of("PlannedMatch", id));
-        if (!PlannedMatch.PLANNED.equals(planned.getStatus())) {
-            throw new BusinessRuleException("Ten mecz nie jest już planowany");
-        }
+        requireOpenForRsvp(planned);
         Player player = playerRepository.findByDiscordUserId(discordUserId)
                 .orElseThrow(() -> new BusinessRuleException(
                         "Twoje konto Discord nie jest połączone z graczem — zagłosuj przez stronę"));
@@ -87,8 +83,33 @@ public class PlannedMatchService {
         return player.getNickname();
     }
 
+    /**
+     * Attendance can only be confirmed for a match that has not started yet.
+     *
+     * <p>The vote message stays in the Discord channel forever, so without this check a click on a
+     * three-week-old announcement would still register a "Będę" for a match that is long over.
+     */
+    private void requireOpenForRsvp(PlannedMatch planned) {
+        if (!PlannedMatch.PLANNED.equals(planned.getStatus())) {
+            throw new BusinessRuleException("Ten mecz nie jest już planowany");
+        }
+        if (planned.getScheduledAt().isBefore(Instant.now())) {
+            throw new BusinessRuleException(
+                    "Termin tego meczu już minął — potwierdzanie obecności jest zamknięte");
+        }
+    }
+
+    /** What players see: only matches ahead of us, because only those can still be confirmed. */
     @Transactional(readOnly = true)
     public List<PlannedMatchResponse> listUpcoming(UUID viewerAccountId) {
+        return repository.findByStatusAndScheduledAtGreaterThanEqualOrderByScheduledAtAsc(
+                        PlannedMatch.PLANNED, Instant.now()).stream()
+                .map(p -> toResponse(p, viewerAccountId)).toList();
+    }
+
+    /** Admin view: past terms included, so the schedule page keeps its history and can tidy it up. */
+    @Transactional(readOnly = true)
+    public List<PlannedMatchResponse> listIncludingPast(UUID viewerAccountId) {
         return repository.findByStatusOrderByScheduledAtAsc(PlannedMatch.PLANNED).stream()
                 .map(p -> toResponse(p, viewerAccountId)).toList();
     }

@@ -310,9 +310,27 @@ public class MatchOcrService {
                 - Read every match screenshot. Multiple screenshots can show different statistic tabs for
                   the same ten players. Merge rows using summoner name, team, and stable row order.
 
+                PLAYER IDENTITY — TWO NAMES PER PERSON (read this before naming anybody):
+                - Every player in this league has TWO names: a LEAGUE NICKNAME used on the website, and
+                  an IN-GAME NAME (the Riot ID without its #TAG) shown on the scoreboard. They are often
+                  completely different strings, e.g. league nickname "Driper" playing as "xXSmurfik99Xx".
+                - The user message lists the roster as: SIDE — league nickname "N" | in-game name "G".
+                  That pairing is the correlation between what you see in the screenshot and what this
+                  system stores. Learn it before you write any name.
+                - In the "name" field return the LEAGUE NICKNAME of the person whose row you are reading,
+                  matched through their in-game name. This is the only way the result can be attached to
+                  the right player.
+                - Only when a scoreboard row matches no roster entry, return the in-game name exactly as
+                  printed, so the mismatch stays visible instead of being assigned to the wrong person.
+                - Never pair two rows with the same league nickname, and never rename a player because
+                  their champion or statistics look like somebody else's.
+                - A roster entry marked "in-game name unknown" has no Riot ID on file: identify that
+                  person by side and by the remaining rows, or leave their row out.
+
                 EXTRACTION RULES:
                 - Return exactly one player object for each player visible in the match screenshots.
-                - Copy summoner names from the screenshot; remove a trailing #TAG only when clearly visible.
+                - Read summoner names from the screenshot; remove a trailing #TAG only when clearly
+                  visible, then map the name onto the roster as described above.
 
                 CHAMPION IDENTIFICATION (the scoreboard never writes champion names — it only shows a
                 small portrait, so this is a visual comparison and you must actually perform it):
@@ -339,8 +357,8 @@ public class MatchOcrService {
                 """;
     }
 
-    private static String prompt(Match match, List<Player> players, List<Champion> champions,
-                                 int screenshotCount, int atlasCount) {
+    static String prompt(Match match, List<Player> players, List<Champion> champions,
+                         int screenshotCount, int atlasCount) {
         Map<UUID, Player> playerById = new HashMap<>();
         for (Player player : players) playerById.put(player.getId(), player);
         Map<Integer, String> championNameById = new HashMap<>();
@@ -353,12 +371,16 @@ public class MatchOcrService {
             Player player = playerById.get(participant.getPlayerId());
             if (player == null) continue;
             participantCount++;
-            roster.append("- ").append(participant.getSide()).append(": ")
-                    .append(player.getNickname());
+            // Both names, always, and spelled out as a pair. Listing the in-game name only when it
+            // differs left the model to guess whether a name was a nickname or an in-game name, and a
+            // scoreboard only ever shows the latter.
             String gameName = riotGameName(player.getRiotId());
-            if (gameName != null && !gameName.equalsIgnoreCase(player.getNickname())) {
-                roster.append(" (Riot game name: ").append(gameName).append(')');
-            }
+            roster.append("- ").append(participant.getSide())
+                    .append(" — league nickname \"").append(player.getNickname()).append('"')
+                    .append(" | in-game name ")
+                    .append(gameName == null || gameName.isBlank()
+                            ? "unknown (no Riot ID on file)"
+                            : '"' + gameName + '"');
             // A match that went through the internal draft already knows who locked what. Telling the
             // model narrows champion identification from ~170 candidates to this player's one, which is
             // the difference between reading a 32px portrait and confirming it.
@@ -389,7 +411,8 @@ public class MatchOcrService {
                 Images 1-%d are the only MATCH SCREENSHOTS from which match data may be extracted.
                 %s
 
-                EXPECTED ROSTER AND SIDE (spelling aid, not a substitute for visible evidence):
+                EXPECTED ROSTER — LEAGUE NICKNAME ↔ IN-GAME NAME (the scoreboard shows the in-game name;
+                report the league nickname, as the system prompt requires):
                 %s
                 CANONICAL CHAMPION NAMES:
                 %s

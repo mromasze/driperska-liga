@@ -111,6 +111,39 @@ function LockToggle({ locked, onToggle, label }: { locked: boolean; onToggle: ()
   );
 }
 
+/**
+ * Column padlock in a table header — locks that one field for all ten players at once. Unlike
+ * {@link LockToggle} it is always visible: a column lock is a deliberate mode the person entering
+ * data needs to see at a glance, not a per-cell detail that would clutter the table.
+ */
+function ColumnLockToggle({ locked, onToggle, label }: {
+  locked: boolean;
+  onToggle: () => void;
+  label: string;
+}) {
+  return (
+    <button
+      type="button"
+      onClick={onToggle}
+      aria-pressed={locked}
+      aria-label={locked ? `Odblokuj kolumnę: ${label}` : `Zablokuj kolumnę: ${label}`}
+      title={
+        locked
+          ? `${label} — cała kolumna zablokowana u wszystkich graczy. Kliknij, aby odblokować.`
+          : `${label} — kliknij, aby zablokować tę kolumnę u wszystkich dziesięciu graczy.`
+      }
+      className={cn(
+        'grid h-4 w-4 place-items-center rounded-full border transition',
+        locked
+          ? 'border-[color:var(--gold)] bg-gold text-[#1a1205]'
+          : 'border-line bg-bg-2 text-text-lo opacity-45 hover:opacity-100 focus-visible:opacity-100',
+      )}
+    >
+      <PadlockIcon open={!locked} />
+    </button>
+  );
+}
+
 export function ResultsForm({
   match,
   submitting,
@@ -172,6 +205,27 @@ export function ResultsForm({
       ...Object.values(MATCH_LOCK),
       ...match.participants.flatMap((p) => LOCKABLE_KEYS.map((key) => rowLockKey(p.playerId, key))),
     ]));
+  };
+
+  /* Column locks. Once the model has read the champions right but keeps mangling vision score, the
+     useful move is "keep this whole column" — ten separate padlock clicks for that is busywork. The
+     header padlock covers every participant of the match, so it works the same from either team's
+     table. */
+  const columnLocked = (key: keyof Row) =>
+    match.participants.length > 0
+    && match.participants.every((p) => locks.has(rowLockKey(p.playerId, key)));
+
+  const toggleColumn = (key: keyof Row) => {
+    setLocks((prev) => {
+      const next = new Set(prev);
+      const allLocked = match.participants.every((p) => next.has(rowLockKey(p.playerId, key)));
+      for (const p of match.participants) {
+        const lockKey = rowLockKey(p.playerId, key);
+        if (allLocked) next.delete(lockKey);
+        else next.add(lockKey);
+      }
+      return next;
+    });
   };
 
   const ocr = useOcrResults(match.id, ocrScope);
@@ -341,7 +395,8 @@ export function ResultsForm({
             <span className="grid h-4 w-4 shrink-0 place-items-center rounded-full border border-[color:var(--gold)] bg-gold text-[#1a1205]">
               <PadlockIcon open={false} />
             </span>
-            Kłódka przy polu chroni jego wartość przed nadpisaniem przy kolejnym wgraniu screenów.
+            Kłódka przy polu chroni jego wartość przed nadpisaniem przy kolejnym wgraniu screenów;
+            kłódka w nagłówku kolumny blokuje ją od razu u wszystkich dziesięciu graczy.
           </span>
           {locks.size > 0 && (
             <span className="chip border-[color:var(--gold)]/30 text-gold">{locks.size} zablokowanych</span>
@@ -467,14 +522,40 @@ export function ResultsForm({
           </div>
           <table className="w-full min-w-[720px] text-sm">
             <thead>
+              {/* Each header carries the lock for its whole column — see ColumnLockToggle. */}
               <tr className="kicker text-left">
-                <th className="px-2 py-1">Gracz</th>
-                <th className="px-2 py-1">Champion</th>
+                <th className="px-2 py-1">
+                  <span className="inline-flex items-center gap-1.5">
+                    Gracz
+                    <ColumnLockToggle
+                      locked={columnLocked('role')}
+                      onToggle={() => toggleColumn('role')}
+                      label="Pozycje wszystkich graczy"
+                    />
+                  </span>
+                </th>
+                <th className="px-2 py-1">
+                  <span className="inline-flex items-center gap-1.5">
+                    Champion
+                    <ColumnLockToggle
+                      locked={columnLocked('championId')}
+                      onToggle={() => toggleColumn('championId')}
+                      label="Postacie wszystkich graczy"
+                    />
+                  </span>
+                </th>
                 {NUM_FIELDS.map((f) => (
                   <th key={f.key} className="px-1 py-1 text-center">
-                    <abbr title={f.desc} className="cursor-help no-underline decoration-dotted underline-offset-2 hover:underline">
-                      {f.label}
-                    </abbr>
+                    <span className="inline-flex items-center gap-1">
+                      <abbr title={f.desc} className="cursor-help no-underline decoration-dotted underline-offset-2 hover:underline">
+                        {f.label}
+                      </abbr>
+                      <ColumnLockToggle
+                        locked={columnLocked(f.key)}
+                        onToggle={() => toggleColumn(f.key)}
+                        label={f.desc}
+                      />
+                    </span>
                   </th>
                 ))}
               </tr>
@@ -589,7 +670,8 @@ export function ResultsForm({
       <p className="text-xs text-text-lo">
         Najedź na nagłówki kolumn (K / D / A / CS / …), aby zobaczyć, co oznaczają. Najedź na pole,
         aby odsłonić kłódkę — zablokowanego pola AI nie nadpisze przy kolejnym wgraniu screenów.
-        Poniżej wyjaśnienie punktacji.
+        Kłódka obok nazwy kolumny blokuje całą kolumnę (np. wszystkie postacie albo wszystkie
+        pozycje) jednym kliknięciem, u obu drużyn naraz. Poniżej wyjaśnienie punktacji.
       </p>
       <ScoringInfo />
     </div>

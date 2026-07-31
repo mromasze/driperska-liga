@@ -11,6 +11,18 @@ export interface ReleaseNote {
  */
 export const RELEASES: ReleaseNote[] = [
   {
+    version: 'v0.5.1',
+    date: '2026-07-31',
+    title: 'Nowe tło, bogatsze karty meczów',
+    changes: [
+      'Strona główna ma wreszcie tło: dryfujące plamy koloru, trójkątną kratę nawiązującą do logo i złotą poświatę przy dolnej krawędzi — zamiast pustej czerni.',
+      'Karta meczu w „Ostatnich wynikach” pokazuje K/D/A obu graczy w rzędzie i napisaną między nimi linię (TOP / JUNGLE / MID / ADC / SUPP), więc widać, kto z kim grał. Korona przy MVP, tarcza przy ACE przegranej drużyny.',
+      'Na stronie meczu „Skąd LP w tym meczu” zjechało pod komentarze graczy — najpierw to, co się o meczu mówi, potem rozliczenie punktów.',
+      'Potwierdzanie obecności znika, gdy termin meczu minie — także kliknięcie „Będę” pod starym ogłoszeniem na Discordzie już nie zapisuje głosu. Administrator dalej widzi minione terminy w planowaniu meczów.',
+      'Przy wpisywaniu wyników można zablokować całą kolumnę jednym kliknięciem (np. wszystkie postacie), a AI dostaje wprost informację, kto ma jaki nick w LoL, a jaki na stronie.',
+    ],
+  },
+  {
     version: 'v0.5.0',
     date: '2026-07-30',
     title: 'Moderatorzy',
