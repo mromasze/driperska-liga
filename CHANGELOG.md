@@ -14,6 +14,7 @@ Wszystkie istotne zmiany Driperskiej Ligi są opisywane tutaj oraz w
 - **Wiadomość drużynowa nie wychodzi z drużyny na poziomie transportu**, a nie tylko interfejsu: `TEAM` jest rozsyłany wyłącznie na pięć kont danej strony. Test pilnuje właśnie tego. Admin pisze zawsze na kanał ogólny, z oznaczeniem, że to admin.
 - **Chat jedzie po istniejącym strumieniu SSE** (nowe nazwane zdarzenie `draft-chat`), a nie po drugim połączeniu: jedno gniazdo na gracza, jedna ścieżka ponawiania, nic nowego do konfiguracji w nginx. Limit 300 znaków i 400 ms odstępu między wiadomościami z jednego konta, żeby zablokowany klawisz nie zalał dziesięciu klientów.
 - Serializacja stanu draftu wyszła do `DraftStateStore`, bo dokument `match_draft.state` obsługuje teraz dwa serwisy (sam draft i faza przed nim) i muszą czytać go tak samo. Nowe testy: 14 integracyjnych na fazę przygotowania i 8 jednostkowych na chat; cały przebieg (głosy → kolejność → gotowość → auto-start → pauza) przejechany też przez API na uruchomionej instancji.
+- **Pasek „Co mówili o sobie po meczach” idzie szybciej i da się go przewijać ręcznie.** Rotacja zeszła z 6 do 3,2 sekundy — cytat jest jednym zdaniem i czyta się w dwie. Po bokach kropek doszły strzałki „‹ ›”, a licznik pokazuje, na której opinii jesteś (np. 3/9). Przejście ręczne restartuje odliczanie, więc cytat, na który właśnie kliknąłeś, nie ucieka po pół sekundy; najechanie kursorem nadal zatrzymuje rotację całkowicie.
 
 ## v0.5.2 — 2026-07-31
 

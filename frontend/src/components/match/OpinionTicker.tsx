@@ -5,7 +5,8 @@ import { Avatar } from '../ui/Avatar';
 import { formatDate } from '../../lib/format';
 import type { PublicOpinion } from '../../api/types';
 
-const ROTATE_MS = 6000;
+/** Six seconds felt like waiting; a quote is one line and reads in two. */
+const ROTATE_MS = 3200;
 
 /**
  * Rotating reel of what players wrote about each other after recent matches.
@@ -35,6 +36,8 @@ export function OpinionTicker() {
   // Refetching can shrink the list under a stale index.
   useEffect(() => setIndex((current) => (current < list.length ? current : 0)), [list.length]);
 
+  // `index` is a dependency on purpose: stepping through by hand restarts the countdown, so a quote
+  // you just clicked to does not vanish half a second later.
   useEffect(() => {
     if (paused || reducedMotion || list.length < 2) return;
     const timer = window.setInterval(
@@ -42,7 +45,10 @@ export function OpinionTicker() {
       ROTATE_MS,
     );
     return () => window.clearInterval(timer);
-  }, [paused, reducedMotion, list.length]);
+  }, [paused, reducedMotion, list.length, index]);
+
+  const step = (delta: number) =>
+    setIndex((current) => (current + delta + list.length) % list.length);
 
   // Nothing to say yet is not worth an empty box on the landing page.
   if (opinions.isLoading || list.length === 0) return null;
@@ -80,6 +86,7 @@ export function OpinionTicker() {
           </div>
           {list.length > 1 && (
             <div className="mt-4 flex items-center gap-2">
+              <StepButton label="‹" title="Poprzednia opinia" onClick={() => step(-1)} />
               {list.map((opinion, position) => (
                 <button
                   key={`${opinion.matchId}-${opinion.aboutPlayerId}-${position}`}
@@ -94,12 +101,30 @@ export function OpinionTicker() {
                   }}
                 />
               ))}
-              {paused && <span className="ml-auto text-[11px] text-text-lo">zatrzymane</span>}
+              <StepButton label="›" title="Następna opinia" onClick={() => step(1)} />
+              <span className="num ml-auto text-[11px] text-text-lo">
+                {paused ? 'zatrzymane · ' : ''}{index + 1}/{list.length}
+              </span>
             </div>
           )}
         </>
       )}
     </section>
+  );
+}
+
+/** Step one quote back or forward by hand. */
+function StepButton({ label, title, onClick }: { label: string; title: string; onClick: () => void }) {
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      title={title}
+      aria-label={title}
+      className="grid h-6 w-6 shrink-0 place-items-center rounded-full border border-line text-sm leading-none text-text-lo transition-colors hover:border-line-strong hover:text-text-hi"
+    >
+      {label}
+    </button>
   );
 }
 
