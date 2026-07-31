@@ -20,7 +20,9 @@ import {
 import { DrawBoard } from '../../components/match/DrawBoard';
 import {
   useAdminSetChampion, useResetDraft, useStartDraft, usePauseDraft,
+  useAdminSetCaptain, useAdminSetTeamReady, useResetDraftSetup,
 } from '../../api/hooks/drawLobby';
+import { DraftChat } from '../../components/match/DraftChat';
 import { useChampions } from '../../api/hooks/champions';
 import { usePlayers } from '../../api/hooks/players';
 import { ResultsForm } from '../../components/match/ResultsForm';
@@ -30,7 +32,7 @@ import { Button } from '../../components/ui/Button';
 import { Badge } from '../../components/ui/Badge';
 import { CardSkeleton, ErrorState, EmptyState } from '../../components/ui/States';
 import { roleLabel } from '../../lib/format';
-import type { DrawLobby, DrawResult } from '../../api/types';
+import type { DraftSetup, DraftSetupSide, DrawLobby, DrawResult, Side } from '../../api/types';
 
 export function MatchControlPage() {
   const { id = '' } = useParams<{ id: string }>();
@@ -292,17 +294,27 @@ export function MatchControlPage() {
               </div>
             ))}
           </div>
+          {/* Teams elect a captain and declare themselves ready here; the draft then starts itself.
+              These controls are the override for when that stalls. */}
+          {drawState.data?.setup && (
+            <SetupControls matchId={id} lobby={drawState.data} setup={drawState.data.setup} />
+          )}
           <div className="flex flex-wrap gap-3">
             <Button variant="gold" disabled={startDraft.isPending} onClick={() => startDraft.mutate()}>
-              {startDraft.isPending ? 'Startowanie…' : '▶ Rozpocznij draft'}
+              {startDraft.isPending ? 'Startowanie…' : '▶ Rozpocznij draft teraz'}
             </Button>
             <Button variant="ghost" disabled={startManual.isPending} onClick={skipDraftAndStart}>
               {startManual.isPending ? 'Uruchamianie…' : 'Pomiń draft — rozpocznij mecz'}
             </Button>
           </div>
+          <p className="text-xs text-text-lo">
+            „Rozpocznij draft teraz” pomija oczekiwanie na gotowość obu drużyn. Wybrani kapitanowie
+            i zapisana kolejność zostają użyte; czego nie ustalili, zostanie wylosowane.
+          </p>
           {(startDraft.isError || startManual.isError) && (
             <p className="text-sm text-loss">{(startDraft.error ?? startManual.error)?.message}</p>
           )}
+          <DraftChat matchId={id} mySide={null} className="h-56" />
         </section>
       )}
 
@@ -337,6 +349,8 @@ export function MatchControlPage() {
             <p className="text-sm text-loss">{(resetDraft.error ?? startManual.error ?? pauseDraft.error)?.message}</p>
           )}
           {drawState.data && <DraftChampionFixer matchId={id} lobby={drawState.data} />}
+          {/* The admin talks to the lobby from here — always on the shared channel. */}
+          <DraftChat matchId={id} mySide={null} className="h-56" />
         </section>
       )}
 
@@ -482,6 +496,93 @@ export function MatchControlPage() {
  * pick order comes from the draft's step pointer, so overwriting a slot here never moves whose turn
  * it is; the new champion still has to be one nobody else banned or picked.
  */
+/**
+ * Real-time control over the phase before the first ban.
+ *
+ * The teams run this themselves — they vote a captain in, the captain sets the pick order, both sides
+ * declare ready and the draft starts on its own. This is the override for when that stalls: somebody
+ * missing, a team that cannot agree, or a captain who went to make tea. Forcing "ready" on the second
+ * team starts the draft exactly as the captains pressing it would.
+ */
+function SetupControls({ matchId, lobby, setup }: {
+  matchId: string; lobby: DrawLobby; setup: DraftSetup;
+}) {
+  const setCaptain = useAdminSetCaptain(matchId);
+  const setReady = useAdminSetTeamReady(matchId);
+  const resetSetup = useResetDraftSetup(matchId);
+  const error = (setCaptain.error ?? setReady.error ?? resetSetup.error) as Error | undefined;
+
+  const sides: { side: Side; label: string; color: string; team: DrawLobby['blue']; state: DraftSetupSide }[] = [
+    { side: 'BLUE', label: 'Niebiescy', color: 'var(--blue)', team: lobby.blue, state: setup.blue },
+    { side: 'RED', label: 'Czerwoni', color: 'var(--red)', team: lobby.red, state: setup.red },
+  ];
+
+  return (
+    <div className="space-y-3 rounded-lg border border-line bg-[color:var(--bg)]/60 p-4">
+      <div className="flex flex-wrap items-center justify-between gap-2">
+        <div>
+          <div className="kicker text-gold">Kapitanowie i gotowość</div>
+          <p className="text-xs text-text-lo">
+            Draft startuje sam, gdy obie drużyny zgłoszą gotowość ({setup.votesToDecide} głosy z pięciu
+            wybierają kapitana).
+          </p>
+        </div>
+        <Button size="sm" variant="ghost" disabled={resetSetup.isPending}
+          onClick={() => { if (window.confirm('Wyczyścić głosowanie, kapitanów i kolejność?')) resetSetup.mutate(); }}>
+          ↻ Reset ustaleń
+        </Button>
+      </div>
+
+      <div className="grid gap-3 sm:grid-cols-2">
+        {sides.map(({ side, label, color, team, state }) => {
+          const captainName = team.find((p) => p.playerId === state.captain)?.nickname;
+          return (
+            <div key={side} className="rounded-md border border-line p-3">
+              <div className="mb-2 flex items-center justify-between gap-2">
+                <span className="font-display font-semibold" style={{ color }}>{label}</span>
+                <Badge tone={state.ready ? 'win' : 'pending'}>
+                  {state.ready ? 'gotowi' : `${state.votesCast}/${state.squadSize} głosów`}
+                </Badge>
+              </div>
+              <label className="block">
+                <span className="kicker">Kapitan{captainName ? '' : ' — nie wybrany'}</span>
+                <select
+                  value={state.captain ?? ''}
+                  disabled={setCaptain.isPending}
+                  onChange={(event) => event.target.value
+                    && setCaptain.mutate({ side, playerId: event.target.value })}
+                  className="form-control mt-1"
+                >
+                  <option value="">— wskaż kapitana —</option>
+                  {team.map((p) => (
+                    <option key={p.playerId} value={p.playerId}>
+                      {p.nickname}{state.votes.find((v) => v.playerId === p.playerId)?.votes
+                        ? ` · ${state.votes.find((v) => v.playerId === p.playerId)!.votes} gł.`
+                        : ''}
+                    </option>
+                  ))}
+                </select>
+              </label>
+              <div className="mt-2 text-xs text-text-lo">
+                Kolejność picków: {state.order.length === 0
+                  ? 'nie ustalona (będzie losowa)'
+                  : state.order.map((playerId, index) =>
+                      `${index + 1}. ${team.find((p) => p.playerId === playerId)?.nickname ?? '?'}`).join(' · ')}
+              </div>
+              <Button className="mt-2" size="sm" variant={state.ready ? 'ghost' : 'gold'}
+                disabled={setReady.isPending || (!state.captain && !state.ready)}
+                onClick={() => setReady.mutate({ side, ready: !state.ready })}>
+                {state.ready ? 'Cofnij gotowość' : 'Ustaw jako gotowych'}
+              </Button>
+            </div>
+          );
+        })}
+      </div>
+      {error && <p className="text-sm text-loss">{error.message}</p>}
+    </div>
+  );
+}
+
 function DraftChampionFixer({ matchId, lobby }: { matchId: string; lobby: DrawLobby }) {
   const setChampion = useAdminSetChampion(matchId);
   const champions = useChampions();

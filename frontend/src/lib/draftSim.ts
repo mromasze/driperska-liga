@@ -188,6 +188,8 @@ export function buildSimLobby(stepSeconds: number): DrawLobby {
     tournamentCode: null,
     riotImportError: null,
     voteDeadline: null,
+    // The simulator drops straight into a running draft, so the pre-draft setup is already behind it.
+    setup: null,
     draft: {
       status: 'DRAFTING',
       currentIndex: 0,

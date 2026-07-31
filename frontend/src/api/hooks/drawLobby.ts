@@ -1,11 +1,27 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
-import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import { useMutation, useQuery, useQueryClient, type QueryClient } from '@tanstack/react-query';
 import { API_BASE, api } from '../client';
 import { queryKeys } from '../queryKeys';
-import type { DrawLobby, DrawVoteDecision } from '../types';
+import type { ChatScope, DraftChatMessage, DrawLobby, DrawVoteDecision } from '../types';
 import { useAuthStore } from '../../store/auth';
 
 const DRAW_KEY = ['draw-lobby', 'active'] as const;
+const chatKey = (matchId: string) => ['draft-chat', matchId] as const;
+/** Matches the server-side buffer; a draft never needs more scrollback than that. */
+const CHAT_BUFFER = 60;
+
+/**
+ * Adds a pushed chat line to its match's cache entry. Keyed by the message's own matchId because the
+ * stream is per account, not per match. Ignores a line already present, so a history refetch racing
+ * with the stream cannot double anything up.
+ */
+function appendChatMessage(queryClient: QueryClient, message: DraftChatMessage) {
+  queryClient.setQueryData<DraftChatMessage[]>(chatKey(message.matchId), (current) => {
+    const list = current ?? [];
+    if (list.some((existing) => existing.id === message.id)) return list;
+    return [...list, message].slice(-CHAT_BUFFER);
+  });
+}
 
 /** Phases where a stale screen is actively harmful, so we poll hard as an SSE backstop. */
 const HOT_STATUSES = ['TEAMS_DRAWN', 'DRAFT_READY', 'DRAFTING', 'DRAFTED', 'LOBBY_READY'];
@@ -81,11 +97,19 @@ export function useDrawLobby() {
             const events = buffer.split('\n\n');
             buffer = events.pop() ?? '';
             for (const event of events) {
-              const data = event.split('\n').filter((line) => line.startsWith('data:'))
+              const lines = event.split('\n');
+              // The stream carries two kinds of frame now, so the event name has to be read: lobby
+              // snapshots replace the state, chat lines are appended to their own cache entry.
+              const name = lines.find((line) => line.startsWith('event:'))?.slice(6).trim();
+              const data = lines.filter((line) => line.startsWith('data:'))
                 .map((line) => line.slice(5).trim()).join('\n');
               if (!data || data === '{"ok":true}') continue;
               try {
-                queryClient.setQueryData(DRAW_KEY, JSON.parse(data) as DrawLobby);
+                if (name === 'draft-chat') {
+                  appendChatMessage(queryClient, JSON.parse(data) as DraftChatMessage);
+                } else {
+                  queryClient.setQueryData(DRAW_KEY, JSON.parse(data) as DrawLobby);
+                }
               } catch {
                 // A truncated frame is not worth dropping the whole connection over.
               }
@@ -226,6 +250,85 @@ export function usePauseDraft(matchId: string) {
     mutationFn: (paused: boolean) => api.post<void>(`/draft/${matchId}/${paused ? 'pause' : 'resume'}`),
     onSettled: refresh,
   });
+}
+
+// --- Before the first ban: captain vote, pick order, readiness ---------------------------
+
+/** Vote a team-mate in as captain (yourself is allowed). */
+export function useVoteCaptain(matchId: string) {
+  const refresh = useRefreshLobby();
+  return useMutation({
+    mutationFn: (playerId: string) => api.post<void>(`/draft/${matchId}/captain-vote`, { playerId }),
+    onSettled: refresh,
+  });
+}
+
+/** Captain only: the order the team picks in. An empty list hands it back to chance. */
+export function useSetPickOrder(matchId: string) {
+  const refresh = useRefreshLobby();
+  return useMutation({
+    mutationFn: (playerIds: string[]) => api.post<void>(`/draft/${matchId}/order`, { playerIds }),
+    onSettled: refresh,
+  });
+}
+
+/** Captain only. Both teams ready and the backend starts the draft by itself. */
+export function useSetTeamReady(matchId: string) {
+  const refresh = useRefreshLobbyAndMatch(matchId);
+  return useMutation({
+    mutationFn: (ready: boolean) => api.post<void>(`/draft/${matchId}/ready`, { ready }),
+    onSettled: refresh,
+  });
+}
+
+export function useAdminSetCaptain(matchId: string) {
+  const refresh = useRefreshLobbyAndMatch(matchId);
+  return useMutation({
+    mutationFn: ({ side, playerId }: { side: 'BLUE' | 'RED'; playerId: string }) =>
+      api.post<void>(`/draft/${matchId}/setup/captain`, { side, playerId }),
+    onSettled: refresh,
+  });
+}
+
+export function useAdminSetTeamReady(matchId: string) {
+  const refresh = useRefreshLobbyAndMatch(matchId);
+  return useMutation({
+    mutationFn: ({ side, ready }: { side: 'BLUE' | 'RED'; ready: boolean }) =>
+      api.post<void>(`/draft/${matchId}/setup/ready`, { side, ready }),
+    onSettled: refresh,
+  });
+}
+
+export function useResetDraftSetup(matchId: string) {
+  const refresh = useRefreshLobbyAndMatch(matchId);
+  return useMutation({
+    mutationFn: () => api.post<void>(`/draft/${matchId}/setup/reset`),
+    onSettled: refresh,
+  });
+}
+
+// --- Draft chat ---------------------------------------------------------------------------
+
+/**
+ * Draft chat for one match: recent lines plus a sender.
+ *
+ * History is fetched once on mount because the stream only carries what happens next; everything
+ * after that arrives as `draft-chat` frames on the lobby stream and is appended to this same cache
+ * entry. A window-focus refetch re-reads the server's buffer, which self-heals a client that missed
+ * frames while asleep.
+ */
+export function useDraftChat(matchId: string, enabled = true) {
+  const messages = useQuery({
+    queryKey: chatKey(matchId),
+    queryFn: () => api.get<DraftChatMessage[]>(`/draft/${matchId}/chat`),
+    enabled: enabled && Boolean(matchId),
+    staleTime: 30_000,
+  });
+  const send = useMutation({
+    mutationFn: ({ scope, text }: { scope: ChatScope; text: string }) =>
+      api.post<void>(`/draft/${matchId}/chat`, { scope, text }),
+  });
+  return { messages: messages.data ?? [], loading: messages.isLoading, send };
 }
 
 /**

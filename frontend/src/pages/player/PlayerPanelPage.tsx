@@ -2,6 +2,8 @@ import { useEffect, useRef, useState } from 'react';
 import { useChampions } from '../../api/hooks/champions';
 import { useDrawLobby, useVoteOnDraw } from '../../api/hooks/drawLobby';
 import { DraftBoard, useCountdown } from './DraftBoard';
+import { DraftSetupPanel } from './DraftSetupPanel';
+import { DraftChat } from '../../components/match/DraftChat';
 import { ModeratorPanel } from './ModeratorPanel';
 import { GameLineup } from '../../components/match/GameLineup';
 import { usePlannedMatches, useRsvpPlannedMatch } from '../../api/hooks/planned';
@@ -303,19 +305,29 @@ function DraftOrWaiting({ lobby, myPlayerId, streamState, fullscreen, onCollapse
         fullscreen={fullscreen} onCollapse={onCollapse} />
     );
   }
+  const mySide = lobby.blue.some((p) => p.playerId === myPlayerId) ? 'BLUE' : 'RED';
   return (
     <section className="draw-stage glass grid-tex overflow-hidden p-5 sm:p-8">
-      <div className="mb-5">
-        <div className="kicker text-gold">Skład zatwierdzony</div>
-        <h2 className="mt-1 font-display text-3xl">Czekamy aż admin rozpocznie draft</h2>
-        <p className="mt-2 text-sm text-text-lo">
-          Wskoczcie na Discorda / osobne lobby i ustalcie, kto gdzie gra. Draft ruszy, gdy admin da sygnał —
-          ta zakładka przełączy się automatycznie.
-        </p>
-      </div>
-      <div className="grid gap-4 md:grid-cols-2">
-        <LobbyTeam title="Niebieska strona" players={lobby.blue} color="var(--blue)" myPlayerId={myPlayerId} />
-        <LobbyTeam title="Czerwona strona" players={lobby.red} color="var(--red)" myPlayerId={myPlayerId} />
+      {/* The captain vote replaces the old "wait for the admin" card: the draft now starts when both
+          teams say they are ready, so there is something to do here. */}
+      {lobby.setup ? (
+        <DraftSetupPanel lobby={lobby} setup={lobby.setup} myPlayerId={myPlayerId} />
+      ) : (
+        <div className="mb-5">
+          <div className="kicker text-gold">Skład zatwierdzony</div>
+          <h2 className="mt-1 font-display text-3xl">Czekamy aż admin rozpocznie draft</h2>
+          <p className="mt-2 text-sm text-text-lo">
+            Wskoczcie na Discorda / osobne lobby i ustalcie, kto gdzie gra. Draft ruszy, gdy admin da sygnał —
+            ta zakładka przełączy się automatycznie.
+          </p>
+        </div>
+      )}
+      <div className="mt-5 grid gap-4 lg:grid-cols-[1.6fr_1fr]">
+        <div className="grid gap-4 md:grid-cols-2">
+          <LobbyTeam title="Niebieska strona" players={lobby.blue} color="var(--blue)" myPlayerId={myPlayerId} />
+          <LobbyTeam title="Czerwona strona" players={lobby.red} color="var(--red)" myPlayerId={myPlayerId} />
+        </div>
+        <DraftChat matchId={lobby.matchId} mySide={mySide} className="h-72 lg:h-auto" />
       </div>
     </section>
   );

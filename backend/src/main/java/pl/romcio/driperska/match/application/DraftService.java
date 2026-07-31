@@ -1,6 +1,5 @@
 package pl.romcio.driperska.match.application;
 
-import com.fasterxml.jackson.databind.ObjectMapper;
 import java.time.Instant;
 import java.util.ArrayList;
 import java.util.Collections;
@@ -20,6 +19,7 @@ import pl.romcio.driperska.match.api.DrawLobbyDtos.DraftStepView;
 import pl.romcio.driperska.match.api.DrawLobbyDtos.DraftSwapView;
 import pl.romcio.driperska.match.api.DrawLobbyDtos.DraftView;
 import pl.romcio.driperska.match.application.draft.DraftState;
+import pl.romcio.driperska.match.application.draft.DraftStateStore;
 import pl.romcio.driperska.match.application.draft.DraftState.StepType;
 import pl.romcio.driperska.match.application.draft.DraftState.SwapType;
 import pl.romcio.driperska.match.domain.Match;
@@ -40,24 +40,22 @@ import pl.romcio.driperska.player.infra.PlayerRepository;
 public class DraftService {
 
     private final MatchService matchService;
-    private final MatchDraftRepository draftRepository;
+    private final DraftStateStore store;
     private final ChampionRepository championRepository;
     private final PlayerRepository playerRepository;
     private final MatchEventRecorder eventRecorder;
-    private final ObjectMapper objectMapper;
     private final DraftProperties draftProperties;
     private final Random random = new Random();
 
-    public DraftService(MatchService matchService, MatchDraftRepository draftRepository,
+    public DraftService(MatchService matchService, DraftStateStore store,
                         ChampionRepository championRepository, PlayerRepository playerRepository,
-                        MatchEventRecorder eventRecorder, ObjectMapper objectMapper,
+                        MatchEventRecorder eventRecorder,
                         DraftProperties draftProperties) {
         this.matchService = matchService;
-        this.draftRepository = draftRepository;
+        this.store = store;
         this.championRepository = championRepository;
         this.playerRepository = playerRepository;
         this.eventRecorder = eventRecorder;
-        this.objectMapper = objectMapper;
         this.draftProperties = draftProperties;
     }
 
@@ -77,23 +75,58 @@ public class DraftService {
         // Clear any champion assignments from a previous draft, then build fresh state.
         match.getParticipants().forEach(p -> p.setChampionId(null));
 
+        // Whatever the teams settled before the first ban survives a (re)start: the captain they voted
+        // for and the pick order that captain arranged. An admin re-rolling the draft is fixing the
+        // draft, not overturning the vote.
+        DraftState.Setup setup = store.findOrNew(match.getId()).setup;
         DraftState state = new DraftState();
+        state.setup = setup;
         state.sequence = DraftState.tournamentSequence();
         state.currentIndex = 0;
         state.deadline = Instant.now().plusSeconds(stepSeconds());
-        // Draft order per team = random shuffle; the first in the list is the captain (on top).
-        // Positions/roles play no part in the draft order — picks simply flow top→bottom.
-        state.blueOrder = draftOrder(match, Side.BLUE);
-        state.redOrder = draftOrder(match, Side.RED);
-        state.blueCaptain = state.blueOrder.isEmpty() ? null : state.blueOrder.get(0);
-        state.redCaptain = state.redOrder.isEmpty() ? null : state.redOrder.get(0);
+        // Picks flow top→bottom through this list. Roles play no part in it.
+        state.blueOrder = orderFor(match, Side.BLUE, setup);
+        state.redOrder = orderFor(match, Side.RED, setup);
+        // The captain bans for the team and need not be first to pick, so this is its own decision.
+        state.blueCaptain = captainFor(setup, Side.BLUE, state.blueOrder);
+        state.redCaptain = captainFor(setup, Side.RED, state.redOrder);
 
         if (match.getStatus() != MatchStatus.DRAFTING) {
             match.transitionTo(MatchStatus.DRAFTING);
         }
-        persist(match.getId(), state);
+        store.save(match.getId(), state);
         eventRecorder.record(match.getId(), MatchEventType.DRAFT_STARTED, actor,
-                java.util.Map.of("blueCaptain", state.blueCaptain, "redCaptain", state.redCaptain));
+                java.util.Map.of("blueCaptain", String.valueOf(state.blueCaptain),
+                        "redCaptain", String.valueOf(state.redCaptain),
+                        "orderChosenByCaptains",
+                        !setup.blueOrder.isEmpty() && !setup.redOrder.isEmpty()));
+    }
+
+    /**
+     * The pick order for a side: the captain's arrangement when they made one, otherwise a shuffle.
+     * A stale arrangement (a substitution after it was set) is discarded rather than trusted.
+     */
+    private List<UUID> orderFor(Match match, Side side, DraftState.Setup setup) {
+        List<UUID> squad = sideSquad(match, side);
+        List<UUID> chosen = setup.orderFor(side);
+        if (chosen.size() == squad.size() && new HashSet<>(chosen).equals(new HashSet<>(squad))) {
+            return new ArrayList<>(chosen);
+        }
+        List<UUID> shuffled = new ArrayList<>(squad);
+        Collections.shuffle(shuffled, random);
+        return shuffled;
+    }
+
+    /** The voted-in captain, or the first player of the pick order when no vote resolved. */
+    private static UUID captainFor(DraftState.Setup setup, Side side, List<UUID> order) {
+        UUID chosen = setup.captainFor(side);
+        if (chosen != null && order.contains(chosen)) return chosen;
+        return order.isEmpty() ? null : order.get(0);
+    }
+
+    private static List<UUID> sideSquad(Match match, Side side) {
+        return match.getParticipants().stream()
+                .filter(p -> p.getSide() == side).map(MatchParticipant::getPlayerId).toList();
     }
 
     /** Admin kicks off the draft once the squad is confirmed (DRAFT_READY). */
@@ -322,11 +355,15 @@ public class DraftService {
 
     // --- view --------------------------------------------------------------
 
+    /**
+     * The running draft, or null when there is nothing to draw yet. A document exists during the
+     * pre-draft setup too (it holds the captain vote), so an empty step sequence means "not started" —
+     * the client must not be handed a board with no steps on it.
+     */
     @Transactional(readOnly = true)
     public DraftView view(Match match) {
-        MatchDraft draft = draftRepository.findById(match.getId()).orElse(null);
-        if (draft == null) return null;
-        DraftState state = deserialize(draft.getState());
+        DraftState state = store.find(match.getId()).orElse(null);
+        if (state == null || state.sequence.isEmpty()) return null;
         DraftState.Step current = state.current();
         List<DraftStepView> sequence = state.sequence.stream()
                 .map(s -> new DraftStepView(s.side, s.type.name())).toList();
@@ -469,36 +506,12 @@ public class DraftService {
                 .orElseThrow(() -> new BusinessRuleException("Gracz nie należy do tego meczu"));
     }
 
+    // Serialisation lives in DraftStateStore, shared with the pre-draft setup service.
     private void persist(UUID matchId, DraftState state) {
-        String json = serialize(state);
-        MatchDraft draft = draftRepository.findById(matchId).orElse(null);
-        if (draft == null) {
-            draftRepository.save(new MatchDraft(matchId, json, state.deadline));
-        } else {
-            draft.update(json, state.deadline);
-            draftRepository.save(draft);
-        }
+        store.save(matchId, state);
     }
 
     private DraftState load(UUID matchId) {
-        MatchDraft draft = draftRepository.findById(matchId)
-                .orElseThrow(() -> ResourceNotFoundException.of("Draft", matchId));
-        return deserialize(draft.getState());
-    }
-
-    private String serialize(DraftState state) {
-        try {
-            return objectMapper.writeValueAsString(state);
-        } catch (Exception ex) {
-            throw new IllegalStateException("Nie udało się zapisać stanu draftu", ex);
-        }
-    }
-
-    private DraftState deserialize(String json) {
-        try {
-            return objectMapper.readValue(json, DraftState.class);
-        } catch (Exception ex) {
-            throw new IllegalStateException("Nie udało się odczytać stanu draftu", ex);
-        }
+        return store.require(matchId);
     }
 }

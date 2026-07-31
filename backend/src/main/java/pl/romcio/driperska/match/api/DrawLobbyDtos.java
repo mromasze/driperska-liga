@@ -43,10 +43,31 @@ public final class DrawLobbyDtos {
             /** Length of one ban/pick step in seconds, so the client can render the timer bar. */
             int stepSeconds) {}
 
+    /** One candidate in a team's captain vote and how many of the five back them. */
+    public record CaptainVoteView(UUID playerId, int votes) {}
+
+    /**
+     * One team's state before the first ban: the captain vote, the pick order that captain arranged
+     * (empty = will be shuffled at start) and whether they have declared themselves ready.
+     */
+    public record DraftSetupSideView(
+            UUID captain,
+            List<CaptainVoteView> votes,
+            int votesCast,
+            int squadSize,
+            List<UUID> order,
+            boolean ready) {}
+
+    /** Present only while the match sits in DRAFT_READY — see {@code DraftSetupService}. */
+    public record DraftSetupView(DraftSetupSideView blue, DraftSetupSideView red, int votesToDecide) {}
+
     public record DrawLobbyResponse(
             UUID matchId, MatchStatus status, int round, int requiredAccepts, int accepts, int rejects,
             List<UUID> acceptedPlayerIds, List<UUID> rejectedPlayerIds,
             List<LobbyPlayer> blue, List<LobbyPlayer> red, Instant updatedAt,
             String tournamentCode, String riotImportError,
-            Instant voteDeadline, DraftView draft) {}
+            Instant voteDeadline,
+            /** Captain vote / pick order / readiness, before the draft itself starts. */
+            DraftSetupView setup,
+            DraftView draft) {}
 }

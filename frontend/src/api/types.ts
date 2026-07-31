@@ -251,12 +251,35 @@ export interface DraftView {
   /** Length of one ban/pick step in seconds, for the timer bar. */
   stepSeconds: number;
 }
+/** One candidate in a team's captain vote. */
+export interface CaptainVote { playerId: string; votes: number; }
+
+/**
+ * One team between "squad confirmed" and the first ban: the captain vote, the pick order that captain
+ * arranged (empty = will be shuffled at start) and whether they declared themselves ready.
+ */
+export interface DraftSetupSide {
+  captain: string | null; votes: CaptainVote[]; votesCast: number; squadSize: number;
+  order: string[]; ready: boolean;
+}
+export interface DraftSetup { blue: DraftSetupSide; red: DraftSetupSide; votesToDecide: number; }
+
+export type ChatScope = 'ALL' | 'TEAM';
+/** Draft chat line. Never stored server-side — see DraftChatService. */
+export interface DraftChatMessage {
+  id: string; matchId: string; scope: ChatScope; side: Side | null; playerId: string | null;
+  nickname: string; text: string; admin: boolean; at: string;
+}
+
 export interface DrawLobby {
   matchId: string; status: MatchStatus; round: number; requiredAccepts: number;
   accepts: number; rejects: number; acceptedPlayerIds: string[]; rejectedPlayerIds: string[];
   blue: LobbyPlayer[]; red: LobbyPlayer[]; updatedAt: string;
   tournamentCode: string | null; riotImportError: string | null;
-  voteDeadline: string | null; draft: DraftView | null;
+  voteDeadline: string | null;
+  /** Only present while the match waits in DRAFT_READY. */
+  setup: DraftSetup | null;
+  draft: DraftView | null;
 }
 export interface RiotLobbyMember {
   playerId: string; nickname: string; puuid: string; joined: boolean;

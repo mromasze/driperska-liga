@@ -14,6 +14,10 @@ import pl.romcio.driperska.match.api.DrawLobbyDtos.DrawLobbyResponse;
 
 @Service
 public class DrawRealtimeService {
+    /** Event names on the stream: the lobby snapshot, and draft chat messages. */
+    public static final String EVENT_STATE = "draw-state";
+    public static final String EVENT_CHAT = "draft-chat";
+
     private static final long TIMEOUT_MS = 30L * 60L * 1000L;
     private final ConcurrentHashMap<UUID, CopyOnWriteArrayList<SseEmitter>> emitters =
             new ConcurrentHashMap<>();
@@ -38,7 +42,7 @@ public class DrawRealtimeService {
         try {
             emitter.send(SseEmitter.event().name("connected").data("{\"ok\":true}"));
             if (initialState != null) {
-                emitter.send(SseEmitter.event().name("draw-state").data(initialState));
+                emitter.send(SseEmitter.event().name(EVENT_STATE).data(initialState));
             }
         } catch (IOException | IllegalStateException ex) {
             cleanup.run();
@@ -47,8 +51,17 @@ public class DrawRealtimeService {
     }
 
     public void broadcast(Collection<UUID> accountIds, DrawLobbyResponse state) {
+        broadcast(accountIds, EVENT_STATE, state);
+    }
+
+    /**
+     * Sends any payload under a named SSE event to the given accounts. Draft chat rides the same
+     * stream as the lobby state rather than opening a second connection: one socket per player, one
+     * reconnect/backoff path, and nothing new to configure in nginx.
+     */
+    public void broadcast(Collection<UUID> accountIds, String eventName, Object payload) {
         accountIds.stream().filter(java.util.Objects::nonNull).distinct()
-                .forEach(accountId -> sendState(accountId, state));
+                .forEach(accountId -> send(accountId, eventName, payload));
     }
 
     /** Keeps Cloudflare and nginx from treating an idle draw stream as dead. */
@@ -63,11 +76,11 @@ public class DrawRealtimeService {
         }));
     }
 
-    private void sendState(UUID accountId, DrawLobbyResponse state) {
+    private void send(UUID accountId, String eventName, Object payload) {
         List<SseEmitter> listeners = emitters.getOrDefault(accountId, new CopyOnWriteArrayList<>());
         listeners.forEach(emitter -> {
             try {
-                emitter.send(SseEmitter.event().name("draw-state").data(state));
+                emitter.send(SseEmitter.event().name(eventName).data(payload));
             } catch (IOException | IllegalStateException ex) {
                 remove(accountId, emitter);
             }

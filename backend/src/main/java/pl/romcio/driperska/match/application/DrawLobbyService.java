@@ -27,12 +27,13 @@ public class DrawLobbyService {
     private final PlayerRepository playerRepository;
     private final DrawRealtimeService realtime;
     private final DraftService draftService;
+    private final DraftSetupService draftSetupService;
     private final DrawProperties drawProperties;
 
     public DrawLobbyService(MatchRepository matchRepository, MatchService matchService,
                             DrawService drawService, DrawVoteRepository voteRepository,
                             PlayerRepository playerRepository, DrawRealtimeService realtime,
-                            DraftService draftService,
+                            DraftService draftService, DraftSetupService draftSetupService,
                             DrawProperties drawProperties) {
         this.matchRepository = matchRepository;
         this.matchService = matchService;
@@ -41,6 +42,7 @@ public class DrawLobbyService {
         this.playerRepository = playerRepository;
         this.realtime = realtime;
         this.draftService = draftService;
+        this.draftSetupService = draftSetupService;
         this.drawProperties = drawProperties;
     }
 
@@ -167,7 +169,8 @@ public class DrawLobbyService {
                 REQUIRED_ACCEPTS, accepted.size(), rejected.size(), accepted, rejected,
                 slots.stream().filter(p -> p.side() == Side.BLUE).toList(),
                 slots.stream().filter(p -> p.side() == Side.RED).toList(), Instant.now(),
-                match.getRiotTournamentCode(), match.getRiotImportError(), voteDeadline, draft);
+                match.getRiotTournamentCode(), match.getRiotImportError(), voteDeadline,
+                draftSetupService.view(match), draft);
     }
 
     private void publish(Match match) { publish(match, toResponse(match)); }

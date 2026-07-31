@@ -1,4 +1,4 @@
-# Driperska Liga v0.5.0
+# Driperska Liga v0.5.3
 
 Aplikacja do prowadzenia amatorskiej ligi League of Legends: ranking i wyniki,
 profile graczy, panel administracyjny oraz głosowane losowanie drużyn w czasie rzeczywistym.
@@ -43,6 +43,12 @@ npm run dev
   5 „przeciw” automatycznie losuje kolejną rundę.
 - Gracze widzą przypisaną stronę i kod turniejowy, a admin kontroluje obecność
   w lobby i ręcznie oznacza rozpoczęcie meczu.
+- Przed draftem każda drużyna głosuje na kapitana (3 z 5 głosów rozstrzygają), kapitan ustawia
+  kolejność wybierania postaci i zgłasza gotowość. Draft startuje sam, gdy obie drużyny są gotowe;
+  bez ustaleń kapitan i kolejność są losowe. Admin może wskazać kapitana, wymusić gotowość,
+  zresetować ustalenia albo wystartować draft od razu.
+- W drafcie działa chat ogólny i drużynowy. Wiadomości nie są zapisywane w bazie — bufor ostatnich
+  linii żyje w pamięci procesu i jedzie po tym samym strumieniu SSE co stan lobby.
 - Callback Tournament API pobiera dane meczu przez Match-v5 i wysyła wynik do kolejki
   akceptacji. Admin ma ręczny fallback pobrania po kodzie turniejowym.
 - Przed rozpoczęciem można wymienić gracza; gotowe lobby otrzymuje wtedy nowy kod.

@@ -3,6 +3,18 @@
 Wszystkie istotne zmiany Driperskiej Ligi są opisywane tutaj oraz w
 `frontend/src/content/releases.ts`, który zasila patch notes na stronie głównej.
 
+## v0.5.3 — 2026-07-31
+
+- **Drużyny wybierają kapitana głosowaniem, zanim padnie pierwszy ban.** Po zatwierdzeniu składu każda piątka głosuje na jednego ze swoich — trzy głosy z pięciu kończą sprawę od razu, a jeśli wszyscy zagłosowali i jest 2-2-1, kapitana wskazuje rzut monetą. Blokowanie draftu na nierozstrzygniętym głosowaniu byłoby gorsze niż losowanie.
+- **Kapitan ustawia kolejność wybierania postaci** w swojej drużynie (strzałki góra/dół, przycisk „Losowa kolejność”) i to ona jest używana w drafcie. Kapitan bez zmian banuje za drużynę i **nie musi** pickować pierwszy — to dwie osobne decyzje, więc może ustawić się na końcu kolejki.
+- **Kapitan widzi, czy przeciwnicy są gotowi, i draft startuje sam, gdy obie drużyny zgłoszą gotowość.** Nie trzeba już czekać na sygnał admina. Kolejność picków drugiej drużyny pozostaje ich sprawą — udostępniana jest tylko informacja, że mają ustalone i że są gotowi.
+- **Nic z tej fazy nie jest obowiązkowe.** Drużyna, która zignoruje ten ekran, dostaje losowego kapitana i losową kolejność przy starcie — czyli dokładnie to, jak draft działał do tej pory. Ustalenia przeżywają też admiński reset draftu: reset naprawia draft, nie unieważnia głosowania.
+- **Admin ma pełne sterowanie tą fazą w czasie rzeczywistym:** wskazanie kapitana z listy (z liczbą głosów przy nazwiskach), ustawienie drużyny jako gotowej (co startuje draft dokładnie tak, jak zrobiliby to kapitanowie), reset całych ustaleń i przycisk „Rozpocznij draft teraz”, który pomija oczekiwanie. Pauza, wznowienie i podmiana postaci działają jak dotąd.
+- **Chat w drafcie: kanał ogólny i kanał drużynowy.** Wiadomości nie są zapisywane w bazie — świadomie. To dziesięć osób ustalających bany przez kilka minut, a nie zapis, do którego ktoś wróci za sezon; trzymanie tego oznaczałoby schemat, pytanie o retencję i pytanie o moderację dla treści bez trwałej wartości. Bufor 60 ostatnich linii żyje w pamięci procesu, żeby odświeżenie strony nie gubiło kontekstu, i znika po restarcie.
+- **Wiadomość drużynowa nie wychodzi z drużyny na poziomie transportu**, a nie tylko interfejsu: `TEAM` jest rozsyłany wyłącznie na pięć kont danej strony. Test pilnuje właśnie tego. Admin pisze zawsze na kanał ogólny, z oznaczeniem, że to admin.
+- **Chat jedzie po istniejącym strumieniu SSE** (nowe nazwane zdarzenie `draft-chat`), a nie po drugim połączeniu: jedno gniazdo na gracza, jedna ścieżka ponawiania, nic nowego do konfiguracji w nginx. Limit 300 znaków i 400 ms odstępu między wiadomościami z jednego konta, żeby zablokowany klawisz nie zalał dziesięciu klientów.
+- Serializacja stanu draftu wyszła do `DraftStateStore`, bo dokument `match_draft.state` obsługuje teraz dwa serwisy (sam draft i faza przed nim) i muszą czytać go tak samo. Nowe testy: 14 integracyjnych na fazę przygotowania i 8 jednostkowych na chat; cały przebieg (głosy → kolejność → gotowość → auto-start → pauza) przejechany też przez API na uruchomionej instancji.
+
 ## v0.5.2 — 2026-07-31
 
 - **Lider sezonu dostaje baner na całą szerokość strony.** Wcześniej był kafelkiem z nickiem, który mówił kto wygrywa, ale nic o tym dlaczego. Teraz jest twarz, medal na awatarze i cała linia liczb za tą pozycją: Σ LP, mecze, bilans, win%, średni PR oraz MVP/ACE, a całość jest jednym linkiem do profilu — bo to naturalny następny klik po przeczytaniu.

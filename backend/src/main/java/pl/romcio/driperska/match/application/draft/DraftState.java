@@ -2,7 +2,9 @@ package pl.romcio.driperska.match.application.draft;
 
 import java.time.Instant;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.UUID;
 import pl.romcio.driperska.common.domain.Side;
 
@@ -41,6 +43,63 @@ public class DraftState {
             this.type = type;
         }
     }
+
+    /**
+     * What each team settles before the first ban: who captains it, in what order the five of them
+     * pick, and whether they are ready to go. Filled in during {@code DRAFT_READY} by the players
+     * themselves (see {@code DraftSetupService}) and consumed by {@link #sequence} being built at
+     * draft start. Anything left undecided falls back to the old behaviour — a random order.
+     */
+    public static class Setup {
+        /** voter playerId → the team-mate they want as captain, per side. */
+        public Map<UUID, UUID> blueVotes = new HashMap<>();
+        public Map<UUID, UUID> redVotes = new HashMap<>();
+        /** Decided captains: a majority of their own five, or an admin's choice. */
+        public UUID blueCaptain;
+        public UUID redCaptain;
+        /** Pick order chosen by the captain; empty means "shuffle at start". */
+        public List<UUID> blueOrder = new ArrayList<>();
+        public List<UUID> redOrder = new ArrayList<>();
+        public boolean blueReady;
+        public boolean redReady;
+
+        public Map<UUID, UUID> votesFor(Side side) {
+            return side == Side.BLUE ? blueVotes : redVotes;
+        }
+
+        public UUID captainFor(Side side) {
+            return side == Side.BLUE ? blueCaptain : redCaptain;
+        }
+
+        public void setCaptain(Side side, UUID playerId) {
+            if (side == Side.BLUE) blueCaptain = playerId;
+            else redCaptain = playerId;
+        }
+
+        public List<UUID> orderFor(Side side) {
+            return side == Side.BLUE ? blueOrder : redOrder;
+        }
+
+        public void setOrder(Side side, List<UUID> order) {
+            if (side == Side.BLUE) blueOrder = new ArrayList<>(order);
+            else redOrder = new ArrayList<>(order);
+        }
+
+        public boolean readyFor(Side side) {
+            return side == Side.BLUE ? blueReady : redReady;
+        }
+
+        public void setReady(Side side, boolean ready) {
+            if (side == Side.BLUE) blueReady = ready;
+            else redReady = ready;
+        }
+
+        public boolean bothReady() {
+            return blueReady && redReady;
+        }
+    }
+
+    public Setup setup = new Setup();
 
     public List<Step> sequence = new ArrayList<>();
     public int currentIndex;

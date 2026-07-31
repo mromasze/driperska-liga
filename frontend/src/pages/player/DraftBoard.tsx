@@ -8,6 +8,7 @@ import type { Champion, DrawLobby, LobbyPlayer, Side, SwapType } from '../../api
 import { Badge } from '../../components/ui/Badge';
 import { Button } from '../../components/ui/Button';
 import { ChampionIcon } from '../../components/champion/ChampionIcon';
+import { DraftChat } from '../../components/match/DraftChat';
 import { VolumeControl } from '../../components/ui/VolumeControl';
 import { Spinner } from '../../components/ui/States';
 import { cn } from '../../lib/cn';
@@ -303,6 +304,9 @@ export function DraftBoard({ lobby, myPlayerId, streamState, onCollapse, fullscr
         <DraftTeam title="Czerwoni" side="RED" color="var(--red)"
           players={sortByOrder(lobby.red, draft.redOrder)} bans={draft.redBans} {...teamProps} />
       </div>
+
+      {/* Talking to your team during bans used to mean leaving the board for Discord. */}
+      <DraftChat matchId={lobby.matchId} mySide={mySide} className="h-44 shrink-0 sm:h-52" />
     </section>
   );
 }

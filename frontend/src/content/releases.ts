@@ -11,6 +11,18 @@ export interface ReleaseNote {
  */
 export const RELEASES: ReleaseNote[] = [
   {
+    version: 'v0.5.3',
+    date: '2026-07-31',
+    title: 'Kapitanowie, kolejność picków i chat w drafcie',
+    changes: [
+      'Przed draftem każda drużyna głosuje na kapitana — trzy głosy z pięciu wystarczą. Kapitan banuje i ustawia kolejność wybierania postaci w swojej drużynie.',
+      'Kapitan widzi, czy przeciwnicy są już gotowi. Draft startuje sam, gdy obie drużyny zgłoszą gotowość — nie trzeba czekać na admina.',
+      'Nic z tego nie jest obowiązkowe: bez głosowania kapitan i kolejność są losowe, dokładnie jak dotąd.',
+      'W drafcie doszedł chat: kanał ogólny i osobny kanał drużynowy. Wiadomości nie są nigdzie zapisywane i znikają po meczu.',
+      'Administrator może wskazać kapitana, ustawić drużynę jako gotową, zresetować ustalenia albo wystartować draft od razu — a także napisać do lobby.',
+    ],
+  },
+  {
     version: 'v0.5.2',
     date: '2026-07-31',
     title: 'Lider na całą szerokość, głosy z ligi',
