@@ -11,6 +11,16 @@ export interface ReleaseNote {
  */
 export const RELEASES: ReleaseNote[] = [
   {
+    version: 'v0.5.4',
+    date: '2026-08-01',
+    title: 'MVP dla zwycięzców',
+    changes: [
+      'MVP meczu to teraz najlepszy zawodnik drużyny, która wygrała. Wcześniej liczył się najwyższy PR w całym meczu, więc gdy najlepszy gracz był po stronie przegranej, jedna osoba miała naraz MVP i ACE oraz brała +3 za przegrany mecz.',
+      'ACE bez zmian: najlepszy PR przegranych z PR co najmniej 60. Jedna osoba nie może już mieć obu tytułów.',
+      'Administrator ma na pulpicie przycisk „Przelicz ranking sezonu” — po zmianie zasad przelicza wszystkie zatwierdzone mecze, żeby stare wyniki nie zostały z poprzednią regułą.',
+    ],
+  },
+  {
     version: 'v0.5.3',
     date: '2026-07-31',
     title: 'Kapitanowie, kolejność picków i chat w drafcie',

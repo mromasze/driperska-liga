@@ -105,7 +105,7 @@ class ScoringTest {
     }
 
     @Test
-    void aceRequiresSixtyPrAndDoesNotStackWithMvp() {
+    void aceRequiresSixtyPrAndIsTheBestLosersOwnTitle() {
         MatchStatsContext ctx = sampleMatch();
         Map<UUID, Double> values = new java.util.LinkedHashMap<>();
         for (ParticipantInput participant : ctx.participants()) {
@@ -119,8 +119,60 @@ class ScoringTest {
         values.put(bestLoser.participantId(), 90.0);
         PointsBreakdown result = points.computeLeaguePoints(ctx, values, cfg).get(bestLoser.participantId());
         assertThat(result.ace()).isTrue();
-        assertThat(result.mvp()).isTrue();
-        assertThat(result.lp()).isEqualTo(cfg.lpLoss() + 3 + cfg.lpMvpBonus());
+        // Even outscoring every winner does not make a loser the MVP — that title is the winners'.
+        assertThat(result.mvp()).isFalse();
+        assertThat(result.lp()).isEqualTo(cfg.lpLoss() + 3 + cfg.lpAceBonus());
+    }
+
+    /**
+     * Regression for the match that exposed this: the best PR of the game belonged to a player on the
+     * losing team, who then wore both the MVP crown and the ACE shield and took +3 for a game they
+     * lost, while nobody on the winning side was marked at all.
+     */
+    @Test
+    void theBestPlayerOfALosingTeamIsAceAndNeverMvp() {
+        MatchStatsContext ctx = sampleMatch();          // BLUE wins in the fixture
+        Map<UUID, Double> pr = new java.util.LinkedHashMap<>();
+        for (ParticipantInput participant : ctx.participants()) {
+            pr.put(participant.participantId(), participant.side() == Side.BLUE ? 62.0 : 55.0);
+        }
+        ParticipantInput bestLoser = ctx.team(Side.RED).getFirst();
+        ParticipantInput bestWinner = ctx.team(Side.BLUE).getFirst();
+        pr.put(bestLoser.participantId(), 63.5);        // highest in the whole match
+        pr.put(bestWinner.participantId(), 62.2);       // highest among the winners
+
+        Map<UUID, PointsBreakdown> lp = points.computeLeaguePoints(ctx, pr, cfg);
+
+        assertThat(lp.get(bestLoser.participantId()).mvp()).isFalse();
+        assertThat(lp.get(bestLoser.participantId()).ace()).isTrue();
+        assertThat(lp.get(bestWinner.participantId()).mvp()).isTrue();
+        assertThat(lp.get(bestWinner.participantId()).ace()).isFalse();
+        // Nobody holds both titles, and exactly one player carries each.
+        assertThat(lp.values().stream().filter(b -> b.mvp() && b.ace())).isEmpty();
+        assertThat(lp.values().stream().filter(PointsBreakdown::mvp)).hasSize(1);
+        assertThat(lp.values().stream().filter(PointsBreakdown::ace)).hasSize(1);
+        // The winning team's best now takes the bigger bonus, as the reward for winning should.
+        assertThat(lp.get(bestWinner.participantId()).lp())
+                .isGreaterThan(lp.get(bestLoser.participantId()).lp());
+    }
+
+    @Test
+    void theMvpIsAlwaysOnTheWinningSide() {
+        MatchStatsContext ctx = sampleMatch();
+        Map<UUID, Double> pr = new java.util.LinkedHashMap<>();
+        // Every loser outperforms every winner — the extreme case of the old bug.
+        for (ParticipantInput participant : ctx.participants()) {
+            pr.put(participant.participantId(), participant.side() == Side.BLUE ? 30.0 : 95.0);
+        }
+
+        Map<UUID, PointsBreakdown> lp = points.computeLeaguePoints(ctx, pr, cfg);
+
+        for (ParticipantInput participant : ctx.participants()) {
+            if (lp.get(participant.participantId()).mvp()) {
+                assertThat(participant.side()).isEqualTo(ctx.winningSide());
+            }
+        }
+        assertThat(lp.values().stream().filter(PointsBreakdown::mvp)).isNotEmpty();
     }
 
     @Test
@@ -134,10 +186,16 @@ class ScoringTest {
         ParticipantInput zeroParticipation = new ParticipantInput(
                 UUID.randomUUID(), UUID.randomUUID(), Side.RED, Role.SUPPORT,
                 0, 0, 0, 20, 5000, 1000, 10, 1);
+        // A second winner with the higher rating, so the MVP bonus lands on somebody else and this
+        // test stays about the two KDA bonuses stacking rather than about who is MVP.
+        ParticipantInput winningTeammate = new ParticipantInput(
+                UUID.randomUUID(), UUID.randomUUID(), Side.BLUE, Role.TOP,
+                5, 3, 5, 190, 11500, 21000, 16, 1);
         MatchStatsContext ctx = new MatchStatsContext(
-                Side.BLUE, 1800, List.of(perfect, other, zeroParticipation));
+                Side.BLUE, 1800, List.of(perfect, winningTeammate, other, zeroParticipation));
         Map<UUID, Double> ratings = Map.of(
                 perfect.participantId(), 50.0,
+                winningTeammate.participantId(), 70.0,
                 other.participantId(), 60.0,
                 zeroParticipation.participantId(), 40.0);
 
@@ -145,8 +203,10 @@ class ScoringTest {
 
         assertThat(result.get(perfect.participantId()).bestKda()).isTrue();
         assertThat(result.get(perfect.participantId()).perfectKda()).isTrue();
+        assertThat(result.get(perfect.participantId()).mvp()).isFalse();
         assertThat(result.get(perfect.participantId()).lp())
                 .isEqualTo(cfg.lpWin() + cfg.lpBestKdaBonus() + cfg.lpPerfectKdaBonus());
+        assertThat(result.get(winningTeammate.participantId()).mvp()).isTrue();
         assertThat(result.get(zeroParticipation.participantId()).perfectKda()).isFalse();
     }
 

@@ -161,6 +161,9 @@ public class MatchAssembler {
                 PointsEngine.performancePoints(pr)));
         if (p.isMvp()) c.add(new LpComponent("MVP meczu", cfg.lpMvpBonus()));
         if (p.isAce()) {
+            // Both titles on one player is impossible since 0.5.4 (MVP is winners-only), but matches
+            // scored under the old rule keep their marks until the season is recalculated — and their
+            // breakdown has to keep adding up to the LP that was actually awarded.
             c.add(new LpComponent(p.isMvp()
                     ? "ACE (tytuł — bonus zawarty w MVP)"
                     : "ACE przegranej drużyny", p.isMvp() ? 0 : cfg.lpAceBonus()));
@@ -174,9 +177,10 @@ public class MatchAssembler {
         int total = Math.max(0, c.stream().mapToInt(LpComponent::points).sum());
         String formula = "Baza: +" + cfg.lpWin() + " za wygraną / +" + cfg.lpLoss()
                 + " za przegraną. Występ: PR <35: -2, 35–44: -1, 45–54: 0, "
-                + "55–64: +1, 65–74: +2, 75+: +3. MVP +" + cfg.lpMvpBonus()
-                + ", ACE od PR " + Math.round(cfg.lpAceMinPr()) + ": +" + cfg.lpAceBonus()
-                + " (te dwa bonusy nie łączą się). Najlepsze KDA +" + cfg.lpBestKdaBonus()
+                + "55–64: +1, 65–74: +2, 75+: +3. MVP (najlepszy PR zwycięzców) +" + cfg.lpMvpBonus()
+                + ", ACE (najlepszy PR przegranych, od PR " + Math.round(cfg.lpAceMinPr()) + ") +"
+                + cfg.lpAceBonus()
+                + ". Najlepsze KDA +" + cfg.lpBestKdaBonus()
                 + ", perfect KDA +" + cfg.lpPerfectKdaBonus()
                 + "; bonusy KDA łączą się z pozostałymi.";
         List<PrMetric> prMetrics = prDetail == null ? List.of()

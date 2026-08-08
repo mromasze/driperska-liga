@@ -94,14 +94,17 @@ LP(gracz) = LP_bazowe(wynik) + próg_występu(PR) + nagrody_indywidualne
 | **PR 55–64** | +1 |
 | **PR 65–74** | +2 |
 | **PR ≥75** | +3 |
-| **MVP meczu** | +3 (najwyższy PR w meczu) |
+| **MVP meczu** | +3 (najwyższy PR **w drużynie zwycięzców**) |
 | **ACE przegranych** | +2 (najwyższy PR przegranych, wymagane PR ≥60) |
 | **Najlepsze KDA w meczu** | +1 (remis oznacza współdzielony bonus) |
 | **Perfect KDA** | +1 (0 śmierci oraz co najmniej 1 kill lub asysta) |
 
-MVP i ACE mogą być współdzielone przy remisie PR. Jeśli przegrany jest jednocześnie MVP i ACE,
-widzi oba tytuły, ale dostaje tylko bonus MVP. Bonusy za najlepsze KDA i perfect KDA łączą się
-ze sobą oraz z MVP/ACE. Penta i quadra pozostają osiągnięciami bez LP.
+MVP i ACE mogą być współdzielone przy remisie PR, ale nigdy nie trafiają do tej samej osoby: MVP jest
+najlepszym zawodnikiem zwycięzców, ACE najlepszym przegranych, więc zbiory są rozłączne z definicji.
+Do 0.5.3 MVP był najwyższym PR w całym meczu i przy dobrym występie po przegranej stronie ta sama
+osoba nosiła oba tytuły oraz brała największy bonus w systemie (+3) za mecz, który przegrała — podczas
+gdy najlepszy zwycięzca nie dostawał nic. Bonusy za najlepsze KDA i perfect KDA łączą się ze sobą oraz
+z MVP/ACE. Penta i quadra pozostają osiągnięciami bez LP.
 
 ### Tabela sezonu
 Kolejność wyznacza skorygowana średnia powiększona o ograniczony bonus aktywności:

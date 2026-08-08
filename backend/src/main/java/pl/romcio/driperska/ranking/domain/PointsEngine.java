@@ -19,10 +19,20 @@ public class PointsEngine {
                                   boolean bestKda, boolean perfectKda) {
     }
 
+    /**
+     * MVP is the best player of the <em>winning</em> team, ACE the best of the losing one.
+     *
+     * <p>Until 0.5.4 the MVP was the highest PR in the match regardless of side. Whenever the best
+     * player of the game happened to be on the losing team — which is common, PR measures performance
+     * and not the result — that one person collected both titles at once and pocketed the biggest
+     * bonus in the system (+3) for a game they lost, while the winning team's best player got nothing.
+     * Splitting the two by side makes them mutually exclusive by construction and puts the larger
+     * bonus back on the winning side.
+     */
     public Map<UUID, PointsBreakdown> computeLeaguePoints(MatchStatsContext ctx,
                                                           Map<UUID, Double> pr,
                                                           ScoringConfig cfg) {
-        Set<UUID> mvpIds = highestPr(ctx, pr, null, 0.0);
+        Set<UUID> mvpIds = highestPr(ctx, pr, ctx.winningSide(), 0.0);
         Set<UUID> aceIds = highestPr(ctx, pr, ctx.winningSide().opposite(), cfg.lpAceMinPr());
         Set<UUID> bestKdaIds = highestKda(ctx);
 
@@ -39,6 +49,8 @@ public class PointsEngine {
             if (isMvp) {
                 lp += cfg.lpMvpBonus();
             }
+            // The two sets are disjoint now that MVP is winners-only; the guard stays as the thing
+            // that would keep the bonuses from stacking if that ever changed again.
             if (isAce && !isMvp) {
                 lp += cfg.lpAceBonus();
             }

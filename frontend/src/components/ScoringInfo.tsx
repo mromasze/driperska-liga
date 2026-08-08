@@ -39,9 +39,9 @@ export function ScoringInfo({ defaultOpen = false }: { defaultOpen?: boolean }) 
           <ul className="mt-2 space-y-1">
             <li>• Wygrana <strong className="text-win">+10</strong>, przegrana <strong>+4</strong></li>
             <li>• Próg PR: <strong>&lt;35: −2</strong>, 35–44: −1, 45–54: 0, 55–64: +1, 65–74: +2, 75+: +3</li>
-            <li>• MVP meczu (najwyższy PR) <strong>+3</strong></li>
+            <li>• MVP meczu: najwyższy PR <strong>w drużynie zwycięzców</strong>, <strong>+3</strong></li>
             <li>• ACE przegranych: najwyższy PR po przegranej stronie, wymagane PR ≥60, <strong>+2</strong></li>
-            <li>• Jeżeli przegrany jest jednocześnie MVP i ACE, widzi oba tytuły, ale dostaje tylko bonus MVP</li>
+            <li>• Jedna osoba nie może mieć obu tytułów — MVP jest po stronie wygranej, ACE po przegranej</li>
             <li>• Najlepsze KDA w meczu <strong>+1</strong>; przy remisie bonus dostaje każdy z najlepszym wynikiem</li>
             <li>• Perfect KDA (0 śmierci i co najmniej kill lub asysta) <strong>+1</strong></li>
             <li>• Bonusy KDA łączą się ze sobą oraz z MVP/ACE; penta i quadra są osiągnięciami bez LP</li>

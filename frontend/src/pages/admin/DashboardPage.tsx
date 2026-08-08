@@ -1,7 +1,9 @@
+import { useState } from 'react';
 import { Link } from 'react-router-dom';
 import { useAuthStore } from '../../store/auth';
 import { useMatches } from '../../api/hooks/matches';
 import { usePlayers } from '../../api/hooks/players';
+import { useRecalculateRanking } from '../../api/hooks/ranking';
 import { StatTile } from '../../components/ui/StatTile';
 import { Button } from '../../components/ui/Button';
 import { Badge } from '../../components/ui/Badge';
@@ -67,6 +69,7 @@ export function DashboardPage() {
         <Link to="/admin/approvals">
           <Button variant="ghost">Kolejka akceptacji</Button>
         </Link>
+        <RecalculateRankingButton />
       </div>
 
       {draftList.length > 0 && (
@@ -161,5 +164,40 @@ export function DashboardPage() {
         )}
       </section>
     </div>
+  );
+}
+
+/**
+ * Rebuilds the current season from its approved matches.
+ *
+ * Needed whenever a scoring rule changes: a match keeps the LP, PR, MMR and MVP/ACE marks it was
+ * scored with, so without this the old rule stays visible on every match already in the database. The
+ * recomputation is deterministic — same matches in, same numbers out — but it does rewrite history, so
+ * it asks first and says plainly what it touched.
+ */
+function RecalculateRankingButton() {
+  const recalculate = useRecalculateRanking();
+  const [message, setMessage] = useState<string | null>(null);
+
+  const run = () => {
+    if (!window.confirm(
+      'Przeliczyć ranking sezonu od nowa ze wszystkich zatwierdzonych meczów?\n\n'
+      + 'LP, PR, MMR oraz tytuły MVP/ACE zostaną wyliczone ponownie według obecnych zasad — '
+      + 'wyniki starszych meczów mogą się zmienić.',
+    )) return;
+    setMessage(null);
+    recalculate.mutate(undefined, {
+      onSuccess: () => setMessage('✓ Ranking i wszystkie zatwierdzone mecze przeliczone.'),
+      onError: (error) => setMessage('⚠ ' + (error as Error).message),
+    });
+  };
+
+  return (
+    <span className="flex flex-wrap items-center gap-3">
+      <Button variant="ghost" disabled={recalculate.isPending} onClick={run}>
+        {recalculate.isPending ? 'Przeliczanie…' : '↻ Przelicz ranking sezonu'}
+      </Button>
+      {message && <span className="text-sm text-text-lo">{message}</span>}
+    </span>
   );
 }
