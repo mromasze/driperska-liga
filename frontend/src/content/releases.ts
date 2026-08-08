@@ -11,6 +11,15 @@ export interface ReleaseNote {
  */
 export const RELEASES: ReleaseNote[] = [
   {
+    version: 'v0.5.5',
+    date: '2026-08-01',
+    title: 'Ręczne składy na jednym ekranie',
+    changes: [
+      'Lista graczy przy ręcznym układaniu drużyn jest podzielona na strony (osiem nazwisk na stronę), więc cały kreator mieści się na jednym ekranie i nie trzeba przewijać w trakcie przeciągania.',
+      'Doszły strzałki i numery stron, a wybór gracza kliknięciem przeżywa zmianę strony.',
+    ],
+  },
+  {
     version: 'v0.5.4',
     date: '2026-08-01',
     title: 'MVP dla zwycięzców',

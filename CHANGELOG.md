@@ -3,6 +3,12 @@
 Wszystkie istotne zmiany Driperskiej Ligi są opisywane tutaj oraz w
 `frontend/src/content/releases.ts`, który zasila patch notes na stronie głównej.
 
+## v0.5.5 — 2026-08-01
+
+- **Lista graczy w ręcznym układaniu składów jest podzielona na strony i cały kreator mieści się na jednym ekranie.** Przy dwudziestu siedmiu graczach pula była wyższa niż okno, więc przeciągnięcie nicku z jej dołu do slotu roli wymagało przewijania z wciśniętym przyciskiem myszy — a tego przeglądarka nie robi. Osiem nazwisk na stronę to mniej więcej wysokość kolumny drużyny, więc slot, na który celujesz, jest zawsze widoczny.
+- Pager to strzałki „‹ ›” plus numery stron, a licznik w nagłówku mówi, na której stronie jesteś. Pudełko puli ma stałą minimalną wysokość, żeby ostatnia strona z dwoma nazwiskami nie zapadała się i nie podskakiwały pod nią kolumny drużyn.
+- Numer strony jest przycinany przy renderowaniu, a nie poprawiany efektem: przypisanie gracza zmniejsza pulę i strona, na której właśnie byłeś, może po prostu przestać istnieć. Zaznaczenie gracza kliknięciem przeżywa zmianę strony, więc „kliknij gracza → zmień stronę → kliknij slot” działa tak samo jak przeciąganie.
+
 ## v0.5.4 — 2026-08-01
 
 - **MVP jest najlepszym zawodnikiem drużyny, która wygrała.** Do tej pory MVP oznaczał najwyższy PR w całym meczu, bez patrzenia na wynik. Ponieważ PR mierzy występ, a nie rezultat, najlepszy gracz meczu regularnie bywa po stronie przegranej — i wtedy ta jedna osoba nosiła oba tytuły naraz (MVP **i** ACE) oraz brała największy bonus w systemie (+3) za mecz, który przegrała, podczas gdy najlepszy zwycięzca nie dostawał nic. Zgłoszone na meczu, w którym `wlezien` z PR 63,5 miał koronę i tarczę jednocześnie.

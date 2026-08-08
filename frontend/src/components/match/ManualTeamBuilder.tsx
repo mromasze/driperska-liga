@@ -8,25 +8,64 @@ const ROLES: Role[] = ['TOP', 'JUNGLE', 'MID', 'ADC', 'SUPPORT'];
 const SIDES: Side[] = ['BLUE', 'RED'];
 const DND_TYPE = 'application/x-driperska-player';
 
+/**
+ * Players per page of the pool.
+ *
+ * Chosen so the pool box stays roughly as tall as a team column: with a league of thirty the pool used
+ * to run far below the fold, and dragging a name from the bottom of it up to a role slot meant
+ * scrolling with the mouse button held down — which does not work.
+ */
+const PAGE_SIZE = 8;
+
 interface ManualTeamBuilderProps {
   players: Player[];
   value: ManualSlot[];
   onChange: (slots: ManualSlot[]) => void;
 }
 
+/** Prev/next page of the pool. */
+function PageButton({ label, title, disabled, onClick }: {
+  label: string; title: string; disabled: boolean; onClick: () => void;
+}) {
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      disabled={disabled}
+      title={title}
+      aria-label={title}
+      className="grid h-7 w-7 shrink-0 place-items-center rounded-md border border-line text-sm leading-none text-text-lo transition-colors hover:text-text-hi disabled:opacity-30"
+    >
+      {label}
+    </button>
+  );
+}
+
 /**
  * Drag (or click) players from the pool into two teams of five role slots. Dropping onto an
  * occupied slot swaps the previous occupant back to the pool; a player can sit in only one slot.
+ *
+ * The pool is paged: a league of thirty made it taller than the viewport, and dragging a name from
+ * below the fold up to a role slot required scrolling mid-drag, which browsers do not do. One page is
+ * about as tall as a team column, so the slots you are dragging onto are always visible.
  */
 export function ManualTeamBuilder({ players, value, onChange }: ManualTeamBuilderProps) {
   // Click-to-place fallback for touch / accessibility: the "picked up" player awaits a slot click.
   const [picked, setPicked] = useState<string | null>(null);
+  const [page, setPage] = useState(0);
 
   const byId = new Map(players.map((p) => [p.id, p]));
   const slotFor = (side: Side, role: Role) =>
     value.find((s) => s.side === side && s.role === role)?.playerId ?? null;
   const assignedIds = new Set(value.map((s) => s.playerId));
   const pool = players.filter((p) => !assignedIds.has(p.id));
+
+  // Clamped on render rather than corrected in an effect: assigning players shrinks the pool, and the
+  // page you were on can simply stop existing mid-drag.
+  const pageCount = Math.max(1, Math.ceil(pool.length / PAGE_SIZE));
+  const currentPage = Math.min(page, pageCount - 1);
+  const visiblePool = pool.slice(currentPage * PAGE_SIZE, currentPage * PAGE_SIZE + PAGE_SIZE);
+  const goToPage = (next: number) => setPage(Math.min(Math.max(0, next), pageCount - 1));
 
   const assign = (playerId: string, side: Side, role: Role) => {
     const next = value.filter(
@@ -51,16 +90,23 @@ export function ManualTeamBuilder({ players, value, onChange }: ManualTeamBuilde
 
   return (
     <div className="grid gap-4 lg:grid-cols-[1fr_1.4fr]">
-      {/* Pool of unassigned players */}
-      <div className="glass p-3">
-        <div className="kicker mb-2 text-text-lo">
-          Do przypisania · {pool.length}
+      {/* Pool of unassigned players, one page at a time so the slots stay on screen next to it. */}
+      <div className="glass flex flex-col p-3">
+        <div className="mb-2 flex items-center justify-between gap-2">
+          <span className="kicker text-text-lo">Do przypisania · {pool.length}</span>
+          {pageCount > 1 && (
+            <span className="num text-[11px] text-text-lo">
+              strona {currentPage + 1}/{pageCount}
+            </span>
+          )}
         </div>
         {pool.length === 0 ? (
           <p className="py-6 text-center text-sm text-text-lo">Wszyscy gracze przypisani.</p>
         ) : (
-          <div className="flex flex-col gap-2">
-            {pool.map((p) => (
+          // Fixed minimum height: a last page with two names left must not collapse the box and shove
+          // the team columns up the screen.
+          <div className="flex min-h-[26rem] flex-col gap-2">
+            {visiblePool.map((p) => (
               <button
                 key={p.id}
                 type="button"
@@ -86,9 +132,34 @@ export function ManualTeamBuilder({ players, value, onChange }: ManualTeamBuilde
             ))}
           </div>
         )}
+        {pageCount > 1 && (
+          <div className="mt-2 flex items-center gap-1.5 border-t border-line pt-2">
+            <PageButton label="‹" title="Poprzednia strona" disabled={currentPage === 0}
+              onClick={() => goToPage(currentPage - 1)} />
+            {Array.from({ length: pageCount }).map((_, index) => (
+              <button
+                key={index}
+                type="button"
+                onClick={() => goToPage(index)}
+                aria-current={index === currentPage}
+                aria-label={`Strona ${index + 1}`}
+                className={cn(
+                  'num h-7 min-w-7 rounded-md border px-1.5 text-xs font-semibold transition-colors',
+                  index === currentPage
+                    ? 'border-[color:var(--gold)]/60 bg-[color:var(--gold)]/10 text-gold'
+                    : 'border-line text-text-lo hover:text-text-hi',
+                )}
+              >
+                {index + 1}
+              </button>
+            ))}
+            <PageButton label="›" title="Następna strona" disabled={currentPage === pageCount - 1}
+              onClick={() => goToPage(currentPage + 1)} />
+          </div>
+        )}
         {picked && (
           <p className="mt-2 text-center text-xs text-gold">
-            Kliknij slot, aby przypisać wybranego gracza.
+            Kliknij slot, aby przypisać wybranego gracza. Możesz zmienić stronę — wybór zostaje.
           </p>
         )}
       </div>
